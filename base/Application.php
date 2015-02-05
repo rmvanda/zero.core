@@ -76,16 +76,22 @@ class Application
         require $stdout : false);
     }
 
-    public function registerAutoloaders(callable $autoload = null)
+    public function registerAutoloaders($autoloader = null)
     {
+        // for Composer + PSR compatability
         if (file_exists($file = ROOT_PATH . "vendor/autoload.php")) {
             require $file;
         }
-
-        if (is_callable($autoload)) {
-            spl_autoload_register($autoload);
+        // if you want to add external autoloaders
+        if ($autoloader) {
+            if (is_callable($autoloader)) {
+                spl_autoload_register($autoloader);
+            } elseif (is_array($autoloader)) {
+                foreach ($autoloader as $al) {
+                    spl_autoload_register($al);
+                }
+            }
         }
-
         /**
          * Maximally Underwritten Fast As Shit Autoloader Array
          * MUFASA - !
@@ -200,21 +206,35 @@ class Application
         return $this;
     }
 
-    public function fetchUtilities()
+    public function fetchUtilities($utilities = null)
     {
         if (DEV) {
             $this -> load("Utilities.php");
         }
         $this -> load("Extensions.php");
+        if ($utilities) {
+            if (file_exists($utilities)) {
+                require $utilities;
+            } elseif (is_array($utilities)) {
+                foreach ($utilities as $utility) {
+                    require $utility;
+                }
+            }
+        }
         return $this;
     }
 
-    public function defineConstants($key = null)
+    public function defineConstants(array $key = null)
     {
         if (!defined("ROOT_PATH")) {
             define("URL", "http://" . $_SERVER['HTTP_HOST'] . "/");
             define("ROOT_PATH", "/" . trim($_SERVER['DOCUMENT_ROOT'], "skeleton/frontend/www") . "/");
             //^fuck
+        }
+        if ($key) {
+            foreach ($key as $k => $v) {
+                define($k, $v);
+            }
         }
 
         return $this;
@@ -230,7 +250,7 @@ class Application
          }
          return $this;*/
     }
-
+// TODO
     public function finalizeRoute()
     {
         if (Request::$sub) {
