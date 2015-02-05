@@ -15,7 +15,8 @@ class Application
     public function __construct()
     {
         //@f:off
-           $this-> defineConstants() 
+           $this -> defineConstants() 
+                -> registerAutoloaders()
                 -> parseRequest() 
                 -> fetchUtilities()
                 -> finalizeRoute()
@@ -59,7 +60,7 @@ class Application
             $aspect = new Request::$aspect;
             $aspect -> {Request::$endpoint}();
         }
-
+        print_i();
     }
 
     private function friendlyURLConverter($url)
@@ -67,11 +68,134 @@ class Application
         return lcfirst(str_replace(" ", "", ucwords(str_replace("-", ' ', $url))));
     }
 
+    public function load($filename, $path = null)
+    {
+        $stdout = exec("find " . ROOT_PATH . $path . " -type f -name " . $filename);
+        echo "Attempting to side load $filename from path : " . ROOT_PATH . "$path which returns: $stdout<br>";
+        return (file_exists($stdout) ?
+        require $stdout : false);
+    }
+
     public function registerAutoloaders(callable $autoload = null)
     {
         if (file_exists($file = ROOT_PATH . "vendor/autoload.php")) {
             require $file;
         }
+
+        if (is_callable($autoload)) {
+            spl_autoload_register($autoload);
+        }
+
+        /**
+         * Maximally Underwritten Fast As Shit Autoloader Array
+         * MUFASA - !
+         * @version 0.8.2
+         *
+         * This is the first truly stable version of MUFASA.
+         * This stability was made possible via dividing the autoloader into 4
+         * parts:
+         *
+         *
+         * It will probably change into a class in the long run, but this is
+         * quite
+         * suitable for the time being.
+         *
+         * AS long as a simple set of standards are adhered to, then this works
+         * flawlessly.
+         * Otherwise, it can be dangerous.
+         *
+         * Be advised!
+         *
+         */
+
+        /*
+         * Loads base classes.
+         */
+        spl_autoload_register(function($class)
+        {
+            echo "loading $class from :";
+            if (strpos($class, "\\")) {
+                $namespace = explode("\\", $class);
+                $class = array_pop($namespace);
+            }
+            $stdout = exec("find " . ROOT_PATH . " -type f -name " . $class . ".php");
+            echo $stdout . "<br>";
+            return (file_exists($stdout) ?
+            require $stdout : false);
+        });
+        /*
+         * Loads app classes.
+         *
+         spl_autoload_register(function($class)
+         {
+         return (file_exists($stdout = exec("find ../app/ -type f -name " .
+         $class . ".php")) ?
+         require $stdout : false);
+         });
+         *
+         * Loads plugins/modules
+         *
+         * spl_autoload_register(function($class)
+         {
+         return (file_exists($file = MODULE_PATH . $class . "/" . $class .
+         ".php") ?
+         require $file : false);
+         });
+         *
+         * loads things from the 'lib' folder
+         *
+         spl_autoload_register(function($class)
+         {
+         return (file_exists($stdout = exec("find ../srv/libs/ -type f -name " .
+         $class . ".php")) ?
+         require $stdout : false);
+         });
+
+         /*
+         * loads things from the 'dev' folder
+         *
+         if (DEV) {
+         require ROOT_PATH . "srv/dev/Console.php";
+         spl_autoload_register(function($class)
+         {
+         if (strpos($class, "\\")) {
+         $namespace = explode("\\", $class);
+         $class = array_pop($namespace);
+         }
+         $stdout = exec("find ../admin/ -type f -name " . $class . ".php");
+         Console::log() -> mufasa($stdout);
+         return (file_exists($stdout) ?
+         require $stdout : false);
+
+         }, false, true);
+         }
+         */
+        /*
+         spl_autoload_register(function($class)
+         {
+         return (file_exists($stdout = exec("find ../srv/dev/ -type f -name " .
+         $class .
+         ".php")) ?
+         require $stdout : false);
+         });
+
+         // if (Request::$isElevated)
+         // spl_autoload_register(function($class)
+         // {
+         // if (strpos($class, "\\")) {
+         // $namespace = explode("\\", $class);
+         // $class = array_pop($namespace);
+         // }
+         // $stdout = exec("find ../admin/ -type f -name " . $class . ".php");
+         // Console::log() -> mufasa($stdout);
+         // return (file_exists($stdout) ?
+         // require $stdout : false);
+         //
+         // }, false, true);
+         // }
+         */
+
+        // require ROOT_PATH."core/_autoloader.php";
         spl_autoload_register("self::errorHandler");
         return $this;
     }
@@ -79,9 +203,9 @@ class Application
     public function fetchUtilities()
     {
         if (DEV) {
-            require_once UTILITIES_PATH . "dev/Utilities.php";
+            $this -> load("Utilities.php");
         }
-        require_once UTILITIES_PATH . "utils/Extensions.php";
+        $this -> load("Extensions.php");
         return $this;
     }
 
@@ -89,16 +213,22 @@ class Application
     {
         if (!defined("ROOT_PATH")) {
             define("URL", "http://" . $_SERVER['HTTP_HOST'] . "/");
-            define("ROOT_PATH", trim($_SERVER['DOCUMENT_ROOT'], "www"));
+            define("ROOT_PATH", "/" . trim($_SERVER['DOCUMENT_ROOT'], "skeleton/frontend/www") . "/");
+            //^fuck
         }
-        foreach (scandir(ROOT_PATH."app/_configs/") as $ini) {
-            if ($ini != "." && $ini != "..") {
-                foreach (parse_ini_file(ROOT_PATH."app/_configs/".$ini, false, INI_SCANNER_RAW) as $constant => $value) {
-                    define($constant, ($ini == "paths.ini" ? ROOT_PATH : "") . $value);
-                }
-            }
-        }
+
         return $this;
+
+        /*
+         foreach (scandir(ROOT_PATH."skeleton/_configs/") as $ini) {
+         if ($ini != "." && $ini != "..") {
+         foreach (parse_ini_file(ROOT_PATH."skeleton/_configs/".$ini, false,
+         INI_SCANNER_RAW) as $constant => $value) {
+         define($constant, ($ini == "paths.ini" ? ROOT_PATH : "") . $value);
+         }
+         }
+         }
+         return $this;*/
     }
 
     public function finalizeRoute()
@@ -117,7 +247,8 @@ class Application
 
     public function errorHandler($class)
     {
-        if (DEV) {die($class);
+        if (DEV) {
+            die("Can't load $class");
             Console::log() -> cannotLoad($class);
         }
         Error::_404($class);

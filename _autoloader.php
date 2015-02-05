@@ -23,13 +23,13 @@
  * Loads base classes.
  */
 spl_autoload_register(function($class)
-{
+{ echo "loading $class"; 
     if (strpos($class, "\\")) {
         $namespace = explode("\\", $class);
         $class = array_pop($namespace);
     }
-    $stdout = exec("find ../srv/base/ -type f -name " . $class . ".php");
-   // echo $stdout."<br>";
+    $stdout = exec("find ".BASE_PATH." -type f -name " . $class . ".php");
+    echo $stdout."<br>";
     return (file_exists($stdout) ?
     require $stdout : false);
 });

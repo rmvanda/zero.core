@@ -9,7 +9,7 @@
  */
 
 //namespace Zero\Core;
-class Error extends Response
+class Error//extends Response
 {
     private static $message = array(
         400 => "BAD REQUEST",
@@ -36,9 +36,13 @@ class Error extends Response
 
     public static function __callStatic($func, $args)
     {
-        $code = str_replace("_", "", $func);
+        define("VIEW_PATH", ROOT_PATH . "skeleton/frontend/views/");
+        $code = trim($func, "_");//, "", $func);
+
         header("HTTP/1.1 $code " . self::$message[$code]);
+
         if (file_exists($errorPage = VIEW_PATH . "_global/_error/_$code.php")) {
+            $message = $args[0]; 
             include $errorPage;
         } else {
             self::generateErrorPage($code, self::$message[$code]);
