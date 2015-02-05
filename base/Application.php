@@ -20,13 +20,15 @@ class Application
                 -> parseRequest() 
                 -> fetchUtilities()
                 -> finalizeRoute()
-                -> run();
+                -> run( Request::$aspect, Request::$endpoint, Request::$args );
             //@f:on
 
     }
 
+    //@deprecated
     public function __call($name, $args)
     {
+        return;
         if (Request::isAccessible()) {
             new Page(Request::$accessible);
         } elseif (in_array(($name = ucfirst($name)), get_declared_classes())) {
@@ -52,14 +54,26 @@ class Application
         return $this;
     }
 
-    public function run()
+    public function run($aspect, $endpoint, $args)
     {
-        if (STANDARD || true) {
-            $this -> {Request::$aspect}(Request::$endpoint);
+        // if (Request::isAccessible()) {
+        //  new Page(Request::$accessible);
+        //} else
+        if (in_array(($aspect = ucfirst($aspect)), get_declared_classes())) {
+            //  trigger_error("You can't do that", E_USER_ERROR);
+            Error::_403();
         } else {
-            $aspect = new Request::$aspect;
-            $aspect -> {Request::$endpoint}();
+            $aspect = new $aspect();
+            $aspect -> $endpoint($args);
         }
+        /*
+         if (STANDARD || true) {
+         $this -> {Request::$aspect}(Request::$endpoint);
+         } else {
+         $aspect = new Request::$aspect;
+         $aspect -> {Request::$endpoint}();
+         }
+         * */
         print_i();
     }
 
@@ -250,7 +264,8 @@ class Application
          }
          return $this;*/
     }
-// TODO
+
+    // TODO
     public function finalizeRoute()
     {
         if (Request::$sub) {
