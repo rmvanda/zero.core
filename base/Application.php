@@ -224,6 +224,7 @@ class Application
     {
         if (DEV) {
             $this -> load("Utilities.php");
+            $this->load("Console.php"); 
         }
         $this -> load("Extensions.php");
         if ($utilities) {
@@ -268,16 +269,16 @@ class Application
     // TODO
     public function finalizeRoute()
     {
-        if (Request::$sub) {
-            if (Request::$sub !== 'admin') {
-                // Redirect that bitch.
-                return $this;
-            } elseif (Request::$isElevated) {
-                return new Zero\Admin();
-            }
-        } else {
-            return $this;
-        }
+        // if (Request::$sub) {
+        //    if (Request::$sub !== 'admin') {
+        // Redirect that bitch.
+        //       return $this;
+        //  } elseif (Request::$isElevated) {
+        return new Zero\Admin();
+        // }
+        //} else {
+        //   return $this;
+        // }
     }
 
     public function errorHandler($class)
