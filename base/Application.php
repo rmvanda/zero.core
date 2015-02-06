@@ -16,29 +16,32 @@ class Application
     {
         //@f:off
            $this -> defineConstants() 
+                -> fetchUtilities()
                 -> registerAutoloaders()
                 -> parseRequest() 
-                -> fetchUtilities()
                 -> finalizeRoute()
                 -> run( Request::$aspect, Request::$endpoint, Request::$args );
         //@f:on
-
+        Console::log() -> maxMemory(xdebug_peak_memory_usage()) -> totalExecutionTime(xdebug_time_index());
+        if (defined("DEV"))
+            Console::output();
+        // -> helloWorld();
     }
 
-    //@deprecated
-    public function __call($name, $args)
-    {
-        return;
-        if (Request::isAccessible()) {
-            new Page(Request::$accessible);
-        } elseif (in_array(($name = ucfirst($name)), get_declared_classes())) {
-            trigger_error("You can't do that", E_USER_ERROR);
-            exit();
-        } else {
-            $aspect = new $name();
-            $aspect -> {$args[0]}(Request::$uri);
-        }
-    }
+    /**@deprecated
+     public function __call($name, $args)
+     {
+     return;
+     if (Request::isAccessible()) {
+     new Page(Request::$accessible);
+     } elseif (in_array(($name = ucfirst($name)), get_declared_classes())) {
+     trigger_error("You can't do that", E_USER_ERROR);
+     exit();
+     } else {
+     $aspect = new $name();
+     $aspect -> {$args[0]}(Request::$uri);
+     }
+     } */
 
     public function modprobe(array $modprobe)
     {
@@ -74,7 +77,6 @@ class Application
          $aspect -> {Request::$endpoint}();
          }
          * */
-        print_i();
     }
 
     private function friendlyURLConverter($url)
@@ -83,6 +85,14 @@ class Application
     }
 
     public function load($filename, $path = null)
+    {
+        $stdout = exec("find " . ROOT_PATH . $path . " -type f -name " . $filename);
+        echo "Attempting to side load $filename from path : " . ROOT_PATH . "$path which returns: $stdout<br>";
+        return (file_exists($stdout) ?
+        require $stdout : false);
+    }
+
+    public function suload($filename, $path = null)
     {
         $stdout = exec("find " . ROOT_PATH . $path . " -type f -name " . $filename);
         echo "Attempting to side load $filename from path : " . ROOT_PATH . "$path which returns: $stdout<br>";
@@ -138,7 +148,7 @@ class Application
                 $namespace = explode("\\", $class);
                 $class = array_pop($namespace);
             }
-            $stdout = exec("find " . ROOT_PATH . " -type f -name " . $class . ".php");
+            $stdout = exec("find " . ROOT_PATH . " -path admin -prune -o -type f -name " . $class . ".php");
             echo $stdout . "<br>";
             return (file_exists($stdout) ?
             require $stdout : false);
@@ -222,9 +232,9 @@ class Application
 
     public function fetchUtilities($utilities = null)
     {
-        if (DEV) {
-            $this -> load("Utilities.php");
-            $this->load("Console.php"); 
+        if (defined("DEV")) {
+            $this -> suload("Utilities.php");
+            $this -> suload("Console.php");
         }
         $this -> load("Extensions.php");
         if ($utilities) {
@@ -241,6 +251,8 @@ class Application
 
     public function defineConstants(array $key = null)
     {
+        define("DEV", "DEV");
+
         if (!defined("ROOT_PATH")) {
             define("URL", "http://" . $_SERVER['HTTP_HOST'] . "/");
             define("ROOT_PATH", "/" . trim($_SERVER['DOCUMENT_ROOT'], "skeleton/frontend/www") . "/");
@@ -274,7 +286,7 @@ class Application
         // Redirect that bitch.
         //       return $this;
         //  } elseif (Request::$isElevated) {
-        return new Zero\Admin();
+        return new Admin();
         // }
         //} else {
         //   return $this;
@@ -283,8 +295,8 @@ class Application
 
     public function errorHandler($class)
     {
-        if (DEV) {
-            die("Can't load $class");
+        if (defined(DEV)) {
+            die("<h1 style='color:red'>Can't load $class</h1>");
             Console::log() -> cannotLoad($class);
         }
         Error::_404($class);
