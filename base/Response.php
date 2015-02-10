@@ -13,40 +13,34 @@ class Response
 
     //public $config = __CLASS__;
 
-    public function __construct()
-    {
+    public function __construct() {
         require ROOT_PATH . "skeleton/_configs/ResponseConfig.php";
-        $this->viewPath = VIEW_PATH; 
+        $this -> viewPath = VIEW_PATH;
     }
 
-    public function __call($func, $args)
-    {
+    public function __call($func, $args) {
         if (method_exists($this -> model, $func)) {
             return $this -> model -> {$func}(count($args) > 1 ? $args : $args[0]);
             // The above portion will likely be @deprecated soon
         } else if (file_exists($view = $this -> viewPath . Request::$aspect . "/" . Request::$endpoint . ".php")) {
             $this -> render($view);
         } else {
-            Error::_404("$func is not a valid thing");
+            new Error(404, "$func is not a valid thing");
         }
 
     }
 
-    public function __get($prop)
-    {
+    public function __get($prop) {
     }
 
-    public function __set($prop, $val)
-    {
+    public function __set($prop, $val) {
     }
 
-    public function load($aspect)
-    {
+    public function load($aspect) {
 
     }
 
-    public function loadModel($aspect)
-    {
+    public function loadModel($aspect) {
         // There's still a major issue with having one model per response for
         // anything other than really small projects (and even then..)
         // We can discuss this another time, however.

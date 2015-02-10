@@ -12,8 +12,7 @@ class Application
 
     private $subdomain = array();
 
-    public function __construct()
-    {
+    public function __construct() {
         //@f:off
            $this -> defineConstants() 
                 -> fetchUtilities()
@@ -43,28 +42,26 @@ class Application
      }
      } */
 
-    public function modprobe(array $modprobe)
-    {
+    public function modprobe(array $modprobe) {
         foreach ($modprobe as $module) {
             define(strtoupper($module), true);
         }
         return $this;
     }
 
-    public function parseRequest()
-    {
+    public function parseRequest() {
         new Request();
         return $this;
     }
 
-    public function run($aspect, $endpoint, $args)
-    {
+    public function run($aspect, $endpoint, $args) {
         // if (Request::isAccessible()) {
         //  new Page(Request::$accessible);
         //} else
         if (in_array(($aspect = ucfirst($aspect)), get_declared_classes())) {
             //  trigger_error("You can't do that", E_USER_ERROR);
-            Error::_403();
+           // Error::_403();
+           new Error(403); 
         } else {
             $aspect = new $aspect();
             $aspect -> $endpoint($args);
@@ -79,29 +76,25 @@ class Application
          * */
     }
 
-    private function friendlyURLConverter($url)
-    {
+    private function friendlyURLConverter($url) {
         return lcfirst(str_replace(" ", "", ucwords(str_replace("-", ' ', $url))));
     }
 
-    public function load($filename, $path = null)
-    {
+    public function load($filename, $path = null) {
         $stdout = exec("find " . ROOT_PATH . $path . " -type f -name " . $filename);
         echo "Attempting to side load $filename from path : " . ROOT_PATH . "$path which returns: $stdout<br>";
         return (file_exists($stdout) ?
         require $stdout : false);
     }
 
-    public function suload($filename, $path = null)
-    {
+    public function suload($filename, $path = null) {
         $stdout = exec("find " . ROOT_PATH . $path . " -type f -name " . $filename);
         echo "Attempting to side load $filename from path : " . ROOT_PATH . "$path which returns: $stdout<br>";
         return (file_exists($stdout) ?
         require $stdout : false);
     }
 
-    public function registerAutoloaders($autoloader = null)
-    {
+    public function registerAutoloaders($autoloader = null) {
         // for Composer + PSR compatability
         if (file_exists($file = ROOT_PATH . "vendor/autoload.php")) {
             require $file;
@@ -141,8 +134,7 @@ class Application
         /*
          * Loads base classes.
          */
-        spl_autoload_register(function($class)
-        {
+        spl_autoload_register(function($class) {
             echo "loading $class from :";
             if (strpos($class, "\\")) {
                 $namespace = explode("\\", $class);
@@ -230,8 +222,7 @@ class Application
         return $this;
     }
 
-    public function fetchUtilities($utilities = null)
-    {
+    public function fetchUtilities($utilities = null) {
         if (defined("DEV")) {
             $this -> suload("Utilities.php");
             $this -> suload("Console.php");
@@ -249,8 +240,7 @@ class Application
         return $this;
     }
 
-    public function defineConstants(array $key = null)
-    {
+    public function defineConstants(array $key = null) {
         define("DEV", "DEV");
 
         if (!defined("ROOT_PATH")) {
@@ -279,8 +269,7 @@ class Application
     }
 
     // TODO
-    public function finalizeRoute()
-    {
+    public function finalizeRoute() {
         // if (Request::$sub) {
         //    if (Request::$sub !== 'admin') {
         // Redirect that bitch.
@@ -293,13 +282,13 @@ class Application
         // }
     }
 
-    public function errorHandler($class)
-    {
+    public function errorHandler($class) {
         if (defined(DEV)) {
             die("<h1 style='color:red'>Can't load $class</h1>");
             Console::log() -> cannotLoad($class);
         }
-        Error::_404($class);
+        //Error::_404($class);
+        new Error(404, $class);
     }
 
 }
