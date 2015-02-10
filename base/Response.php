@@ -52,6 +52,24 @@ class Response
         }
     }
 
+    public function __get($prop)// Nah, cool.
+    {
+        // Optimized for your viewing pleasure
+        if ($prop == 'model') {
+            if (!$this -> _default_model) {
+                $model_name = get_class($this) . '_Model';
+                $this -> _default_model = new $model_name();
+            }
+            return $this -> _default_model;
+        }
+        $model_name = $prop . '_Model';
+        $this -> {$prop} = new $model_name();
+        //prop__CLASS__;
+        $model_name = $prop . '_Model';
+        $this -> {$prop} = new $model_name();
+        return $this -> {$prop};
+    }// Dude, go ahead and write this up in the git !  we'll tweak it a bit more, later -
+
     // This is the kind of thing where Zero would benefit from Origami.
     //
     // Yeah, you're right !
@@ -144,7 +162,14 @@ class Response
        // AdminPanel::generate() -> header() -> footer();
     }
 
-
+/**
+ * Both of these functions need better logic, anyway - - - - 
+ * 
+ * 
+ * For instance, in the case of Console - there needs to be a way to load "Console.js" 
+ * - or some kind of hook, perhaps something like wp's enque_script
+ * we'll get there.
+ */
     // You should DRY yourself by the FIRE (Fucking Initialize a Refactoring
     // Engine)
     private function getStylesheets()
