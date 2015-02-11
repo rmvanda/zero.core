@@ -39,5 +39,6 @@
 		<meta property="og:title" content="" />
 	<?php } ?>
 	<noscript><div class="messageBox error"><p>	We're sorry, but <!--TODO -->  requires JavaScript and Cookies in order to function properly</p><p>Please ensure that JavaScript is enabled in order to have a good experience with LoAff</p></div></noscript>
+	<link rel="stylesheet" href="/assets/css/reset.css" />
 	<link rel="stylesheet" href="/assets/css/global.css" /> 
 </head>
