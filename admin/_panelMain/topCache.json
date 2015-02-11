@@ -1,0 +1,54 @@
+{
+	"CMS": {
+		"icon": "fa-bookmark",
+		"href": "#",
+		"menu": {
+			"Create": "/cms/create",
+			"Read": "/cms/read",
+			"Update": "/cms/update",
+			"Delete": "/cms/delete"
+		},
+		"refreshCallback": "/cms/checkComments"
+	},
+	"Catalog": {
+		"href": "catalog/",
+		"icon": "fa-bookmark",
+		"menu": {
+			"UI": {
+				"buttons": "buttons",
+				"empty": {
+					"One": "one",
+					"TWo": "Two",
+					"Three": "Three"
+				},
+				"General": "general",
+				"jQueryYU": "jquery-ui",
+				"Sliders": "sliders",
+				"Timeline": "timeline"
+			},
+			"charts": ["empty", "flot", "inline", "morris"],
+			"examples": ["404", "500", "blank", "invoice", "lockscreen", "login", "register"],
+			"forms": ["advanced", "editors", "empty", "general"],
+			"tables": ["data", "empty", "simple"]
+		}
+	},
+	"Man": {
+		"icon": "fa-question",
+		"uri": "Man",
+		"href": "#",
+		"menu": {
+			"Create": "create",
+			"Read": "delete",
+			"Update": "update",
+			"Delete": "read"
+		}
+	},
+	"ModuleManager": {
+		"icon": "fa-cogs",
+		"uri": "moduleManager",
+		"href": "moduleManager",
+		"menu": {
+			"New Module": "new"
+		}
+	}
+}
