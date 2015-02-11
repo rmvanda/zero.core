@@ -1,2 +1,2 @@
 <?php
-define("VIEW_PATH", ROOT_PATH."skeleton/frontend/views/"); 
+define("VIEW_PATH", ROOT_PATH."app/frontend/views/"); 
