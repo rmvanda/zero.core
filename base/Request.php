@@ -61,7 +61,7 @@ class Request
         self::$domain = $_SERVER['HTTP_HOST'];
         self::$url = $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
 
-        $this -> checkRequest();
+  //     $this -> checkRequest();
     }
 
     private function iter(&$uri)
@@ -99,19 +99,19 @@ class Request
         };
     }
 
-    private function checkRequest()
-    {return; 
-        if (filter_var($_SERVER['HTTP_HOST'], FILTER_VALIDATE_IP) || $_SERVER['SERVER_PORT'] == 8080) {
-            Request::access();
-        } else if (strpos($_SERVER['HTTP_HOST'], "admin") !== false) {
-            Request::access() -> elevateRequest("admin");
-            if ($subdomain = count(explode(".", $_SERVER['HTTP_HOST'])) > 2) {
-                self::$subdomain = $subdomain[0];
-            }
-
-        }
-
-    }
+    // private function checkRequest()
+    // {return; 
+        // if (filter_var($_SERVER['HTTP_HOST'], FILTER_VALIDATE_IP) || $_SERVER['SERVER_PORT'] == 8080) {
+            // Request::access();
+        // } else if (strpos($_SERVER['HTTP_HOST'], "admin") !== false) {
+            // Request::access() -> elevateRequest("admin");
+            // if ($subdomain = count(explode(".", $_SERVER['HTTP_HOST'])) > 2) {
+                // self::$subdomain = $subdomain[0];
+            // }
+// 
+        // }
+// 
+    // }
 
     public static function isAccessible()
     {
@@ -148,16 +148,16 @@ class Request
 
 
 
-    public static function access()
-    {
-        // It's a shame there's no __getStatic(), that would be handy here.
-
-        if (!self::$instance) {
-            self::$instance = new self;
-        }
-        self::$instance -> accessLevel ? : self::$instance -> getAccessClearanceLevel();
-        return self::$instance;
-    }
+    // public static function access()
+    // {
+        // // It's a shame there's no __getStatic(), that would be handy here.
+// 
+        // if (!self::$instance) {
+            // self::$instance = new self;
+        // }
+        // self::$instance -> accessLevel ? : self::$instance -> getAccessClearanceLevel();
+        // return self::$instance;
+    // }
 
     private static function getAccessClearanceLevel()
     {

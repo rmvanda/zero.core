@@ -14,6 +14,7 @@ class Application
 
     public function __construct()
     {
+        // define("DEV", true);
         //@f:off
            $this -> defineConstants() 
                 -> fetchUtilities()
@@ -21,10 +22,13 @@ class Application
                 -> parseRequest() 
                 -> finalizeRoute()
                 -> run( Request::$aspect, Request::$endpoint, Request::$args );
+
+        Console::log() -> maxMemory(xdebug_peak_memory_usage())
+					   -> totalExecutionTime(xdebug_time_index())
+          			   -> display();
         //@f:on
-        Console::log() -> maxMemory(xdebug_peak_memory_usage()) -> totalExecutionTime(xdebug_time_index());
-        if (defined("DEV"))
-            Console::output();
+        //Console::output();
+
         // -> helloWorld();
     }
 
@@ -54,6 +58,7 @@ class Application
     public function parseRequest()
     {
         new Request();
+
         return $this;
     }
 
@@ -74,11 +79,10 @@ class Application
         /*
          if (STANDARD || true) {
          $this -> {Request::$aspect}(Request::$endpoint);
-         } else {
-         $aspect = new Request::$aspect;
-         $aspect -> {Request::$endpoint}();
+         } else {$aspect = new Request::$aspect;$aspect -> {Request::$endpoint}();
          }
          * */
+
     }
 
     private function friendlyURLConverter($url)
@@ -88,16 +92,16 @@ class Application
 
     public function load($filename, $path = null)
     {
-        $stdout = exec("find " . ROOT_PATH . $path . " -type f -path admin/ -prune -name " . $filename);
-        echo "Attempting to side load $filename from path : " . ROOT_PATH . "$path which returns: $stdout<br>";
+        $stdout = exec("find " . ROOT_PATH . "core/base/ -type f -name " . $filename . ".php");
+        Console::log() -> autoloader("<pre><p>stdout:<p></pre><pre> For $filename: $stdout<pre>");
         return (file_exists($stdout) ?
         require $stdout : false);
     }
 
-    public function suload($filename, $path = null)
+    public function suload($filename)
     {
-        $stdout = exec("find " . ROOT_PATH . $path . " -type f -name " . $filename);
-        echo "Attempting to side load $filename from path : " . ROOT_PATH . "$path which returns: $stdout<br>";
+        $stdout = exec("find " . ROOT_PATH . " -type f -name " . $filename . ".php");
+        //  echo "Awwwttempting to side load $filename from path : " . ROOT_PATH . "$path which returns: $stdout<br>";
         return (file_exists($stdout) ?
         require $stdout : false);
     }
@@ -145,13 +149,15 @@ class Application
          */
         spl_autoload_register(function($class)
         {
-            echo "loading $class from :";
+
+            //  echo $class;
             if (strpos($class, "\\")) {
                 $namespace = explode("\\", $class);
                 $class = array_pop($namespace);
             }
             $stdout = exec("find " . ROOT_PATH . " -path admin -prune -o -type f -name " . $class . ".php");
-            echo $stdout . "<br>";
+            Console::log() -> autoloading("Class $class in path: $stdout <br>");
+            //echo " $stdout !<br>";
             return (file_exists($stdout) ?
             require $stdout : false);
         });
@@ -234,11 +240,11 @@ class Application
 
     public function fetchUtilities($utilities = null)
     {
-        if (defined("DEV")) {
-            $this -> suload("Utilities.php");
-            $this -> suload("Console.php");
-        }
-        $this -> load("Extensions.php");
+
+        require ROOT_PATH . "admin/dev/Console/Console.php";
+        $this -> load("Extensions");
+        $this -> load("Error");
+
         if ($utilities) {
             if (file_exists($utilities)) {
                 require $utilities;
@@ -253,8 +259,10 @@ class Application
 
     public function defineConstants(array $key = null)
     {
-        define("DEV", "DEV");
-
+        //        define("DEV", "DEV");
+        if (($_SERVER['REMOTE_ADDR'] == "192.168.1.77")) {
+            define("DEV", true);
+        }
         if (!defined("ROOT_PATH")) {
             define("URL", "http://" . $_SERVER['HTTP_HOST'] . "/");
             define("ROOT_PATH", "/" . trim($_SERVER['DOCUMENT_ROOT'], "skeleton/frontend/www") . "/");
@@ -280,8 +288,10 @@ class Application
     }
 
     // TODO
+    // ACL HOOK
     public function finalizeRoute()
     {
+
         // if (Request::$sub) {
         //    if (Request::$sub !== 'admin') {
         // Redirect that bitch.
@@ -297,9 +307,10 @@ class Application
     public function errorHandler($class)
     {
         if (defined("DEV")) {
-        	xdebug_print_function_stack(); 
+            xdebug_print_function_stack();
+            Console::log() -> error($class);
             die("<h1 style='color:red'>Can't load $class</h1>");
-            Console::log() -> cannotLoad($class);
+
         }
         //Error::_404($class);
         new Error(404, $class);

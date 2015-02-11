@@ -68,8 +68,8 @@ function file_curl_contents($url, $timeout = true)
 
 function loads($filename, $path = null)
 {
-    $stdout = exec("find " . ROOT_PATH . $path . " -type f -path admin/ -prune -name " . $filename);
-    echo "Attempting to side load $filename from path : " . ROOT_PATH . "$path which returns: $stdout<br>";
+    $stdout = exec("find " . ROOT_PATH . $path . " -type f -name " . $filename);
+    //echo "Attempting to side load $filename from path : " . ROOT_PATH . "$path which returns: $stdout<br>";
     return (file_exists($stdout) ?
     require $stdout : false);
 }

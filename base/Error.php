@@ -39,7 +39,7 @@ class Error//extends Response
         //#FIXME
         //$code = trim($func, "_");//, "", $func);
 
-        header("HTTP/1.1 $code " . self::$message[$code]);
+        header("HTTP/1.1 $code " . $this->message[$code]);
 
         if (file_exists($errorPage = VIEW_PATH . "_global/_error/_$code.php")) {
             $message = $args[0];
