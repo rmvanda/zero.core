@@ -13,6 +13,8 @@ class Response
 
     public $viewPath;
 
+    public $isAjax;
+
     //public $config = __CLASS__;
 
     public function __construct()
@@ -20,6 +22,7 @@ class Response
         require ROOT_PATH . "skeleton/_configs/ResponseConfig.php";
         $this -> viewPath = VIEW_PATH;
         $this -> aspect = strtolower(get_class($this));
+       // $this -> config = $this -> getConfig();
     }
 
     public function __call($func, $args)
@@ -40,7 +43,7 @@ class Response
 
     public function isAjax()
     {
-        return $this -> $isAjax ? : $this -> isAjax = (@$_SERVER['HTTP_X_REQUESTED_WITH'] && strtolower(@$_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') ? true : false;
+        return $this -> isAjax ? : $this -> isAjax = (@$_SERVER['HTTP_X_REQUESTED_WITH'] && strtolower(@$_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') ? true : false;
     }
 
     public function render($view)
