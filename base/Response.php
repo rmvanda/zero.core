@@ -13,6 +13,8 @@ class Response
 
     public $viewPath;
 
+    public $isAjax;
+
     //public $config = __CLASS__;
 
     public function __construct()
@@ -40,7 +42,7 @@ class Response
 
     public function isAjax()
     {
-        return $this -> $isAjax ? : $this -> isAjax = (@$_SERVER['HTTP_X_REQUESTED_WITH'] && strtolower(@$_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') ? true : false;
+        return $this -> isAjax ? : $this -> isAjax = (@$_SERVER['HTTP_X_REQUESTED_WITH'] && strtolower(@$_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') ? true : false;
     }
 
     public function render($view)

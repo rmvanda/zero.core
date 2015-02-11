@@ -287,16 +287,17 @@ class Application
         // Redirect that bitch.
         //       return $this;
         //  } elseif (Request::$isElevated) {
-        return new Admin();
+        // return new Admin();
         // }
         //} else {
-        //   return $this;
+        return $this;
         // }
     }
 
     public function errorHandler($class)
     {
-        if (defined(DEV)) {
+        if (defined("DEV")) {
+        	xdebug_print_function_stack(); 
             die("<h1 style='color:red'>Can't load $class</h1>");
             Console::log() -> cannotLoad($class);
         }
