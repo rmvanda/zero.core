@@ -9,9 +9,9 @@
  */
 
 //namespace Zero\Core;
-class Error extends Response
+class Error//extends Response
 {
-    private static $message = array(
+    private $message = array(
         400 => "BAD REQUEST",
         402 => "PAYMENT REQUIRED",
         401 => "NOT AUTHORIZED",
@@ -34,20 +34,27 @@ class Error extends Response
         420 => "ENHANCE YOUR CALM"
     );
 
-    public static function __callStatic($func, $args)
-    {
-        $code = str_replace("_", "", $func);
+    public function __construct($code, $opt = null) {
+        define("VIEW_PATH", ROOT_PATH . "skeleton/frontend/views/");
+        //#FIXME
+        //$code = trim($func, "_");//, "", $func);
+
         header("HTTP/1.1 $code " . self::$message[$code]);
+
         if (file_exists($errorPage = VIEW_PATH . "_global/_error/_$code.php")) {
+            $message = $args[0];
             include $errorPage;
         } else {
-            self::generateErrorPage($code, self::$message[$code]);
+            $this -> generateErrorPage($code, $this -> message[$code]);
             exit();
         }
     }
 
-    public static function JSON()
-    {
+    public static function __callStatic($func, $args) {
+        return new Error(trim($func, "_"), $args);
+    }
+
+    public function JSON() {
 
         switch(json_last_error()) {
             case '' :
@@ -58,8 +65,7 @@ class Error extends Response
         }
     }
 
-    private static function generateErrorPage($code, $message)
-    {
+    private function generateErrorPage($code, $message) {
         echo "
             <!DOCTYPE html>
             <head>
