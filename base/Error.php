@@ -38,7 +38,7 @@ class Error//extends Response
         define("VIEW_PATH", ROOT_PATH . "app/frontend/views/");
         //#FIXME
         //$code = trim($func, "_");//, "", $func);
-
+xdebug_print_function_stack();
         header("HTTP/1.1 $code " . $this->message[$code]);
 
         if (file_exists($errorPage = VIEW_PATH . "_global/_error/_$code.php")) {

@@ -3,13 +3,12 @@
 //namespace Zero;
 //require "../srv/dev/Console.php";
 /*
-use \Request as Request;
-use \Application as Application;
-use \Console as Console;
-*/ 
+ use \Request as Request;
+ use \Application as Application;
+ use \Console as Console;
+ */
 class Admin extends Response//extends Application
 {
-
     public function __construct()
     {
         new Restricted(Request);
@@ -25,6 +24,25 @@ class Admin extends Response//extends Application
             return (file_exists($stdout) ?
             require $stdout : false);
         }, false, true);
+    }
+
+    public function buildHead()
+    {
+    }
+
+    public function buildHeader()
+    {
+
+    }
+
+    public function buildPage()
+    {
+
+    }
+
+    public function buildFooter()
+    {
+
     }
 
     public function run()

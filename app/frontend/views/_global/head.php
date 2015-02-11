@@ -27,7 +27,7 @@
 	  
 	 ?>
 		<meta property="og:type" content="website" />
-		<meta property="og:url" content="http://<?=$_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'] . '?' . $_SERVER['QUERY_STRING'] ?>" />
+		<!--<meta property="og:url" content="http://<?=$_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'] . '?' . $_SERVER['QUERY_STRING'] ?>" />-->
 		<meta property="og:image" content="<?=$pic ?>" />
 		<meta property="og:title" content="<?=$title ?>" />
 		<meta property="og:description" content="<?=$ogDesc ?>" />

@@ -4,7 +4,7 @@
  * @depends on class Table
  *
  */
-class Console// extends Page
+class Console
 {
     public static $instance;
     public $output, $table, $display;

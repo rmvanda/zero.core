@@ -16,16 +16,16 @@ class Application
     {
         // define("DEV", true);
         //@f:off
-           $this -> defineConstants() 
-                -> fetchUtilities()
-                -> registerAutoloaders()
-                -> parseRequest() 
-                -> finalizeRoute()
-                -> run( Request::$aspect, Request::$endpoint, Request::$args );
+        $this -> defineConstants() 
+            -> fetchUtilities()
+            -> registerAutoloaders()
+            -> parseRequest() 
+            -> finalizeRoute()
+            -> run( Request::$aspect, Request::$endpoint, Request::$args );
 
         Console::log() -> maxMemory(xdebug_peak_memory_usage())
-					   -> totalExecutionTime(xdebug_time_index())
-          			   -> display();
+            -> totalExecutionTime(xdebug_time_index())
+            -> display();
         //@f:on
         //Console::output();
 
@@ -45,7 +45,7 @@ class Application
      $aspect = new $name();
      $aspect -> {$args[0]}(Request::$uri);
      }
-     } */
+    } */
 
     public function modprobe(array $modprobe)
     {
@@ -58,31 +58,18 @@ class Application
     public function parseRequest()
     {
         new Request();
-
         return $this;
     }
 
     public function run($aspect, $endpoint, $args)
     {
-        // if (Request::isAccessible()) {
-        //  new Page(Request::$accessible);
-        //} else
-        if (in_array(($aspect = ucfirst($aspect)), get_declared_classes())) {
-            //  trigger_error("You can't do that", E_USER_ERROR);
-            // Error::_403();
+        if (in_array(($aspect = ucfirst($aspect)), get_declared_classes()) && !defined("DEV")) {
             new Error(403);
         } else {
             $aspect = new $aspect();
             $aspect -> endpoint = $endpoint;
             $aspect -> $endpoint($args);
         }
-        /*
-         if (STANDARD || true) {
-         $this -> {Request::$aspect}(Request::$endpoint);
-         } else {$aspect = new Request::$aspect;$aspect -> {Request::$endpoint}();
-         }
-         * */
-
     }
 
     private function friendlyURLConverter($url)
@@ -92,18 +79,17 @@ class Application
 
     public function load($filename, $path = null)
     {
-        $stdout = exec("find " . ROOT_PATH . "core/base/ -type f -name " . $filename . ".php");
+        $stdout = exec("find " . ROOT_PATH . "base/ -type f -name " . $filename . ".php");
         Console::log() -> autoloader("<pre><p>stdout:<p></pre><pre> For $filename: $stdout<pre>");
         return (file_exists($stdout) ?
-        require $stdout : false);
+            require $stdout : false);
     }
 
     public function suload($filename)
     {
         $stdout = exec("find " . ROOT_PATH . " -type f -name " . $filename . ".php");
-        //  echo "Awwwttempting to side load $filename from path : " . ROOT_PATH . "$path which returns: $stdout<br>";
         return (file_exists($stdout) ?
-        require $stdout : false);
+            require $stdout : false);
     }
 
     public function registerAutoloaders($autoloader = null)
@@ -127,20 +113,6 @@ class Application
          * MUFASA - !
          * @version 0.8.2
          *
-         * This is the first truly stable version of MUFASA.
-         * This stability was made possible via dividing the autoloader into 4
-         * parts:
-         *
-         *
-         * It will probably change into a class in the long run, but this is
-         * quite
-         * suitable for the time being.
-         *
-         * AS long as a simple set of standards are adhered to, then this works
-         * flawlessly.
-         * Otherwise, it can be dangerous.
-         *
-         * Be advised!
          *
          */
 
@@ -148,99 +120,26 @@ class Application
          * Loads base classes.
          */
         spl_autoload_register(function($class)
-        {
+                {
 
-            //  echo $class;
-            if (strpos($class, "\\")) {
-                $namespace = explode("\\", $class);
-                $class = array_pop($namespace);
-            }
-            $stdout = exec("find " . ROOT_PATH . " -path admin -prune -o -type f -name " . $class . ".php");
-            Console::log() -> autoloading("Class $class in path: $stdout <br>");
-            //echo " $stdout !<br>";
-            return (file_exists($stdout) ?
-            require $stdout : false);
-        });
-        /*
-         * Loads app classes.
-         *
-         spl_autoload_register(function($class)
-         {
-         return (file_exists($stdout = exec("find ../app/ -type f -name " .
-         $class . ".php")) ?
-         require $stdout : false);
-         });
-         *
-         * Loads plugins/modules
-         *
-         * spl_autoload_register(function($class)
-         {
-         return (file_exists($file = MODULE_PATH . $class . "/" . $class .
-         ".php") ?
-         require $file : false);
-         });
-         *
-         * loads things from the 'lib' folder
-         *
-         spl_autoload_register(function($class)
-         {
-         return (file_exists($stdout = exec("find ../srv/libs/ -type f -name " .
-         $class . ".php")) ?
-         require $stdout : false);
-         });
+                    //  echo $class;
+                    if (strpos($class, "\\")) {
+                        $namespace = explode("\\", $class);
+                        $class = array_pop($namespace);
+                    }
+                    $stdout = exec("find " . ROOT_PATH . " -path admin -prune -o -type f -name " . $class . ".php");
+                    Console::log() -> autoloading("Class $class in path: $stdout <br>");
+                    //echo " $stdout !<br>";
+                    return (file_exists($stdout) ?
+                        require $stdout : false);
+                });
 
-         /*
-         * loads things from the 'dev' folder
-         *
-         if (DEV) {
-         require ROOT_PATH . "srv/dev/Console.php";
-         spl_autoload_register(function($class)
-         {
-         if (strpos($class, "\\")) {
-         $namespace = explode("\\", $class);
-         $class = array_pop($namespace);
-         }
-         $stdout = exec("find ../admin/ -type f -name " . $class . ".php");
-         Console::log() -> mufasa($stdout);
-         return (file_exists($stdout) ?
-         require $stdout : false);
-
-         }, false, true);
-         }
-         */
-        /*
-         spl_autoload_register(function($class)
-         {
-         return (file_exists($stdout = exec("find ../srv/dev/ -type f -name " .
-         $class .
-         ".php")) ?
-         require $stdout : false);
-         });
-
-         // if (Request::$isElevated)
-         // spl_autoload_register(function($class)
-         // {
-         // if (strpos($class, "\\")) {
-         // $namespace = explode("\\", $class);
-         // $class = array_pop($namespace);
-         // }
-         // $stdout = exec("find ../admin/ -type f -name " . $class . ".php");
-         // Console::log() -> mufasa($stdout);
-         // return (file_exists($stdout) ?
-         // require $stdout : false);
-         //
-         // }, false, true);
-         // }
-         */
-
-        // require ROOT_PATH."core/_autoloader.php";
         spl_autoload_register("self::errorHandler");
         return $this;
     }
 
     public function fetchUtilities($utilities = null)
     {
-
         require ROOT_PATH . "admin/dev/Console/Console.php";
         $this -> load("Extensions");
         $this -> load("Error");
@@ -260,7 +159,7 @@ class Application
     public function defineConstants(array $key = null)
     {
         //        define("DEV", "DEV");
-        if (($_SERVER['REMOTE_ADDR'] == "192.168.1.77")) {
+        if (($_SERVER['REMOTE_ADDR'] == "192.168.1.77") || $_SERVER['REMOTE_ADDR'] == "50.199.113.222") {
             define("DEV", true);
         }
         if (!defined("ROOT_PATH")) {
@@ -284,7 +183,7 @@ class Application
          }
          }
          }
-         return $this;*/
+        return $this;*/
     }
 
     // TODO
@@ -316,4 +215,4 @@ class Application
         new Error(404, $class);
     }
 
-}
+     }
