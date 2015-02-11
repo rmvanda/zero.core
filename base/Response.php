@@ -19,7 +19,7 @@ class Response
 
     public function __construct()
     {
-        require ROOT_PATH . "skeleton/_configs/ResponseConfig.php";
+        require ROOT_PATH . "app/_configs/ResponseConfig.php";
         $this -> viewPath = VIEW_PATH;
         $this -> aspect = strtolower(get_class($this));
        // $this -> config = $this -> getConfig();

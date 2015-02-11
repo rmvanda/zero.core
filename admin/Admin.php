@@ -1,17 +1,18 @@
 <?php
 
-namespace Zero;
-require "../srv/dev/Console.php";
-
+//namespace Zero;
+//require "../srv/dev/Console.php";
+/*
 use \Request as Request;
 use \Application as Application;
 use \Console as Console;
-
-class Admin extends Application
+*/ 
+class Admin extends Response//extends Application
 {
 
     public function __construct()
     {
+        new Restricted(Request);
         spl_autoload_register(function($class)
         {
             echo $class;

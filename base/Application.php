@@ -265,7 +265,7 @@ class Application
         }
         if (!defined("ROOT_PATH")) {
             define("URL", "http://" . $_SERVER['HTTP_HOST'] . "/");
-            define("ROOT_PATH", "/" . trim($_SERVER['DOCUMENT_ROOT'], "skeleton/frontend/www") . "/");
+            define("ROOT_PATH", "/" . trim($_SERVER['DOCUMENT_ROOT'], "app/frontend/www") . "/");
             //^fuck
         }
         if ($key) {
@@ -276,9 +276,9 @@ class Application
 
         return $this;
         /*
-         foreach (scandir(ROOT_PATH."skeleton/_configs/") as $ini) {
+         foreach (scandir(ROOT_PATH."app/_configs/") as $ini) {
          if ($ini != "." && $ini != "..") {
-         foreach (parse_ini_file(ROOT_PATH."skeleton/_configs/".$ini, false,
+         foreach (parse_ini_file(ROOT_PATH."app/_configs/".$ini, false,
          INI_SCANNER_RAW) as $constant => $value) {
          define($constant, ($ini == "paths.ini" ? ROOT_PATH : "") . $value);
          }

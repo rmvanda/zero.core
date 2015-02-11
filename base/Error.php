@@ -35,7 +35,7 @@ class Error//extends Response
     );
 
     public function __construct($code, $opt = null) {
-        define("VIEW_PATH", ROOT_PATH . "skeleton/frontend/views/");
+        define("VIEW_PATH", ROOT_PATH . "app/frontend/views/");
         //#FIXME
         //$code = trim($func, "_");//, "", $func);
 
