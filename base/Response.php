@@ -17,7 +17,7 @@ class Response {
 		if (file_exists($vp = ROOT_PATH . "opt/" . get_class($this) . "/view/")) {
 			$this -> viewPath = $vp;
 		} else {
-			$this -> viewPath = VIEW_PATH //ROOT_PATH . "app/frontend/views/";
+			$this -> viewPath = VIEW_PATH; //ROOT_PATH . "app/frontend/views/";
 		}
 	}
 
