@@ -167,6 +167,7 @@ class Application
             define("ROOT_PATH", "/" . trim($_SERVER['DOCUMENT_ROOT'], "app/frontend/www") . "/");
             //^fuck
         }
+		define("VIEW_PATH", ROOT_PATH."app/frontend/views/");
         if ($key) {
             foreach ($key as $k => $v) {
                 define($k, $v);
@@ -187,7 +188,7 @@ class Application
     }
 
     // TODO
-    // ACL HOOK
+    // ACL HOOK?
     public function finalizeRoute()
     {
 

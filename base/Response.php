@@ -17,7 +17,7 @@ class Response {
 		if (file_exists($vp = ROOT_PATH . "opt/" . get_class($this) . "/view/")) {
 			$this -> viewPath = $vp;
 		} else {
-			$this -> viewPath = ROOT_PATH . "app/frontend/views/";
+			$this -> viewPath = VIEW_PATH //ROOT_PATH . "app/frontend/views/";
 		}
 	}
 
@@ -72,11 +72,11 @@ class Response {
 	}
 
 	public function buildHead() {
-		include VIEW_PATH . "_global/head.php";
+		include $this -> viewPath . "_global/head.php";
 	}
 
 	public function buildHeader() {
-		include VIEW_PATH . "_global/header.php";
+		include $this -> viewPath . "_global/header.php";
 	}
 
 	public function getPage($page) {
@@ -84,7 +84,7 @@ class Response {
 	}
 
 	public function buildFooter() {
-		include VIEW_PATH . "_global/footer.php";
+		include $this -> viewPath . "_global/footer.php";
 	}
 
 	/**
