@@ -34,7 +34,11 @@ class Application {
 		if (in_array(($aspect = ucfirst($aspect)), get_declared_classes()) && !defined("DEV")) {
 			new Error(403);
 		} else {
-			$aspect = new $aspect();
+			if (loads($aspect)) {
+				$aspect = new $aspect();
+			} else {
+				$aspect = new Response();
+			}
 			$aspect -> endpoint = $endpoint;
 			$aspect -> $endpoint($args);
 		}
