@@ -6,55 +6,47 @@
 		public $aspect;
 		public $endpoint, $model, $viewPath, $isAjax;
 
-		public function __construct()
+		public function __construct($standalone = false)
 		{
-			//$this -> aspect = strtolower(get_class($this));
-			$this -> aspect = get_class($this);
-			$this -> defineViewPath();
+			if ($standalone) {
+				$this -> aspect = $standalone;
+				$this -> viewPath = VIEW_PATH;
+			}
+
 		}
 
-		public function defineViewPath()
+		public function defineBaseViewPath()
 		{
-			if (file_exists($vp = ROOT_PATH . "opt/" . get_class($this) . "/view/")) {
+			if (file_exists($vp = ROOT_PATH . "opt/" . get_class($this) . "/views/")) {
+				$this -> viewPath = ROOT_PATH . "opt/";
+			} elseif (file_exists($vp = ROOT_PATH . "app/modules/" . get_class($this) . "/views/")) {
 				$this -> viewPath = $vp;
 			} else {
 				$this -> viewPath = VIEW_PATH;
-				//ROOT_PATH . "app/frontend/views/";
 			}
 		}
 
 		public function __call($func, $args)
 		{
-			echo "Function(aspect): $func<br> ";
-			
-			//echo "This aspect : ".$this->aspect; echo "This endpoint:". $this->endpoint;
-			if (file_exists($view = $this -> viewPath . $this -> aspect . "/" . $this -> endpoint . ".php")) {
+			if (file_exists($view = ROOT_PATH . "app/modules/" . $this -> aspect . "/views/" . $this -> endpoint . ".php") || file_exists($view = ROOT_PATH . "opt/plugins/Zero/" . $this -> aspect . "/" . $this -> endpoint . ".php") || file_exists($view = VIEW_PATH . $this -> aspect . "/" . $this -> endpoint . ".php")) {
 				$this -> render($view);
 			} else {
-				die($view); 
+
 				new Error(404, "$func is not a valid thing");
 			}
-
-		}
-
-		public function isAjax()
-		{
-			return $this -> isAjax ? : $this -> isAjax = (@$_SERVER['HTTP_X_REQUESTED_WITH'] && strtolower(@$_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') ? true : false;
 		}
 
 		public function render($view)
 		{
-			if ($this -> isAjax()) {
+			if (isAjax()) {
 				$this -> getPage($view);
 			} else {
 				$this -> build($view);
 			}
 		}
 
-		public function __get($prop)// Nah, cool.
+		public function __get($prop)
 		{
-			// Optimized for your viewing pleasure
-			
 			if ($prop == 'model') {
 				if (!$this -> _default_model) {
 					$model_name = get_class($this) . '_Model';
@@ -70,10 +62,6 @@
 			return $this -> {$prop};
 		}
 
-		// This is the kind of thing where Zero would benefit from Origami.
-		//
-		// Yeah, you're right !
-		//
 		public function build($view)
 		{
 			$this -> buildHead();

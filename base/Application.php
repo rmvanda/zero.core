@@ -9,15 +9,26 @@
 
 		private $aspect;
 		private $endpoint;
-
+		public $request;
 		private $subdomain = array();
 
 		public function __construct()
 		{
-			session_start(); 
+			session_start();
 			//@f:off
-		$this -> defineConstants() -> fetchUtilities() -> registerAutoloaders() -> parseRequest() -> finalizeRoute() -> run(Request::$aspect, Request::$endpoint, Request::$args);
-		Console::log() -> maxMemory(xdebug_peak_memory_usage()) -> totalExecutionTime(xdebug_time_index()) -> display();
+			$this -> defineConstants()
+				  -> fetchUtilities() 
+				  -> registerAutoloaders() 
+				  -> parseRequest() 
+				  -> finalizeRoute() 
+				  -> run(
+					  	$this->request->aspect, 
+					  	$this->request->endpoint, 
+					  	$this->request->args
+					);
+		//	Console::log() -> maxMemory(xdebug_peak_memory_usage()) 
+		//				   -> totalExecutionTime(xdebug_time_index()) 
+		//				   -> display();
 		//@f:on
 		}
 
@@ -31,7 +42,8 @@
 
 		public function parseRequest()
 		{
-			new Request();
+			$this -> request = new Request();
+			//print_x($this -> request);
 			return $this;
 		}
 
@@ -43,10 +55,10 @@
 				if (loads($aspect)) {
 					$aspect = new $aspect();
 				} else {
-					$aspect = new Response();
+					$aspect = new Response(strtolower($aspect));
 				}
 				$aspect -> endpoint = $endpoint;
-				$aspect -> $endpoint($args);
+				$aspect -> {$endpoint}($args);
 			}
 		}
 
@@ -57,8 +69,9 @@
 
 		public function load($filename, $path = null)
 		{
-			$stdout = exec("find " . ROOT_PATH . "core/base/ -type f -name " . $filename . ".php");
-			Console::log() -> autoloader("<pre><p>stdout:<p></pre><pre> For $filename: $stdout<pre>");
+			$stdout = exec("find " . ROOT_PATH . ' -not -iwholename "*admin*" -type f -name ' . $filename . ".php");
+			//Console::log() -> autoloader("<pre><p>stdout:<p></pre><pre> For $filename:
+			// $stdout<pre>");
 			return (file_exists($stdout) ?
 			require $stdout : false);
 		}
@@ -100,8 +113,8 @@
 					$namespace = explode("\\", $class);
 					$class = array_pop($namespace);
 				}
-				$stdout = exec("find " . ROOT_PATH . " -path admin -prune -o -type f -name " . $class . ".php");
-				Console::log() -> autoloading("Class $class in path: $stdout <br>");
+				$stdout = exec("find " . ROOT_PATH . ' -not -iwholename "*admin*" -type f -name ' . $class . ".php");
+				//	Console::log() -> autoloading("Class $class in path: $stdout <br>");
 				//echo " $stdout !<br>";
 				return (file_exists($stdout) ?
 				require $stdout : false);
@@ -113,8 +126,8 @@
 
 		public function fetchUtilities($utilities = null)
 		{
-			require ROOT_PATH . "admin/dev/Console/Console.php";
 
+			require ROOT_PATH . "admin/dev/Console/Console.php";
 			$this -> load("Extensions");
 			$this -> load("Error");
 
@@ -141,6 +154,15 @@
 				//^fuck FIXME
 			}
 			define("VIEW_PATH", ROOT_PATH . "app/frontend/views/");
+
+			foreach (scandir(ROOT_PATH."app/_configs/") as $ini) {
+				if ($ini != "." && $ini != "..") {
+					foreach (parse_ini_file(ROOT_PATH."app/_configs/".$ini, false, INI_SCANNER_RAW) as $constant => $value) {
+						define($constant, ($ini == "paths.ini" ? ROOT_PATH : "") . $value);
+					}
+				}
+			}
+
 			if ($key) {
 				foreach ($key as $k => $v) {
 					define($k, $v);
@@ -153,6 +175,22 @@
 		// ACL HOOK?
 		public function finalizeRoute()
 		{
+
+			if ($_SERVER['HTTP_HOST'] != PRIMARY_DOMAIN) {
+				if ($_SERVER['HTTP_HOST'] != ADMIN_DOMAIN) {//|| $_SERVER['HTTP_HOST'] !=
+					// MOD_DOMAIN)
+					header("Location: " . $this -> request -> protocol . "://" . PRIMARY_DOMAIN);
+					exit();
+				} else {
+					if (!$this -> request -> access) {// -> granted) {
+						header("Location: " . $this -> request -> protocol . "://" . PRIMARY_DOMAIN);
+						exit();
+					} else {
+						$this -> suload("Admin");
+						return new Admin();
+					}
+				}
+			}
 			return $this;
 		}
 
@@ -162,7 +200,6 @@
 				xdebug_print_function_stack();
 				Console::log() -> error($class);
 				die("<h1 style='color:red'>Can't load $class</h1>");
-
 			}
 			new Error(404, $class);
 		}
