@@ -16,6 +16,9 @@
 		{
 			session_start();
 			//@f:off
+			ini_set("display_errors", "On");
+			error_reporting(-1 & ~E_NOTICE); 
+			
 			$this -> defineConstants()
 				  -> fetchUtilities() 
 				  -> registerAutoloaders() 
@@ -30,6 +33,9 @@
 		//				   -> totalExecutionTime(xdebug_time_index()) 
 		//				   -> display();
 		//@f:on
+		//	Console::setRequest($this -> request -> aspect, $this -> request -> endpoint, $this -> request -> args);
+		//	Console::saveAutoLoadLog();
+
 		}
 
 		public function modprobe(array $modprobe)
@@ -69,18 +75,31 @@
 
 		public function load($filename, $path = null)
 		{
-			$stdout = exec("find " . ROOT_PATH . ' -not -iwholename "*admin*" -type f -name ' . $filename . ".php");
+
+			if (loads($filename)) {
+				return true;
+			} else {
+				return false;
+			}
+			//	$stdout = exec("find " . ROOT_PATH . ' -not -iwholename "*admin*" -type f
+			// -name ' . $filename . ".php");
 			//Console::log() -> autoloader("<pre><p>stdout:<p></pre><pre> For $filename:
 			// $stdout<pre>");
-			return (file_exists($stdout) ?
-			require $stdout : false);
+			//		return (file_exists($stdout) ?
+			//	require $stdout : false);
 		}
 
 		public function suload($filename)
 		{
-			$stdout = exec("find " . ROOT_PATH . " -type f -name " . $filename . ".php");
-			return (file_exists($stdout) ?
-			require $stdout : false);
+
+			if (suloads($filename)) {
+				return true;
+			} else {
+				return false;
+			}
+			//$stdout = exec("find " . ROOT_PATH . " -type f -name " . $filename . ".php");
+			//return (file_exists($stdout) ?
+			//require $stdout : false);
 		}
 
 		public function registerAutoloaders($autoloader = null)
@@ -99,11 +118,12 @@
 					}
 				}
 			}
+			spl_autoload_register("self::load"); 
 			/**
 			 * Maximally Underwritten Fast As Shit Autoloader Array
 			 * MUFASA - !
 			 * @version 0.8.2
-			 */
+			 *
 
 			spl_autoload_register(function($class)
 			{
@@ -119,7 +139,7 @@
 				return (file_exists($stdout) ?
 				require $stdout : false);
 			});
-
+*/
 			spl_autoload_register("self::errorHandler");
 			return $this;
 		}
@@ -128,8 +148,9 @@
 		{
 
 			require ROOT_PATH . "admin/dev/Console/Console.php";
-			$this -> load("Extensions");
-			$this -> load("Error");
+			require __DIR__ . "/Extensions.php";
+			require __DIR__ . "/../defaults/Error/Error.php";
+			//loads("Error");
 
 			if ($utilities) {
 				if (file_exists($utilities)) {

@@ -71,7 +71,7 @@
 	function loads($filename, $path = null)
 	{
 		$stdout = exec("find " . ROOT_PATH . $path . ' -not -iwholename "*admin*" -type f -name ' . $filename . ".php");
-		echo "Attempting to load $filename from $stdout<br>";
+		Console::log() -> loading($filename, $stdout);
 		return (file_exists($stdout) ?
 		require $stdout : false);
 	}
@@ -79,14 +79,9 @@
 	function suloads($filename, $path = null)
 	{
 		$stdout = exec("find " . ROOT_PATH . $path . '  -iwholename "*admin*" -type f -name ' . $filename . ".php");
-		//echo "Attempting to load $filename from $stdout<br>";
+		Console::log() -> suloading($filename, $stdout);
 		return (file_exists($stdout) ?
 		require $stdout : false);
-	}
-	
-	function pyramid($load){//Hmm... 
-		$include = find($load);
-		$include ? include $include : "";
 	}
 
 	function find($file, $path = null)
@@ -95,12 +90,20 @@
 		return (file_exists($stdout) ? $stdout : false);
 	}
 
+	function pyramid($load)
+	{
+		//Hmm...
+		$include = find($load);
+		$include ?
+		include $include : "";
+	}
+
 	function isAjax()
 	{
 		//@f:off
 	        return 
 	          (
-	             @$_SERVER['HTTP_X_REQUESTED_WITH'] && 
+	             @$_SERVER['HTTP_X_REQUESTED_WITH'] && 	
 	             strtolower(@$_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest'
 			   ) 
 	         ? true : false;

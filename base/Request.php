@@ -17,6 +17,7 @@
 		 *   |---------|             |                             |
 		 */
 		public $uri;
+		public static $guri; 
 		private $url, $protocol, $queryString, $sub, $subdomain, $domain, $aspect, $endpoint, $args, $uriArray, $isAjax, $basePath;
 		public $isElevated;
 		public $authorized;
@@ -26,7 +27,7 @@
 
 		public function __construct()
 		{
-			$this -> uri = trim(strtok($_SERVER['REQUEST_URI'], "?"), "/");
+			Request::$guri = $this -> uri = trim(strtok($_SERVER['REQUEST_URI'], "?"), "/");
 
 			if (!$this -> uri) {
 				$this -> uri = 'index/index';
