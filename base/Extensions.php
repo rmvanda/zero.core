@@ -83,6 +83,11 @@
 		return (file_exists($stdout) ?
 		require $stdout : false);
 	}
+	
+	function pyramid($load){//Hmm... 
+		$include = find($load);
+		$include ? include $include : "";
+	}
 
 	function find($file, $path = null)
 	{
