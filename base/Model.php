@@ -13,8 +13,9 @@ class Model
 
     public function __construct()
     {
-        if (!class_exists("ZXC")) {
-            require ZXC;
+    	echo "Hello! ";
+        //if (!class_exists("ZXC")) {
+            //require ZXC;
             $db_config = array(
                 "HOST" => HOST,
                 "NAME" => NAME,
@@ -22,7 +23,10 @@ class Model
                 "PASS" => PASS
             );
             ZXC::INIT($db_config);
-        }
+        //}
+        print_x($db_config);
+		die();
+		 
     }
 
 }
