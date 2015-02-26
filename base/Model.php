@@ -1,32 +1,27 @@
 <?php
-/**
- * Model Class
- * This class simply establishes a connection to the database, generically.
- * Any other generic model functions can go here.
- *
- * @version 1.0
- *
- * */
+	/**
+	 * Model Class
+	 * This class simply establishes a connection to the database, generically.
+	 * Any other generic model functions can go here.
+	 *
+	 * @version 1.0
+	 *
+	 * */
 
-class Model
-{
+	class Model
+	{
 
-    public function __construct()
-    {
-    	echo "Hello! ";
-        //if (!class_exists("ZXC")) {
-            //require ZXC;
-            $db_config = array(
-                "HOST" => HOST,
-                "NAME" => NAME,
-                "USER" => USER,
-                "PASS" => PASS
-            );
-            ZXC::INIT($db_config);
-        //}
-        print_x($db_config);
-		die();
-		 
-    }
+		public function __construct()
+		{
+			if (!class_exists("ZXC", false)) {
+				$db_config = array(
+					"HOST" => HOST,
+					"NAME" => NAME,
+					"USER" => USER,
+					"PASS" => PASS
+				);
+				ZXC::INIT($db_config);
+			}
+		}
 
-}
+	}
