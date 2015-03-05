@@ -14,7 +14,8 @@
 
         public function __construct()
         {
-            session_start(); // Since we are not currently using the client class
+            session_start();
+            // Since we are not currently using the client class
             //@f:off
 			ini_set("display_errors", "On");
 			error_reporting(-1 & ~E_NOTICE); 
@@ -204,6 +205,20 @@
                         $this -> suload("Admin");
                         return new Admin();
                     }
+                }
+                /**
+                 * APP_MODE simply designated that this Application should act
+                 * like an app
+                 * and force the user to login if they want to do anything -
+                 * otherwise, display a page,
+                 * or take some action - (perhaps redirect to an info.domain.com
+                 * which is not running Zero)
+                 *
+                 */
+            } elseif (defined("APP_MODE") && APP_MODE == true) {
+                if (!$_SESSION['uid']) {
+                    //include VIEW_PATH."_global/login.html";
+                    //	exit();
                 }
             }
             return $this;
