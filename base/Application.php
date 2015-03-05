@@ -14,7 +14,7 @@
 
         public function __construct()
         {
-            session_start();
+            session_start(); // Since we are not currently using the client class
             //@f:off
 			ini_set("display_errors", "On");
 			error_reporting(-1 & ~E_NOTICE); 
