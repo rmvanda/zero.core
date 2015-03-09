@@ -190,22 +190,13 @@
         // ACL HOOK?
         public function finalizeRoute()
         {
+            if ($_SERVER['HTTP_HOST'] != PRIMARY_DOMAIN && !$this -> request -> access) {
+                header("Location: " . $this -> request -> protocol . "://" . PRIMARY_DOMAIN);
+                exit();
+            } elseif ($_SERVER['HTTP_HOST'] == ADMIN_DOMAIN) {
+                $this -> suload("Admin");
+                return new Admin();
 
-            if ($_SERVER['HTTP_HOST'] != PRIMARY_DOMAIN) {
-                if ($_SERVER['HTTP_HOST'] != ADMIN_DOMAIN) {//||
-                    // $_SERVER['HTTP_HOST'] !=
-                    // MOD_DOMAIN)
-                    header("Location: " . $this -> request -> protocol . "://" . PRIMARY_DOMAIN);
-                    exit();
-                } else {
-                    if (!$this -> request -> access) {// -> granted) {
-                        header("Location: " . $this -> request -> protocol . "://" . PRIMARY_DOMAIN);
-                        exit();
-                    } else {
-                        $this -> suload("Admin");
-                        return new Admin();
-                    }
-                }
                 /**
                  * APP_MODE simply designated that this Application should act
                  * like an app
@@ -215,11 +206,9 @@
                  * which is not running Zero)
                  *
                  */
-            } elseif (defined("APP_MODE") && APP_MODE == true) {
-                if (!$_SESSION['uid']) {
-                    //include VIEW_PATH."_global/login.html";
-                    //	exit();
-                }
+            } elseif (!$_SESSION['uid'] && defined("APP_MODE") && APP_MODE == true && $this -> request -> aspect != "auth") {
+                include VIEW_PATH . "_global/login.html";
+                exit();
             }
             return $this;
         }
