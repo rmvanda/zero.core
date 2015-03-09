@@ -206,9 +206,10 @@
                  * which is not running Zero)
                  *
                  */
-            } elseif (!$_SESSION['uid'] && defined("APP_MODE") && APP_MODE == true && $this -> request -> aspect != "auth") {
-                include VIEW_PATH . "_global/login.html";
-                exit();
+          //  } elseif (!$_SESSION['uid'] && defined("APP_MODE") && APP_MODE == true && $this -> request -> aspect != "auth") {
+            //	header("Location: /auth/login");
+                //include VIEW_PATH . "_global/login.html";
+              //  exit();
             }
             return $this;
         }
