@@ -28,12 +28,17 @@
 
         public function __call($func, $args)
         {
+            $this->endpoint = strtolower($this->endpoint); // Maybe this should go elsewhere?
             //@f:off
 	        if (file_exists($view = ROOT_PATH . "app/modules/" . $this -> aspect . "/views/" . $this -> endpoint . ".php") 
 	        || file_exists($view = ROOT_PATH . "opt/plugins/Zero/" . $this -> aspect . "/" . $this -> endpoint . ".php") 
-	        || file_exists($view = VIEW_PATH . $this -> aspect . "/" . $this -> endpoint . ".php")) {
+	        || file_exists($view = VIEW_PATH . $this -> aspect . "/" . $this -> endpoint . ".php")
+            || file_exists($view = ROOT_PATH."opt/modules/".$this->aspect."/views/".$this->endpoint.".php")) {
 	            $this -> render($view);
+                //Someone mentioned "Hey, that isn't right! you set $view to 5 different things, how is that supposed to work? 
+                // Well, as soon as file_exists returns true, it jumps to this line, and works exactly as expected. 
     	    } else { //@f:on
+                die("$view"); 
                 new Error(404, "$func is not a valid thing");
             }
         }
