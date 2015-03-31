@@ -198,7 +198,8 @@
                 header("Location: " . $this -> request -> protocol . "://" . PRIMARY_DOMAIN);
                 exit();
             } elseif ($_SERVER['HTTP_HOST'] == ADMIN_DOMAIN) {
-                echo "Suload says: ". $this -> suload("Admin");
+//                echo "Suload says: ".
+                $this -> suload("Admin");
                 return new Admin();
 
                 /**
@@ -217,7 +218,6 @@
             }
             return $this;
         }
-
         public function errorHandler($class)
         {
             if (defined("DEV")) {
