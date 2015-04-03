@@ -37,6 +37,10 @@
         return (date("Y-m-d", $timestamp) == date("Y-m-d", time()) ? date("H:i:s", $timestamp) : date("Y-m-d", $timestamp));
     }
 
+    function getAge($bday){
+        return date_create($bday)->diff(date_create('today'))->y;  
+    }
+
     /** */
     function curlImg($img, $imgPath)
     {
