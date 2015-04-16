@@ -11,7 +11,7 @@
             if ($standalone) {
                 $this -> aspect = $standalone;
             }
-
+                new Model; // if the model is already instantiated, the model class handles this. 
                 $this -> viewPath = VIEW_PATH;
         }
 
