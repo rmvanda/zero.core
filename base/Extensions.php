@@ -83,7 +83,7 @@
     function sufind($file, $path = null)
     {
         $stdout = exec("find " . ROOT_PATH . $path . '  -iwholename "*admin*" -type f -name ' . $file . ".php");
-        echo "SuFind Found: $stdout"; 
+        echo "SuFind Found: $stdout, while looking for $file<br>"; 
         return (file_exists($stdout) ? $stdout : false);
     }
 
