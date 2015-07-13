@@ -63,7 +63,7 @@
                 if (loads($aspect)) {
                     $aspect = new $aspect();
                 } else {
-                    $aspect = new Response(strtolower($aspect));
+                    $aspect = new Response(false, strtolower($aspect));
                 }
                 $aspect->aspect = $aspectName; // well, this is redundant. 
                 // Request:: was a way more elegant way of handling this... 
@@ -194,7 +194,9 @@
         // ACL HOOK?
         public function finalizeRoute()
         {
+            return $this ; // your AC is no good here
             if ($_SERVER['HTTP_HOST'] != PRIMARY_DOMAIN && !$this -> request -> access) {
+
                 header("Location: " . $this -> request -> protocol . "://" . PRIMARY_DOMAIN);
                 exit();
             } elseif ($_SERVER['HTTP_HOST'] == ADMIN_DOMAIN) {

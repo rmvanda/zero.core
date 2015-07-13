@@ -11,10 +11,10 @@
 	class Model
 	{
 
-		public function __construct()
+		public function __construct($alt_config=null)
 		{
 			if (!class_exists("ZXC", false)) {
-				$db_config = array(
+				$db_config = $alt_config ?: array(
 					"HOST" => HOST,
 					"NAME" => NAME,
 					"USER" => USER,

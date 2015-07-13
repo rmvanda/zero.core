@@ -6,12 +6,17 @@
         public $aspect;
         public $endpoint, $model, $viewPath, $isAjax;
 
-        public function __construct($standalone = false)
+        public function __construct($altconfig = null, $standalone = false)
         {
             if ($standalone) {
                 $this -> aspect = $standalone;
             }
+
+            if(!$altconfig || !is_array($altconfig)){
                 new Model; // if the model is already instantiated, the model class handles this. 
+            } else {
+                new Model($altconfig); 
+            }    
                 $this -> viewPath = VIEW_PATH;
         }
 
