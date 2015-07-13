@@ -15,6 +15,9 @@ class Request
     public $uri;
     public static $guri;
     private $url, $protocol, $queryString, $sub, $subdomain, $domain, $aspect, $endpoint, $args, $uriArray, $isAjax, $basePath;
+
+   // public static $endpoint; XXX FIXME FUUUUUCK 
+    
     public $isElevated;
     public $authorized;
     public $accessLevel;
