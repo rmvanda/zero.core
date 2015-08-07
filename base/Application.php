@@ -17,9 +17,6 @@
             session_start();
             // Since we are not currently using the client class
             //@f:off
-			ini_set("display_errors", "On");
-			error_reporting(-1 & ~E_NOTICE); 
-			
 			$this -> defineConstants()
 				  -> fetchUtilities() 
 				  -> registerAutoloaders() 
@@ -167,17 +164,27 @@
             if (($_SERVER['REMOTE_ADDR'] == "192.168.1.77") || $_SERVER['REMOTE_ADDR'] == "50.199.113.222") {
                 define("DEV", true);
             }
+
             if (!defined("ROOT_PATH")) {
                 define("URL", "http://" . $_SERVER['HTTP_HOST'] . "/");
-                define("ROOT_PATH", "/" . trim($_SERVER['DOCUMENT_ROOT'], "app/frontend/www") . "/");
-                //^fuck FIXME
+                $root_path = explode("core", __DIR__ );
+                define("ROOT_PATH", $root_path[0]) ;
             }
+
             define("VIEW_PATH", ROOT_PATH . "app/frontend/views/");
 
             foreach (scandir(ROOT_PATH."app/_configs/") as $ini) {
                 if ($ini != "." && $ini != "..") {
-                    foreach (parse_ini_file(ROOT_PATH."app/_configs/".$ini, false, INI_SCANNER_RAW) as $constant => $value) {
-                        define($constant, ($ini == "paths.ini" ? ROOT_PATH : "") . $value);
+                    foreach (
+                            parse_ini_file(
+                                ROOT_PATH."app/_configs/".$ini,
+                                false, 
+                                INI_SCANNER_RAW
+                            ) 
+                        as $constant => $value) {
+
+                            define($constant, ($ini == "paths.ini" ? ROOT_PATH : "") . $value);
+
                     }
                 }
             }
