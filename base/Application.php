@@ -37,9 +37,19 @@
 
         }
 
+
+       /*
+        * @function modprobe 
+        * Simply @defines found in @arg $modprobe#array 
+        * This allows you to define flags for turning features on and off in your modules, 
+        * all on the fly - and at the index-level. 
+        * @chains 
+        *
+        */
+
         public function modprobe(array $modprobe)
         {
-            foreach ($modprobe as $module) {
+            foreach ($modprobe?:array() as $module) {
                 define(strtoupper($module), true);
             }
             return $this;
