@@ -169,8 +169,7 @@
             }
             if (!defined("ROOT_PATH")) {
                 define("URL", "http://" . $_SERVER['HTTP_HOST'] . "/");
-                define("ROOT_PATH", "/" . trim($_SERVER['DOCUMENT_ROOT'], "app/frontend/www") . "/");
-                //^fuck FIXME
+                define("ROOT_PATH", str_replace("app/frontend/www", "", $_SERVER['DOCUMENT_ROOT']) . "/");
             }
             define("VIEW_PATH", ROOT_PATH . "app/frontend/views/");
 
