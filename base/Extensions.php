@@ -90,9 +90,7 @@
     function loads($filename, $path = null)
     {
         $stdout = find($filename, $path);
-        //exec("find " . ROOT_PATH . $path . ' -not -iwholename "*admin*" -type f
-        // -name ' . $filename . ".php");
-        Console::log() -> loading($filename, $stdout);
+        //Console::log() -> loading($filename, $stdout);
         return (file_exists($stdout) ?
         require $stdout : false);
     }
