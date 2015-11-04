@@ -14,23 +14,30 @@ class Request
      */
     public $uri;
     public static $guri;
-    private $url, $protocol, $queryString, $sub, $subdomain, $domain, $aspect, $endpoint, $args, $uriArray, $isAjax, $basePath;
+    private $url, 
+            $protocol, 
+            $queryString, 
+            $sub, $subdomain, 
+            $domain, 
+            $aspect, $endpoint, $args, 
+            $uriArray, 
+            $isAjax, 
+            $basePath;
 
-   // public static $endpoint; XXX FIXME FUUUUUCK 
     
     public $isElevated;
     public $authorized;
     public $accessLevel;
+
     private $status;
     private static $instance;
-
-
 
     public function __construct()
 
     {
         Request::$instance = $this; 
-        Request::$guri = $this -> uri = trim(strtok($_SERVER['REQUEST_URI'], "?"), "/");
+        Request::$guri = $this -> uri = trim(
+                 strtok($_SERVER['REQUEST_URI'], "?"), "/");
 
         if (!$this -> uri) {
             $this -> uri = 'index/index';
@@ -58,34 +65,54 @@ class Request
     {
         switch($prop) {
             case 'aspect' :
-                return $this -> aspect ? : $this -> aspect = $this -> uriArray[0];
+                return $this -> aspect ? :
+                       $this -> aspect = $this -> uriArray[0];
                 break;
             case 'endpoint' :
-                return $this -> endpoint ? : $this -> endpoint = $this -> uriArray[1] ? : "index";
+                return $this -> endpoint ? : 
+                       $this -> endpoint = $this -> uriArray[1] ? : "index";
                 break;
             case 'protocol' :
-                return $this -> protocol ? : $this -> protocol = $_SERVER['SERVER_PORT'] == 80 ? "http" : "https";
+                return $this -> protocol ? :
+                       $this -> protocol = $_SERVER['SERVER_PORT'] == 80 ? 
+                       "http" : "https";
                 break;
             case 'domain' :
-                return $this -> domain ? : $this -> domain = $_SERVER['HTTP_HOST'];
+                return $this -> domain ? : 
+                       $this -> domain = $_SERVER['HTTP_HOST'];
                 break;
             case 'url' :
-                return $this -> url ? : $this -> url = $_SERVER['HTTP_HOST'] . $this -> uri;
+                return $this -> url ? : 
+                       $this -> url = $_SERVER['HTTP_HOST'] . $this -> uri;
                 break;
             case "args" :
-                $args = array_slice($this -> uriArray, 2);
-                return $args;
-                vreak;
+                return $this -> args ? : 
+                       $this -> args = array_slice($this -> uriArray, 2);
+                break;
             case "uri" :
                 return $this -> uri;
                 break;
             case "subdomain" :
-                return implode(".", array_reverse(array_slice(array_reverse(explode(".", $_SERVER['HTTP_HOST'])), 2)));
+                return implode(".", 
+                        array_reverse(
+                            array_slice(
+                                array_reverse(
+                                    explode(".", $_SERVER['HTTP_HOST'])), 2)));
                 //array_slice(explode(".",$_SERVER['HTTP_HOST'],0,-2))
+                // This portion does the hokeyPokey instead of the 1 line above
+                // In order to accomodate instances of subdomains like: 
+                // some.stupid.long.cdn.directory.chain.whatever.domain.com 
+                // in which case, the module leveraging that can be aware of
+                // the .'s imbetween - and act accordingly. 
+                break;
+            case "method" : 
+                return (empty($_POST) && count($_POST) === 0 ) ? 
+                       "GET" : "POST";
                 break;
             case "isAccessible" :
             case "access" :
-                return $this -> isAccessible ? : $this -> isAccessible = new Restricted();
+                return $this -> isAccessible ? : 
+                       $this -> isAccessible = new Restricted(); // REVIEW
                 break;
         }
     }

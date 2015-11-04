@@ -64,7 +64,9 @@
 
         public function run($aspect, $endpoint, $args)
         {
-            if (in_array(($aspect = $aspectName = ucfirst($aspect)), get_declared_classes()) && !defined("DEV")) {
+            if (in_array(($aspect = ucfirst($aspect)), get_declared_classes()) 
+                && !defined("DEV")
+               ){
                 new Error(403);
             } else {
                 if (loads($aspect)) {
@@ -72,7 +74,7 @@
                 } else {
                     $aspect = new Response(false, strtolower($aspect));
                 }
-                $aspect->aspect = $aspectName; // well, this is redundant. 
+                $aspect->aspect = $aspect; // well, this is redundant. 
                 // Request:: was a way more elegant way of handling this... 
 
                 $aspect -> endpoint = $endpoint;

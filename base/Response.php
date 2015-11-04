@@ -17,7 +17,8 @@
             } else {
                 new Model($altconfig); 
             }    
-                $this -> viewPath = VIEW_PATH;
+            $this -> viewPath = VIEW_PATH;
+            //XXX FIXME - Should only set viewPath if it is standalone - - - 
         }
 
         public function defineBaseViewPath()
@@ -39,12 +40,10 @@
 	        if (file_exists($view= $viem = ROOT_PATH . "app/modules/" . ucfirst($this -> aspect) . "/views/" . $this -> endpoint . ".php") 
 	        || file_exists($view = ROOT_PATH . "opt/plugins/Zero/" . $this -> aspect . "/" . $this -> endpoint . ".php") 
 	        || file_exists($view = VIEW_PATH . $this -> aspect . "/" . $this -> endpoint . ".php")
-            || file_exists($view = ROOT_PATH."opt/modules/".ucfirst($this->aspect)."/views/".$this->endpoint.".php")) {
+            || file_exists($view = ROOT_PATH."opt/modules/".ucfirst($this->aspect)."/views/".$this->endpoint.".php")
+            ) {
 	            $this -> render($view);
-                //Someone mentioned "Hey, that isn't right! you set $view to 5 different things, how is that supposed to work? 
-                // Well, as soon as file_exists returns true, it jumps to this line, and works exactly as expected. 
-    	    } else { //@f:on
-                die("$viem"); 
+    	    } else { 
                 new Error(404, "$func is not a valid thing");
             }
         }
