@@ -14,18 +14,11 @@ class Response
 
     public function defineBaseViewPath()
     {
-        if (file_exists($vp = ROOT_PATH . "app/modules/" .
-                    get_class($this) . "/views/")) {
-            $this -> viewPath = $vp;
-        } else {
-            $this -> viewPath = VIEW_PATH;
-        }
-
+        $this -> viewPath = VIEW_PATH;
     }
 
     public function __call($func, $args)
     {
-        //@f:off
         if (file_exists($view= $viem = ROOT_PATH . 
                     "app/modules/" . 
                     ucfirst(Request::$aspect) . 
@@ -79,7 +72,7 @@ class Response
         include $this -> viewPath . "_global/footer.php";
     }
 
-   private function getStylesheets()
+    private function getStylesheets()
     {
         foreach(array(Request::$aspect, Request::$endpoint) as $resource){
             if (file_exists(WEB_PATH . "assets/css/pg-specific/" . $resource . ".css")) {

@@ -5,12 +5,12 @@
  * @package Team Zero Framework
  * @author James Pope
  */
-//namespace Zero\Core;
 class Request
 {
     /*
      * Given a URL :
      * http://sub.domain.tld/aspect/endpoint/arg[0]/arg[1]/...argi[X]?query=string&etc
+     * Parse it into useful bits so we can use them later, as needed.
      */
     public static 
         $uri, $url, 
@@ -61,7 +61,7 @@ class Request
         self::$args     = array_slice(self::$uriArray, 2);
 
         self::$method   = (empty($_POST) && count($_POST) === 0 )?"GET":"POST";
-
+        self::$isAjax   = isAjax(); // cheating.
     }
 
     public static function test(){

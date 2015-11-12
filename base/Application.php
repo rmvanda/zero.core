@@ -35,12 +35,13 @@ class Application
 
     public function run($aspect, $endpoint, $args)
     {
-        if (loads($aspect)) {
+
+        if (loads(ucfirst($aspect))) {
             $aspect = new $aspect();
         } else {
             $aspect = new Response();
         }
-
+         
         $aspect -> {$endpoint}($args);
 
     }
