@@ -27,29 +27,40 @@ class Request
 
     public function __construct(){
 
-        self::$uri=trim(strtok($_SERVER['REQUEST_URI'],"?"),"/")?:"index/index";
+        self::$uri      = trim(
+                            strtok(
+                                $_SERVER['REQUEST_URI'],
+                            "?"),
+                          "/")
+                        ?:"index/index";
+
         self::$uriArray = explode("/", self::$uri); 
 
-        self::$uri = "/".self::$uri; 
+        self::$uri      = "/".self::$uri; 
+        
+        if(count(self::$uriArray) === 1){
+            self::$uri       .= "/index"; 
+            self::$uriArray[] = "index"; 
+        }
 
         self::$protocol = $_SERVER['SERVER_PORT'] == 80 ? "http" : "https";
 
-        self::$sub = self::$subdomain = implode(".", 
-                array_reverse(
-                    array_slice(
-                        array_reverse(
-                            explode(".", $_SERVER['HTTP_HOST'])), 
-                        2)));
+        self::$sub      = self::$subdomain = implode(".", 
+                            array_reverse(
+                                array_slice(
+                                    array_reverse(
+                                        explode(".", $_SERVER['HTTP_HOST'])), 
+                                    2)));
 
-        self::$domain = $_SERVER['HTTP_HOST']; 
+        self::$domain   = $_SERVER['HTTP_HOST']; 
 
-        self::$tld = array_slice(explode(".", self::$domain), -1); 
+        self::$tld      = array_slice(explode(".", self::$domain), -1); 
 
-        self::$aspect = self::$uriArray[0]; 
+        self::$aspect   = self::$uriArray[0]; 
         self::$endpoint = self::$uriArray[1]; 
-        self::$args = array_slice(self::$uriArray, 2);
+        self::$args     = array_slice(self::$uriArray, 2);
 
-        self::$method = (empty($_POST) && count($_POST) === 0 )?"GET":"POST";
+        self::$method   = (empty($_POST) && count($_POST) === 0 )?"GET":"POST";
 
     }
 

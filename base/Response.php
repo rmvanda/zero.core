@@ -79,15 +79,7 @@ class Response
         include $this -> viewPath . "_global/footer.php";
     }
 
-    /**
-     * Both of these functions need better logic, anyway - - - -
-     *
-     * For instance, in the case of Console - there needs to be a way to load
-     * "Console.js"
-     * - or some kind of hook, perhaps something like wp's enque_script
-     * we'll get there.
-     */
-    private function getStylesheets()
+   private function getStylesheets()
     {
         foreach(array(Request::$aspect, Request::$endpoint) as $resource){
             if (file_exists(WEB_PATH . "assets/css/pg-specific/" . $resource . ".css")) {
