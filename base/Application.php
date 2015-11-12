@@ -1,52 +1,24 @@
 <?php
-    /**
-     * Application class
-     *
-     * @version 3.0.1
-     */
+
     class Application
     {
 
-        private $aspect;
-        private $endpoint;
-        public $request;
-        private $subdomain = array();
-
         public function __construct()
         {
-            session_start();
-            // Since we are not currently using the client class
-            //@f:off
+            session_start(); 
 			$this -> defineConstants()
 				  -> fetchUtilities() 
 				  -> registerAutoloaders() 
 				  -> parseRequest() 
 				  -> finalizeRoute() 
 				  -> run(
-					  	$this->request->aspect, 
-					  	$this->request->endpoint, 
-					  	$this->request->args
+					  	Request::$aspect, 
+					  	Request::$endpoint, 
+					  	Request::$args
 					);
-		//	Console::log() -> maxMemory(xdebug_peak_memory_usage()) 
-		//				   -> totalExecutionTime(xdebug_time_index()) 
-		//				   -> display();
-		//@f:on
-            //	Console::setRequest($this -> request -> aspect, $this -> request
-            // -> endpoint, $this -> request -> args);
-            //	Console::saveAutoLoadLog();
 
         }
-
-
-       /*
-        * @function modprobe 
-        * Simply @defines found in @arg $modprobe#array 
-        * This allows you to define flags for turning features on and off in your modules, 
-        * all on the fly - and at the index-level. 
-        * @chains 
-        *
-        */
-
+       
         public function modprobe(array $modprobe)
         {
             foreach ($modprobe?:array() as $module) {
@@ -57,28 +29,22 @@
 
         public function parseRequest()
         {
-            $this -> request = new Request();
-            //print_x($this -> request);
+            new Request();
             return $this;
         }
 
         public function run($aspect, $endpoint, $args)
         {
             if (in_array(($aspect = ucfirst($aspect)), get_declared_classes()) 
-                && !defined("DEV")
+            && !defined("DEV")
                ){
                 new Error(403);
             } else {
                 if (loads($aspect)) {
                     $aspect = new $aspect();
                 } else {
-                    $aspect = new Response(false, strtolower($aspect));
+                    $aspect = new Response();
                 }
-                $aspect->aspect = $aspect; // well, this is redundant. 
-                // Request:: was a way more elegant way of handling this... 
-
-                $aspect -> endpoint = $endpoint;
-
                 $aspect -> {$endpoint}($args);
             }
         }

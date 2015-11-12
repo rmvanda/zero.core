@@ -10,135 +10,61 @@ class Request
 {
     /*
      * Given a URL :
-     * http://sub.domain.com/aspect/endpoint/arg0/.../argX?query=string&etc
+     * http://sub.domain.tld/aspect/endpoint/arg[0]/arg[1]/...argi[X]?query=string&etc
      */
-    public $uri;
-    public static $guri;
-    private $url, 
-            $protocol, 
-            $queryString, 
-            $sub, $subdomain, 
-            $domain, 
-            $aspect, $endpoint, $args, 
-            $uriArray, 
-            $isAjax, 
-            $basePath;
+    public static 
+        $uri, $url, 
+        $protocol,
+        $method,
+        $queryString, 
+        $sub, $subdomain, 
+        $domain,
+        $tld, 
+        $aspect, $endpoint, $args, 
+        $uriArray, 
+        $isAjax, 
+        $basePath;
 
-    
-    public $isElevated;
-    public $authorized;
-    public $accessLevel;
+    public function __construct(){
 
-    private $status;
-    private static $instance;
+        self::$uri=trim(strtok($_SERVER['REQUEST_URI'],"?"),"/")?:"index/index";
+        self::$uriArray = explode("/", self::$uri); 
 
-    public function __construct()
+        self::$uri = "/".self::$uri; 
 
-    {
-        Request::$instance = $this; 
-        Request::$guri = $this -> uri = trim(
-                 strtok($_SERVER['REQUEST_URI'], "?"), "/");
+        self::$protocol = $_SERVER['SERVER_PORT'] == 80 ? "http" : "https";
 
-        if (!$this -> uri) {
-            $this -> uri = 'index/index';
-        }
-        $this -> uriArray = explode("/", $this -> uri);
-
-        if (count($this -> uriArray) == 1) {
-            $this -> uri .= "/index";
-            $this -> uriArray[] = "index";
-        }
-        self::$instance = $this;
-    }
-
-    public static function __callStatic($func, $args ){     
-        return self::$instance->{$func}; 
-    }
-
-
-    public static function get($prop)
-    {
-        return self::$instance -> __get($prop);
-    }
-
-    public function __get($prop)
-    {
-        switch($prop) {
-            case 'aspect' :
-                return $this -> aspect ? :
-                       $this -> aspect = $this -> uriArray[0];
-                break;
-            case 'endpoint' :
-                return $this -> endpoint ? : 
-                       $this -> endpoint = $this -> uriArray[1] ? : "index";
-                break;
-            case 'protocol' :
-                return $this -> protocol ? :
-                       $this -> protocol = $_SERVER['SERVER_PORT'] == 80 ? 
-                       "http" : "https";
-                break;
-            case 'domain' :
-                return $this -> domain ? : 
-                       $this -> domain = $_SERVER['HTTP_HOST'];
-                break;
-            case 'url' :
-                return $this -> url ? : 
-                       $this -> url = $_SERVER['HTTP_HOST'] . $this -> uri;
-                break;
-            case "args" :
-                return $this -> args ? : 
-                       $this -> args = array_slice($this -> uriArray, 2);
-                break;
-            case "uri" :
-                return $this -> uri;
-                break;
-            case "subdomain" :
-                return implode(".", 
+        self::$sub = self::$subdomain = implode(".", 
+                array_reverse(
+                    array_slice(
                         array_reverse(
-                            array_slice(
-                                array_reverse(
-                                    explode(".", $_SERVER['HTTP_HOST'])), 2)));
-                //array_slice(explode(".",$_SERVER['HTTP_HOST'],0,-2))
-                // This portion does the hokeyPokey instead of the 1 line above
-                // In order to accomodate instances of subdomains like: 
-                // some.stupid.long.cdn.directory.chain.whatever.domain.com 
-                // in which case, the module leveraging that can be aware of
-                // the .'s imbetween - and act accordingly. 
-                break;
-            case "method" : 
-                return (empty($_POST) && count($_POST) === 0 ) ? 
-                       "GET" : "POST";
-                break;
-            case "isAccessible" :
-            case "access" :
-                return $this -> isAccessible ? : 
-                       $this -> isAccessible = new Restricted(); // REVIEW
-                break;
-        }
+                            explode(".", $_SERVER['HTTP_HOST'])), 
+                        2)));
+
+        self::$domain = $_SERVER['HTTP_HOST']; 
+
+        self::$tld = array_slice(explode(".", self::$domain), -1); 
+
+        self::$aspect = self::$uriArray[0]; 
+        self::$endpoint = self::$uriArray[1]; 
+        self::$args = array_slice(self::$uriArray, 2);
+
+        self::$method = (empty($_POST) && count($_POST) === 0 )?"GET":"POST";
+
     }
 
-    private function parseSubdomain()
-    {
-        if (count($domain = explode(".", $_SERVER['HTTP_HOST'])) > 2) {
-            $this -> subdomain = $domain[0];
-            unset($domain);
-        };
-    }
-
-    /*
-       public function isAccessible()
-       {
-       return file_exists($this -> accessible = ($this -> basePath ? :
-       VIEW_PATH) .
-       Request::$uri . ".php");
-       }
-     */
-    public function getArgs()
-    {
-        $args = explode("/", trim($this -> uri, "/"));
-        array_shift($args);
-        array_shift($args);
-        return $args;
+    public static function test(){
+        print_x(self::$uri);
+        print_x(self::$uriArray);
+        print_x(self::$uri);
+        print_x(self::$protocol);
+        print_x(self::$sub);
+        print_x(self::$domain);
+        print_x(self::$tld);
+        print_x(self::$aspect);
+        print_x(self::$endpoint);
+        print_x(self::$args);
+        print_x(self::$method);
     }
 
 }

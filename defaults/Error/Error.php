@@ -1,15 +1,6 @@
 <?php
-/*
- * This class handles and generates error pages.
- *
- * There is currently no real support for custom error pages, but that may be
- * handled
- * in the future...
- *
- */
 
-//namespace Zero\Core;
-class Error //extends Response
+class Error 
 {
     private $message = array(				
             400 => "BAD REQUEST", 				
@@ -30,33 +21,27 @@ class Error //extends Response
             415 => "UNSUPPORTED MEDIA TYPE", 				
             416 => "UNSUPPORTED MEDIA TYPE", 				
             417 => "EXPECTATION FAILED", 				
-            418 => "", 				
-            420 => "ENHANCE YOUR CALM"
+            418 => "I'M A LITTLE TEAPOT", 				
+            420 => "ENHANCE YOUR CALM",
+            505 => "STOP THAT"
             ); 
 
     public function __construct($code, $opt = null) {
 
         header("HTTP/1.1 $code " . $this -> message[$code]);
         
-        if(defined(DEV) && DEV !== false) {
+        if(defined(DEV) && DEV !== false && $_GET['shwtrc']) {
             xdebug_print_function_stack();
         }
-
-        if (file_exists($errorPage = VIEW_PATH . "_global/_error/_$code.php")) {
-            $message = $args[0];
-            include $errorPage;
-        } else {
-            $this -> generateErrorPage($code, $this -> message[$code]);
-            exit();
-        }
-
+        $this -> generateErrorPage($code, $opt?:$this -> message[$code]);
+        exit(); 
     }
 
     public static function __callStatic($func, $args) {
         return new Error(trim($func, "_"), $args);
     }
 
-    public function JSON() {
+    public static function JSON() {
 
         switch(json_last_error()) {
             case '' :
@@ -68,13 +53,17 @@ class Error //extends Response
 
     }
 
-
     private function generateErrorPage($code, $message) {
         
         $title = "Error: ".ucwords(strtolower($message))." | $code"; 
         include VIEW_PATH . "_global/head.php"; 
         include VIEW_PATH . "_global/header.php";
-        include __DIR__   . "/views/error$code.php"; 
+        if(file_exists($errPg = __DIR__   . "/views/error$code.php")){
+            include $errPg;
+        }else{
+            echo "<h1>$code</h1><br><h2>$message</h2><hr>";     
+        }
+
         include VIEW_PATH . "_global/footer.php";
 
     }
