@@ -2,7 +2,6 @@
 /**
  * Request Class
  *
- * @package Team Zero Framework
  * @author James Pope
  */
 class Request
