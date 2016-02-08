@@ -21,24 +21,60 @@ class Model
                     "PASS" => PASS
                     );
             ZXC::INIT($db_config);
+        } else {
+        
+            throw new Exception("It should not be necessary to instantiate ".
+                                "the base model class twice - "
+                               );
+
         }
     }
-    /*
-       public function __get($prop)
-       {
-       if ($prop == 'model') {
-       if (!$this -> _default_model) {
-       $model_name = get_class($this) . '_Model';
-       $this -> _default_model = new $model_name();
-       }
-       return $this -> _default_model;
-       }
-       $model_name = $prop . '_Model';
-       $this -> {$prop} = new $model_name();
-    //prop__CLASS__;
-    $model_name = $prop . '_Model';
-    $this -> {$prop} = new $model_name();
-    return $this -> {$prop};
+ }
+
+// Sneaky trick : 
+// If you know of a better place to put this, I'm all ears. 
+
+function fetchColumnsFrom($table, $formatType=null){
+
+    $a = ZXC::RAW("SHOW COLUMNS FROM ".$table)->go(); 
+    $return = array(); 
+    if(empty($formatType)){
+
+        foreach($a as $column){
+            $return[] = $column['Field'];
+
+        }
+        return $return; 
+
+    } else {
+
+        
+        switch($formatType){ 
+            case 1:
+            case "raw":
+                $return = $a;
+            break;
+            case 2:
+            case "valueType":
+                
+                foreach($a as $column){
+                
+                    $type = $column['Type'] !== "varchar"?: "string"; 
+                    $return[$column['Field']] = $column['Type'];
+                
+                }
+                
+            break;
+            case "rawValueType":
+                
+                foreach($a as $column){
+                    $return[$column['Field']] = $column['Type'];
+                }
+
+            break;
+        }
     }
-     */
+
+    return $return; 
+
 }

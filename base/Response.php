@@ -6,6 +6,8 @@ class Response
     public $aspect;
     public $endpoint, $model, $viewPath, $isAjax;
 
+    public $data; 
+
     public function __construct($altconfig = null)
     {
         new Model($altconfig); 
@@ -94,5 +96,66 @@ class Response
             }
         }
     }
+
+// JSON API functions... 
+
+
+    // This will at least standardize our json output without having to refactor *every endpoint individually*
+    // Ideally we would have functions rather than the if/elseif check below, but I didn't have much time to
+    // do choice today, and I wanted to make sure we could at least standardize it for the app developers.
+    
+    public function error($e)
+    {
+        return $this->export(Array('error' => $e));
+    }
+    public function export($e)
+    {
+        if (!is_array($e)) { $e = Array($e); }
+        $e = array_change_key_case($e); 
+        
+        // For endpoints used both on the APP and 
+        if ($this->no_json == 1) { return $e; } 
+        
+        $json = Array(
+            'data' => $this->data?:'',
+            'success' => true,
+            'message' => null
+        );
+        
+        // later, maybe possibly we could refactor all the update/create/delete endpoints to 
+        // give out messages.
+        if ($e['full'])
+        {
+            $json = $e['full'];
+        }
+        else if ($e['error'])
+        {
+            $json['success'] = false;
+            $json['message'] = $e['error'];    
+        }
+        else if ($e['success'])
+        {
+            $json['message'] = $e['success'];
+        }
+        else 
+        {
+            $json['data'] = $e; 
+        }
+        
+        // This seems to be the issue here with backwards compatibility.
+        unset($e['success']);
+        unset($e['data']);
+        unset($e['message']);
+
+        $json = array_merge($json,$e?:Array());        
+        header("Content-Type: application/json");
+        echo json_encode($json, JSON_PRETTY_PRINT);
+        die;
+    }
+
+
+
+
+
 
 }

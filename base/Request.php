@@ -26,6 +26,7 @@ class Request
 
     public function __construct(){
 
+        $this->convertJSONtoPOST(); 
         self::$uri      = trim(
                 strtok(
                     $_SERVER['REQUEST_URI'],
