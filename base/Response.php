@@ -3,10 +3,13 @@
 class Response
 {
 
-    public $aspect;
-    public $endpoint, $model, $viewPath, $isAjax;
+    protected $aspect;
+    protected $endpoint, $model, $viewPath, $isAjax;
 
-    public $data; 
+    protected $status = true; 
+    protected $message; 
+    protected $data; 
+
 
     public function __construct($altconfig = null)
     {
@@ -14,7 +17,7 @@ class Response
         $this->defineBaseViewPath(); 
     }
 
-    public function defineBaseViewPath()
+    protected function defineBaseViewPath()
     {
         $this -> viewPath = VIEW_PATH;
     }
@@ -33,11 +36,11 @@ class Response
            ) {
             $this -> render($view);
         } else { 
-            new Error(404, "Failed to find a respose to give");
+            new Error(404, "Failed to find a respose to give for $func");
         }
     }
 
-    public function render($view)
+    protected function render($view)
     {
         if (isAjax()) {
             $this -> getPage($view);
@@ -46,7 +49,7 @@ class Response
         }
     }
 
-    public function build($view)
+    protected function build($view)
     {
         $this -> buildHead();
         $this -> buildHeader();
@@ -54,22 +57,24 @@ class Response
         $this -> buildFooter();
     }
 
-    public function buildHead()
+// Doing it like this allows individual classed to override the methods
+// while still using render. 
+    protected function buildHead()
     {
         include $this -> viewPath . "_global/head.php";
     }
 
-    public function buildHeader()
+    protected function buildHeader()
     {
         include $this -> viewPath . "_global/header.php";
     }
 
-    public function getPage($page)
+    protected function getPage($page)
     {
         include $page;
     }
 
-    public function buildFooter()
+    protected function buildFooter()
     {
         include $this -> viewPath . "_global/footer.php";
     }
@@ -97,62 +102,79 @@ class Response
         }
     }
 
-// JSON API functions... 
+    // JSON API functions... 
 
 
     // This will at least standardize our json output without having to refactor *every endpoint individually*
     // Ideally we would have functions rather than the if/elseif check below, but I didn't have much time to
     // do choice today, and I wanted to make sure we could at least standardize it for the app developers.
-    
-    public function error($e)
+
+    protected function error($e)
     {
-        return $this->export(Array('error' => $e));
+        $this->message = $e;
+        $this->status  = false; 
+        $this->export();
     }
-    public function export($e)
+    protected function success($msg="The operation completed successfully"){
+        $this->message = $msg;
+        $this->export(); 
+    }
+
+    protected function export($e=null)
     {
-        if (!is_array($e)) { $e = Array($e); }
-        $e = array_change_key_case($e); 
-        
+        if (!is_array($e)&&!is_null($e)) { 
+            $this->message = $e; 
+        } else if(empty($this->data)){
+            $this->data = $e;    
+        }
+
         // For endpoints used both on the APP and 
-        if ($this->no_json == 1) { return $e; } 
-        
-        $json = Array(
-            'data' => $this->data?:'',
-            'success' => true,
-            'message' => null
-        );
-        
-        // later, maybe possibly we could refactor all the update/create/delete endpoints to 
-        // give out messages.
-        if ($e['full'])
-        {
-            $json = $e['full'];
+        if ($this->no_json) { 
+            die("Not implemented"); 
+            $this->render($e); 
+        } 
+    
+        $json = array(
+                    "status"  => $this->status?"success":"error",
+                    "message" => $this->message
+                    ); 
+
+        if(!empty($this->data)){
+            $json['data'] = $this->data; 
         }
-        else if ($e['error'])
-        {
-            $json['success'] = false;
-            $json['message'] = $e['error'];    
-        }
-        else if ($e['success'])
-        {
-            $json['message'] = $e['success'];
-        }
-        else 
-        {
-            $json['data'] = $e; 
-        }
-        
+
+        // later, maybe possibly we could refactor all the update/create/delete
+        // endpoints to give out messages.
+        //if ($e['full'])
+        //{
+        //    $json = $e['full'];
+        //}
+        //        {
+        //            $json['status'] = "error"; 
+        //            $json['message'] = $e['error'];    
+        //        }
+        //        else if ($e['success'])
+        //        {
+        //             $json['message'] = $e['success'];
+        //        }
+        //        else 
+        //        {
+        //            $json['data'] = $e; 
+        //        }
+
         // This seems to be the issue here with backwards compatibility.
-        unset($e['success']);
-        unset($e['data']);
-        unset($e['message']);
+       // unset($e['success']);
+        //unset($e['data']);
+        //unset($e['message']);
 
-        $json = array_merge($json,$e?:Array());        
+        //         $json = array_merge($json,$e?:Array());        
+        // This was causing the size to double.... 
+        // 
         header("Content-Type: application/json");
-        echo json_encode($json, JSON_PRETTY_PRINT);
-        die;
-    }
+        die(json_encode($json, empty(DEVMODE)?0:JSON_PRETTY_PRINT));
 
+    }
+   
 
 
 

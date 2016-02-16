@@ -5,10 +5,12 @@ class Application
 
     public function __construct()
     {
-        session_start(); 
+
+
         $this -> defineConstants()
             -> fetchUtilities() 
             -> registerAutoloaders() 
+            -> getClientSession()
             -> parseRequest() 
             -> finalizeRoute() 
             -> run(
@@ -41,7 +43,7 @@ class Application
         } else {
             $aspect = new Response();
         }
-         
+
         $aspect -> {$endpoint}($args);
 
     }
@@ -49,7 +51,9 @@ class Application
 
     private function friendlyURLConverter($url)
     {
-        return lcfirst(str_replace(" ", "", ucwords(str_replace("-", ' ', $url))));
+        return lcfirst(str_replace(" ", "", 
+                    ucwords(
+                        str_replace("-", ' ', $url))));
     }
 
     public function load($filename, $path = null)
@@ -115,6 +119,11 @@ class Application
         return $this;
     }
 
+    public function getClientSession(){ 
+        new Client(); 
+        return $this; 
+    }
+
     public function fetchUtilities($utilities = null)
     {
 
@@ -137,8 +146,12 @@ class Application
 
     public function defineConstants(array $key = null)
     {
-        if (($_SERVER['REMOTE_ADDR'] == "192.168.1.77") || $_SERVER['REMOTE_ADDR'] == "50.199.113.222") {
-            define("DEV", true);
+        if ($_SERVER['REMOTE_ADDR'] == "192.168.1.77"  || 
+                $_SERVER['REMOTE_ADDR'] == "50.199.113.222"||
+                $_SERVER['HTTP_HOST']   == "localhost"
+           ) {
+            define("DEV",     true);
+            define("DEVMODE", true); 
         }
 
         if (!defined("ROOT_PATH")) {
@@ -150,7 +163,7 @@ class Application
         define("VIEW_PATH", ROOT_PATH . "app/frontend/views/");
 
         foreach (scandir(ROOT_PATH."app/_configs/") as $ini) {
-            if ($ini != "." && $ini != "..") {
+            if ($ini != "." && $ini != "..") { // there's a flag to kill this
                 foreach (
                         parse_ini_file(
                             ROOT_PATH."app/_configs/".$ini,
@@ -159,8 +172,10 @@ class Application
                             ) 
                         as $constant => $value) {
 
-                    define($constant, ($ini == "paths.ini" ? ROOT_PATH : "") . $value);
-
+                    define($constant, 
+                            ($ini == "paths.ini" ? 
+                             ROOT_PATH : "") . $value);
+                    // ^ this will be largely inefficient if there are too many .ini's
                 }
             }
         }
@@ -187,15 +202,18 @@ class Application
 
 
          */
-        if ($_SERVER['HTTP_HOST'] != PRIMARY_DOMAIN && !$this -> request -> access) {
-
-            header("Location: " . $this -> request -> protocol . "://" . PRIMARY_DOMAIN);
+        if ($_SERVER['HTTP_HOST'] != PRIMARY_DOMAIN && 
+                !$this -> request -> access
+           ) {
+            header("Location: " . 
+                    $this -> request -> protocol . 
+                    "://" . PRIMARY_DOMAIN
+                  );
             exit();
         } elseif ($_SERVER['HTTP_HOST'] == ADMIN_DOMAIN) {
             //                echo "Suload says: ".
             $this -> suload("Admin");
             return new Admin();
-
             /**
              * APP_MODE simply designated that this Application should act
              * like an app

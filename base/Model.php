@@ -31,7 +31,7 @@ class Model
     }
  }
 
-// Sneaky trick : 
+// Sneaky trick/ hack : 
 // If you know of a better place to put this, I'm all ears. 
 
 function fetchColumnsFrom($table, $formatType=null){
@@ -59,18 +59,11 @@ function fetchColumnsFrom($table, $formatType=null){
                 
                 foreach($a as $column){
                 
-                    $type = $column['Type'] !== "varchar"?: "string"; 
+                    $type = $column['Type'] == "varchar"?$column['Type']: "string"; 
                     $return[$column['Field']] = $column['Type'];
                 
                 }
                 
-            break;
-            case "rawValueType":
-                
-                foreach($a as $column){
-                    $return[$column['Field']] = $column['Type'];
-                }
-
             break;
         }
     }

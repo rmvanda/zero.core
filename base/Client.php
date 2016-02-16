@@ -20,11 +20,42 @@ class Client
 
     public function __construct()
     {
+
+        if($_POST['token']){
+            session_id($this->decodeToken($_POST['token']));
+        }
         session_start();
-        if (!Client::$instance)
+        if (!Client::$instance){
             Client::$instance = $this;
+        }
 
     }
+/////////////////////////////////////////////////////////
+// BAD IDEAS
+/////////////////////////////////////////////////////////
+    private function decodeToken(){
+        return $_POST['token']; // because we don't have a system for this yet.
+
+        return str_replace(SALT,"",base64_decode($_POST['token'])); 
+    }
+    private function encodeToken(){
+        return session_id();// likewise ^ 
+        return base64_encode($_POST['token'].SALT);  
+    }
+    public function hackToken(){ // BAD BECAUSE:
+        $a       = base64_decode($response['token']); 
+        $notsalt = str_replace("obvious_gibberish", "", $a);
+        $salt    = str_replace($notsalt, "", $a); 
+//        return $salt; 
+        foreach($johntheripperpasswordGuess as $password){
+            $tkn = base64_encode($password.$salt);
+            eval("curl -d 'token=$tkn' lawyea.com/login/user");
+        
+        }
+    }
+/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
 
     public static function findLocation()
     {
