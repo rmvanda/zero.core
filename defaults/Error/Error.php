@@ -1,6 +1,6 @@
 <?php
 
-class Error 
+class Err 
 {
     private $message = array(				
             400 => "BAD REQUEST", 				
@@ -38,7 +38,7 @@ class Error
     }
 
     public static function __callStatic($func, $args) {
-        return new Error(trim($func, "_"), $args);
+        return new Err(trim($func, "_"), $args);
     }
 
     public static function JSON() {

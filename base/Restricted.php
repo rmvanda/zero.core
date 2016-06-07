@@ -16,7 +16,7 @@
 				self::$authorized = true;
 			} else {
 				//  echo $_SERVER['REMOTE_ADDR'];
-				new Error(403);
+				new Err(403);
 			}
 		}
 
@@ -38,7 +38,7 @@
 			if (self::isOnTheWhiteList() || self::hasEAccessCookie()) {
 				return self::$instance -> authorized = true;
 			} else {
-				return new Error(403);
+				return new Err(403);
 			}
 		}
 
@@ -62,13 +62,13 @@
  
     // Where is this being called? It's private but nothing is accessing it...
     
-    // A lot of repetition in here.. if you destaticified (?) the Error class you could make a function like:
+    // A lot of repetition in here.. if you destaticified (?) the Err class you could make a function like:
     /* private function setHeaders($title,$error_code)
        {
      *      if ($title) {
      *          header('WWW-Authenticate: Basic Realm="'.$title.'"');
      *      }
-     *      new Error($error_code);
+     *      new Err($error_code);
      */
      // That would then take out a BUNCH of code, including extraneous exits() and deaths().
     private static function restrictAccess()
@@ -83,25 +83,25 @@
             if ($acl[$_SERVER['PHP_AUTH_USER']] == $_SERVER['PHP_AUTH_PW'])
                 return;
             header('WWW-Authenticate: Basic realm="Only since you asked nicely…"');
-            new Error(401); 
+            new Err(401); 
             die();
         }
         //A kill-all-requests block.
         if ($_SERVER['PHP_AUTH_USER'] == "Fucked") {
-           new Error(403);
+           new Err(403);
         }
         // Add this to the elseif chain and then... (see 8D)
         // The actual, first-time login system.
         if (!isset($_SERVER['PHP_AUTH_USER'])) {
             header('WWW-Authenticate: Basic realm="Botch this login, and you will be locked out forever"');
-            new Error(401);
+            new Err(401);
         } elseif (!key_exists($_SERVER['PHP_AUTH_USER'], $acl)) {
-            new Error(403); 
+            new Err(403); 
             exit ;
             // --------------------------------------------------------------(8D) -- This statement is no longer necessary -- (8D)
         } elseif ($acl[$_SERVER['PHP_AUTH_USER']] != $_SERVER['PHP_AUTH_PW'] && $_SERVER['PHP_AUTH_USER'] != "Fucked") {
             header('WWW-Authenticate: Basic realm="OK, you get exactly one more chance."');
-            new Error(401); 
+            new Err(401); 
 
         }
     }

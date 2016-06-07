@@ -6,8 +6,8 @@ class Application {
 	}
 	public function run($aspect, $endpoint, $args) {
 		if (in_array ( ($aspect = ucfirst ( $aspect )), get_declared_classes () )) {
-			// new Error ( 403 );
-			die ( "Error 403" );
+			// new Err ( 403 );
+			die ( "Err 403" );
 		} else {
 			if ($this->loads ( $aspect )) {
 				$aspect = new $aspect ();

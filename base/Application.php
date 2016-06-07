@@ -129,8 +129,8 @@ class Application
 
         require ROOT_PATH . "admin/dev/Console/Console.php";
         require __DIR__ . "/Extensions.php";
-        require __DIR__ . "/../defaults/Error/Error.php";
-        //loads("Error");
+        require __DIR__ . "/../defaults/Err/Err.php";
+        //loads("Err");
 
         if ($utilities) {
             if (file_exists($utilities)) {
@@ -196,7 +196,7 @@ class Application
         /*            if (in_array(($aspect = ucfirst($aspect)), get_declared_classes()) 
                       && !defined("DEV")
                       ){
-                      new Error(403);
+                      new Err(403);
 
                       } else {
 
@@ -237,7 +237,7 @@ class Application
             Console::log() -> error($class);
             die("<h1 style='color:red'>Can't load $class</h1>");
         }
-        new Error(404, $class);
+        new Err(404, $class);
     }
 
     }
