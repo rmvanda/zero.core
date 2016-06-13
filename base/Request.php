@@ -81,15 +81,12 @@ class Request
     private function convertJSONtoPOST(){
 
         if(!$_POST && 
-           !empty($xdata = json_decode(file_get_contents("php://input"),true))
+           !empty($xdata = file_get_contents("php://input"))
         ){
-
-            $_POST = $xdata;
-
+            $_POST = json_decode($xdata, true);
         } else if(!empty($jerr = json_last_error_msg())){
-
+        /* The above function will literally say "no error" as its error message >_> */
             if (json_last_error() !== 0) 
-/* The above function will literally say "no error" as its error message >_> */
             {
                 exit(json_encode(
                             array(
@@ -100,30 +97,9 @@ class Request
                             )
                     );
             }    
-
         }
         if(isset($xdata)){
             unset($xdata); 
         }
-
-        /*
-           if ($_POST)
-           {
-           function err($number, $message, $file, $line)
-           {
-           print_r(func_get_args()); die;
-           echo json_encode(Array('error' => $message.' in '.$file.' at line '.$line), 0);
-           die;
-           }
-
-           set_exception_handler('err');
-           set_error_handler('err');
-           }*/
-
-        // Okay so.. first of all try {} catch {} does not override xdebug..
-        // Error handlers *do* but error handlers will have issues with the $_SESSION['uid'] check below.
-        // Evidently exception handlers can't override xdebug either...............
-        // Also my knowledge on exception handling is very iffy bordering on null sooooo
-
     }
 }

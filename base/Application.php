@@ -6,7 +6,6 @@ class Application
     public function __construct()
     {
 
-
         $this -> defineConstants()
             -> fetchUtilities() 
             -> registerAutoloaders() 
@@ -21,7 +20,7 @@ class Application
 
     }
 
-    public function modprobe(array $modprobe)
+    private function modprobe(array $modprobe)
     {
         foreach ($modprobe?:array() as $module) {
             define(strtoupper($module), true);
@@ -37,7 +36,6 @@ class Application
 
     public function run($aspect, $endpoint, $args)
     {
-
         if (loads(ucfirst($aspect))) {
             $aspect = new $aspect();
         } else {

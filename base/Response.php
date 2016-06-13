@@ -13,6 +13,7 @@ class Response
 
     public function __construct($altconfig = null)
     {
+        echo "Now this is interesting..." ; 
         new Model($altconfig); 
         $this->defineBaseViewPath(); 
     }
@@ -42,6 +43,7 @@ class Response
 
     protected function render($view)
     {
+        echo $view; 
         if (isAjax()) {
             $this -> getPage($view);
         } else {
@@ -115,6 +117,7 @@ class Response
         $this->status  = false; 
         $this->export();
     }
+
     protected function success($msg="The operation completed successfully"){
         $this->message = $msg;
         $this->export(); 

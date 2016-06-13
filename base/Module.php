@@ -2,17 +2,10 @@
 
 
 class Module extends Response { 
-    
-    // lol. 
 // Yes, this class is secretly a way to realias Response to Module.
-// problem? 
-// =D 
-
-//   public function __construct(){ parent::__construct();     } 
-// I thought this would be necessary, but it isn't! Happy day! ;   
-
-
-    }
+// Why do it this way? To maintain backward compatability until a more
+// appropriate distinction between the two is made.
+}
 
 
 
