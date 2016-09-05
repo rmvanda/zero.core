@@ -1,0 +1,4 @@
+#!/bin/sh
+# updater - very primitive, but... 
+git pull framework master; 
+echo "\n Done. Thank you for using the framework \n"; 
