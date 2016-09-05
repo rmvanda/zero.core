@@ -143,7 +143,7 @@ if (defined("DEV")) {
     }
 
 } else {
-    // This prevents Errors
+    // This prevents Errors if someone leaves one of these, somewhere. 
     function print_x()
     {
         //pass;

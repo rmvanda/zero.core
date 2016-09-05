@@ -58,6 +58,14 @@ class Request
 
         self::$aspect   = self::$uriArray[0]; 
         self::$endpoint = self::$uriArray[1]; 
+
+        if(strpos(self::$aspect,"-")){
+            self::$aspect = $this->friendlyURLConverter(self::$aspect); 
+        }
+        if(strpos(self::$endpoint,"-")){
+            self::$endpoint = $this->friendlyURLConverter(self::$aspect); 
+        }
+
         self::$args     = array_slice(self::$uriArray, 2);
 
         self::$method   = (empty($_POST) && count($_POST) === 0 )?"GET":"POST";
@@ -102,4 +110,24 @@ class Request
             unset($xdata); 
         }
     }
+
+
+/**
+ * @function friendlyURLConverter
+ * Converts requests-with-dashes to 
+ *          requestWithCamelCase
+ */
+    private function friendlyURLConverter($url,$class=null)
+    {
+        $urlwords = ucwords($url); 
+        $friendly = str_replace(" ", "", $urlwords); 
+        if($class === null){
+            $friendly = lcfirst($friendly); 
+        }
+        return $friendly; 
+    }
+
+
+
+
 }
