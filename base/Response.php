@@ -180,10 +180,5 @@ class Response
         die(json_encode($json, empty(DEVMODE)?0:JSON_PRETTY_PRINT));
 
     }
-   
-
-
-
-
 
 }

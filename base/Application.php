@@ -11,8 +11,8 @@ class Application{
             -> parseRequest() 
 //           -> finalizeRoute() 
             -> run(
-                    $this->friendlyURLConverter(Request::$aspect, true), 
-                    $this->friendlyURLConverter(Request::$endpoint), 
+                    Request::$aspect,
+                    Request::$endpoint, 
                     Request::$args
                   );
 

@@ -4,15 +4,13 @@
  * This class simply establishes a connection to the database, generically.
  * Any other generic model functions can go here.
  *
- * @version 1.0
+ * @version 0.8
  *
  * */
 
-class Model
-{
+class Model{
 
-    public function __construct($alt_config=null)
-    {
+    public function __construct($alt_config=null){
         if (!class_exists("ZXC", false)) {
             $db_config = $alt_config ?: array(
                     "HOST" => HOST,
@@ -21,13 +19,7 @@ class Model
                     "PASS" => PASS
                     );
             ZXC::INIT($db_config);
-        } else {
-        
-            throw new Exception("It should not be necessary to instantiate ".
-                                "the base model class twice - "
-                               );
-
-        }
+        } 
     }
  }
 
@@ -42,12 +34,11 @@ function fetchColumnsFrom($table, $formatType=null){
 
         foreach($a as $column){
             $return[] = $column['Field'];
-
         }
+
         return $return; 
 
     } else {
-
         
         switch($formatType){ 
             case 1:
