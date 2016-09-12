@@ -52,10 +52,6 @@ class Application{
  */ 
     public function fetchExtensions($extensions = null){
 
-        require __DIR__ . "/../dev/Console/Console.php";
-        require __DIR__ . "/Extensions.php";
-        require __DIR__ . "/../defaults/Err/Err.php";
-
         if (is_array($extensions)) {
             foreach ($extensions as $extension) {
                 if(file_exists($extension)){
@@ -105,6 +101,33 @@ class Application{
 
     }
 
+    public function zeroCoreLoader(){
+
+ // In order of importance to core functionality.
+ // Zero's core framework configurations will be based on this. 
+ //
+        require __DIR__."/Request.php";     
+        require __DIR__."/Response.php";
+   
+//   require __DIR__."/Client.php"; Sooner the better, for ACL.. but...
+
+        require __DIR__."/Extensions.php";
+
+//Other logic can be set, here - 
+        require __DIR__."/../defaults/Index/Index.php"; 
+ 
+ //       require __DIR__."/Model.php"; // Database adapter.
+      
+        require __DIR__."/Module.php";
+        //require __DIR__."/Restricted.php";
+        //require __DIR__."/Whitelist.php";
+
+        require __DIR__ . "/../dev/Console/Console.php";
+        require __DIR__ . "/../defaults/Err/Err.php";
+
+
+    }
+
     public function load($filename, $path = null)
     {
         if (loads($filename)) {
@@ -127,6 +150,11 @@ class Application{
 
     public function registerAutoloaders($autoloader = null)
     {
+        $this->zeroCoreLoader();
+    // Framework manages it's core, first
+        spl_autoload_register("self::load");
+        spl_autoload_register("self::errorHandler");
+
         // for Composer + PSR compatability
         if (file_exists($file = ROOT_PATH . "vendor/autoload.php")) {
             require $file;
@@ -145,9 +173,7 @@ class Application{
             } 
         }
 
-        spl_autoload_register("self::load");
-        spl_autoload_register("self::errorHandler");
-        return $this;
+               return $this;
     }
 
     public function getClientSession(){ 

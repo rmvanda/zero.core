@@ -8,8 +8,8 @@
  *
  * */
 
-class Model{
-
+class Model{  } // XXX
+/*
     public function __construct($alt_config=null){
         if (!class_exists("ZXC", false)) {
             $db_config = $alt_config ?: array(
@@ -62,3 +62,4 @@ function fetchColumnsFrom($table, $formatType=null){
     return $return; 
 
 }
+*/
