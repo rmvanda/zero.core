@@ -12,6 +12,9 @@ class Response
 
     public function __construct($altconfig = null)
     {
+        //echo "Now this is interesting..." ; 
+        //new Model($altconfig); 
+        $this->defineBaseViewPath(); 
         new Model($altconfig); 
         $this->defineBaseViewPath(); 
     }
@@ -21,6 +24,8 @@ class Response
         if(!defined($this->viewPath)){  
             $this -> viewPath = ROOT_PATH."app/frontend/global_views/"; 
         } 
+        //die(VIEW_PATH); 
+        $this -> viewPath = VIEW_PATH;
     }
 
     public function __call($func, $args)
@@ -44,9 +49,11 @@ class Response
 
     protected function render($view)
     {
+        //echo $view; 
         if (!isset($this->viewPath)){
             $this->viewPath = VIEW_PATH; 
         }
+
         if (isAjax()) {
             include $view;
             //$this -> getPage($view);
