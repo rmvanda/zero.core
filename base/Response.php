@@ -13,14 +13,11 @@ class Response
 
     public function __construct($altconfig = null)
     {
-<<<<<<< HEAD
         //echo "Now this is interesting..." ; 
         //new Model($altconfig); 
         $this->defineBaseViewPath(); 
-=======
         new Model($altconfig); 
        // $this->defineBaseViewPath(); 
->>>>>>> e59c0a7ff3c8ada9e5d1763115087e1f3da8914c
     }
 
  /*   protected function defineBaseViewPath()
@@ -31,17 +28,6 @@ class Response
 */
     public function __call($func, $args)
     {
-<<<<<<< HEAD
-        if (file_exists($view = $viem = ROOT_PATH . 
-                    "app/modules/" . 
-                    ucfirst(Request::$aspect) . 
-                    "/views/" . 
-                    Request::$endpoint . ".php") 
-        ||  file_exists($view = VIEW_PATH . 
-                    Request::$aspect . "/" .
-                    Request::$endpoint . 
-                    ".php")
-=======
         if (file_exists($view = MODULE_PATH .
                         ucfirst(Request::$aspect) . 
                         "/views/" . 
@@ -52,7 +38,6 @@ class Response
                         Request::$aspect   . "/" .
                         Request::$endpoint . 
                         ".php")
->>>>>>> e59c0a7ff3c8ada9e5d1763115087e1f3da8914c
            ) {
             $this -> render($view);
         } else { 
@@ -62,13 +47,11 @@ class Response
 
     protected function render($view)
     {
-<<<<<<< HEAD
         //echo $view; 
-=======
         if (!isset($this->viewPath)){
             $this->viewPath = VIEW_PATH; 
         }
->>>>>>> e59c0a7ff3c8ada9e5d1763115087e1f3da8914c
+
         if (isAjax()) {
             include $view;
             //$this -> getPage($view);
