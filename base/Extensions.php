@@ -76,13 +76,13 @@ function file_curl_contents($url, $timeout = true)
 
 function find($file, $path = null)
 {
-    $stdout = exec($stdin = "find " . ROOT_PATH . $path . ' -not -iwholename "*admin*" -not -iwholename "*helpers*" -type f -iname ' . $file . ".php");
+    $stdout = exec($stdin = "find " . ROOT_PATH . $path . ' -not -iwholename "*admin*" -not -iwholename "*helpers*" -type f -name ' . $file . ".php");
     return (file_exists($stdout) ? $stdout : false);
 }
 
 function sufind($file, $path = null)
 {
-    $stdout = exec("find " . ROOT_PATH . $path . '  -iwholename "*admin*" -type f -iname ' . $file . ".php");
+    $stdout = exec("find " . ROOT_PATH . $path . '  -iwholename "*admin*" -type f -name ' . $file . ".php");
 //    echo "SuFind Found: $stdout, while looking for $file<br>"; 
     return (file_exists($stdout) ? $stdout : false);
 }

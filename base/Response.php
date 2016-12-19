@@ -7,21 +7,22 @@ class Response
     protected $endpoint, $model, $viewPath, $isAjax;
 
     protected $status = true; 
-    protected $message; 
     protected $data; 
 
 
     public function __construct($altconfig = null)
     {
         new Model($altconfig); 
-       // $this->defineBaseViewPath(); 
+        $this->defineBaseViewPath(); 
     }
 
- /*   protected function defineBaseViewPath()
+    protected function defineBaseViewPath()
     {
-        $this -> viewPath = VIEW_PATH;
+        if(!defined($this->viewPath)){  
+            $this -> viewPath = ROOT_PATH."app/frontend/global_views/"; 
+        } 
     }
-*/
+
     public function __call($func, $args)
     {
         if (file_exists($view = MODULE_PATH .
@@ -66,12 +67,12 @@ class Response
 // while still using render. 
     protected function buildHead()
     {
-        include $this -> viewPath . "_global/head.php";
+        include $this -> viewPath . "head.php";
     }
 
     protected function buildHeader()
     {
-        include $this -> viewPath . "_global/header.php";
+        include $this -> viewPath . "header.php";
     }
 
    // protected function getPage($page) // who the fuck? 
@@ -81,7 +82,7 @@ class Response
 
     protected function buildFooter()
     {
-        include $this -> viewPath . "_global/footer.php";
+        include $this -> viewPath . "footer.php";
     }
 
     private function getStylesheets()

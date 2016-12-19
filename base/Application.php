@@ -1,15 +1,15 @@
 <?php
 
-class Application{
+class Application {
 
     public function __construct(array $opts=null){
 
         $this -> defineConstants($opts['constants'])
             -> fetchExtensions($opts['extensions']) 
             -> registerAutoloaders($opts['autoloaders']) 
-//            -> getClientSession()
+            -> getClientSession()
             -> parseRequest() 
-//           -> finalizeRoute() 
+            //           -> finalizeRoute() 
             -> run(
                     Request::$aspect,
                     Request::$endpoint, 
@@ -19,12 +19,12 @@ class Application{
     }
 
 
-/**
- *  @function defineConstants
- * Defines constants based on .ini files or based on 
- * @param @array $key
- * Which is an array of key=>value pairs that are defined as constants 
- */ 
+    /**
+     *  @function defineConstants
+     * Defines constants based on .ini files or based on 
+     * @param @array $key
+     * Which is an array of key=>value pairs that are defined as constants 
+     */ 
 
     public function defineConstants(array $key = null){
         $inis = array_diff(scandir(ROOT_PATH."app/_configs/"),['.','..']); 
@@ -46,15 +46,15 @@ class Application{
     }
 
 
-/**
- *  @function fetchExtensions
- *  Loads additional things to make everyone's lives easier. 
- */ 
+    /**
+     *  @function fetchExtensions
+     *  Loads additional things to make everyone's lives easier. 
+     */ 
     public function fetchExtensions($extensions = null){
 
         require __DIR__ . "/../dev/Console/Console.php";
         require __DIR__ . "/Extensions.php";
-        require __DIR__ . "/../defaults/Err/Err.php";
+        //require __DIR__ . "/../../modules/Err/Err.php";
 
         if (is_array($extensions)) {
             foreach ($extensions as $extension) {
@@ -62,8 +62,7 @@ class Application{
                     require $extension;
                 }
             }
-         }
-        elseif ($extensions) {
+        } else if ($extensions) {
             if (file_exists($extensions)) {
                 require $extensions;
             } else {} //#TODO log warning
@@ -72,11 +71,11 @@ class Application{
     }
 
 
-/**
- *  @function parseRequest
- * Instantiates the Request interpreter. Simple as that. 
- *
- */
+    /**
+     *  @function parseRequest
+     * Instantiates the Request interpreter. Simple as that. 
+     *
+     */
     public function parseRequest()
     {
         new Request();
@@ -84,15 +83,15 @@ class Application{
     }
 
 
-/**
- *  @function run
- * This is where the real magic happens - 
- * takes 
- * @param $aspect
- * @param $endpoint
- * @param array $args ($opt)
- *
- */
+    /**
+     *  @function run
+     * This is where the real magic happens - 
+     * takes 
+     * @param $aspect
+     * @param $endpoint
+     * @param array $args ($opt)
+     *
+     */
     public function run($aspect, $endpoint, $args)
     {
         if (loads(ucfirst($aspect))) {
@@ -140,9 +139,9 @@ class Application{
                     }
                 }
             }else 
-            if (is_callable($autoloader)) {
-                spl_autoload_register($autoloader);
-            } 
+                if (is_callable($autoloader)) {
+                    spl_autoload_register($autoloader);
+                } 
         }
 
         spl_autoload_register("self::load");
@@ -164,11 +163,7 @@ class Application{
                       && !defined("DEV")
                       ){
                       new Err(403);
-
                       } else {
-
-
-         */
         if ($_SERVER['HTTP_HOST'] != PRIMARY_DOMAIN && 
                 !$this -> request -> access
            ) {
@@ -194,8 +189,7 @@ class Application{
             //	header("Location: /auth/login");
             //include VIEW_PATH . "_global/login.html";
             //  exit();
-    }
-    return $this;
+        //}
     }
 
     public function errorHandler($class)
@@ -208,28 +202,4 @@ class Application{
     }
 
 } 
-
-/**
-         * Maximally Underwritten Fast As Shit Autoloader 
-         * MUFASA - !
-         * @version 0.8.2
-         *
-
-         spl_autoload_register(function($class)
-         {
-
-        //  echo $class;
-        if (strpos($class, "\\")) {
-        $namespace = explode("\\", $class);
-        $class = array_pop($namespace);
-        }
-        $stdout = exec("find " . ROOT_PATH . ' -not -iwholename "*admin*"
-        -type f -name ' . $class . ".php");
-        //	Console::log() -> autoloading("Class $class in path: $stdout
-        // <br>");
-        //echo " $stdout !<br>";
-        return (file_exists($stdout) ?
-        require $stdout : false);
-        });
-         */
 
