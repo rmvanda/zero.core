@@ -13,19 +13,25 @@ class Response
 
     public function __construct($altconfig = null)
     {
+<<<<<<< HEAD
         //echo "Now this is interesting..." ; 
         //new Model($altconfig); 
         $this->defineBaseViewPath(); 
+=======
+        new Model($altconfig); 
+       // $this->defineBaseViewPath(); 
+>>>>>>> e59c0a7ff3c8ada9e5d1763115087e1f3da8914c
     }
 
-    protected function defineBaseViewPath()
+ /*   protected function defineBaseViewPath()
     {
         //die(VIEW_PATH); 
         $this -> viewPath = VIEW_PATH;
     }
-
+*/
     public function __call($func, $args)
     {
+<<<<<<< HEAD
         if (file_exists($view = $viem = ROOT_PATH . 
                     "app/modules/" . 
                     ucfirst(Request::$aspect) . 
@@ -35,6 +41,18 @@ class Response
                     Request::$aspect . "/" .
                     Request::$endpoint . 
                     ".php")
+=======
+        if (file_exists($view = MODULE_PATH .
+                        ucfirst(Request::$aspect) . 
+                        "/views/" . 
+                        Request::$endpoint . 
+                        ".php"
+                       ) 
+         || file_exists($view = VIEW_PATH  . // I'd like to dprecate this block  <-- 
+                        Request::$aspect   . "/" .
+                        Request::$endpoint . 
+                        ".php")
+>>>>>>> e59c0a7ff3c8ada9e5d1763115087e1f3da8914c
            ) {
             $this -> render($view);
         } else { 
@@ -44,9 +62,16 @@ class Response
 
     protected function render($view)
     {
+<<<<<<< HEAD
         //echo $view; 
+=======
+        if (!isset($this->viewPath)){
+            $this->viewPath = VIEW_PATH; 
+        }
+>>>>>>> e59c0a7ff3c8ada9e5d1763115087e1f3da8914c
         if (isAjax()) {
-            $this -> getPage($view);
+            include $view;
+            //$this -> getPage($view);
         } else {
             $this -> build($view);
         }
@@ -56,7 +81,7 @@ class Response
     {
         $this -> buildHead();
         $this -> buildHeader();
-        $this -> getPage($view);
+        include $view ; //$this -> getPage($view);
         $this -> buildFooter();
     }
 
@@ -72,10 +97,10 @@ class Response
         include $this -> viewPath . "_global/header.php";
     }
 
-    protected function getPage($page)
-    {
-        include $page;
-    }
+   // protected function getPage($page) // who the fuck? 
+   // {
+   //     include $page;
+   // }
 
     protected function buildFooter()
     {
@@ -178,10 +203,5 @@ class Response
         die(json_encode($json, empty(DEVMODE)?0:JSON_PRETTY_PRINT));
 
     }
-   
-
-
-
-
 
 }

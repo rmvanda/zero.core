@@ -1,4 +1,6 @@
+
 <?php
+#TODO:: Rethink this fucking class  - read some fucking design shit 
 /**
  * Client Class
  *
@@ -10,73 +12,46 @@
  *
  */
 //namespace Zero\Core;
-class Client
-{
+class Client {
+
     public static $isAdmin;
 
     private $ip, $userAgent, $deviceTye;
     private static $guessedLocation;
     public static $instance;
 
-    public function __construct()
-    {
+    public static function __callStatic($func,$args){
 
-        if($_POST['token']){
-            session_id($this->decodeToken($_POST['token']));
-        }
+        self::$instance = self::$instance ?: new self;   
+
+        if (method_exists(self,$func)){
+            return self::$func();  
+        } else {
+            new Err(500,"Called nonexistant Client function $func"); 
+        }    
+
+    }
+
+    public function __construct() {
         session_start();
-        if (!Client::$instance){
-            Client::$instance = $this;
-        }
+    }
 
-    }
-/////////////////////////////////////////////////////////
-// BAD IDEAS
-/////////////////////////////////////////////////////////
-    private function decodeToken(){
-        return $_POST['token']; // because we don't have a system for this yet.
-
-        return str_replace(SALT,"",base64_decode($_POST['token'])); 
-    }
-    private function encodeToken(){
-        return session_id();// likewise ^ 
-        return base64_encode($_POST['token'].SALT);  
-    }
-    public function hackToken(){ // BAD BECAUSE:
-        $a       = base64_decode($response['token']); 
-        $notsalt = str_replace("obvious_gibberish", "", $a);
-        $salt    = str_replace($notsalt, "", $a); 
-//        return $salt; 
-        foreach($johntheripperpasswordGuess as $password){
-            $tkn = base64_encode($password.$salt);
-            eval("curl -d 'token=$tkn' lawyea.com/login/user");
-        
-        }
-    }
-/////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////
-
-    public static function findLocation()
-    {
-        if (!self::$instance) {
-            self::$instance = new self;
-        }
+    private static function findLocation() {
         //TODO - City, State, Zip, etc.
         return self::$instance -> getLocation();
 
     }
 
-    private function getLocation($output = 'json')
+    public function getLocation($output = 'json')
     {
         //@f:off 
         // FIXME ROUTING HACK for cestus - 
         $ip = $_SERVER['REMOTE_ADDR'] == "192.168.1.77" ? '99.135.100.109' : $_SERVER['REMOTE_ADDR']; 
-           return  
+        return  
             json_decode(
-                file_curl_contents(
-                    "http://ip-api.com/json/$ip")
-                );
+                    file_curl_contents(
+                        "http://ip-api.com/json/$ip")
+                    );
         //http://freegeoip.net/json/
         //http://ip-api.com/json/208.80.152.201
         //@f:on
@@ -87,17 +62,17 @@ class Client
         $url = 'http://www.gravatar.com/avatar/';
         $url .= md5(strtolower(trim($email)));
         $url .= "?s=$s&d=$d&r=$r&f=y";
-        // the image url (on gravatarr servers), will return in something like
+        // the image url (on gravatar servers), will return in something like
         // http://www.gravatar.com/avatar/205e460b479e2e5b48aec07710c08d50?s=80&d=mm&r=g
-        // note: the url does NOT have something like .jpg
+        // so take note that the url does NOT have something like .jpg at the end
         self::$user_gravatar_image_url = $url;
         // build img tag around
-        $url = '<img src="' . $url . '"';
+        $img = '<img src="' . $url . '"';
         foreach ($atts as $key => $val)
-            $url .= ' ' . $key . '="' . $val . '"';
-        $url .= ' />';
+            $img .= ' ' . $key . '="' . $val . '"';
+        $img .= ' />';
         // the image url like above but with an additional <img src .. /> around
-        return self::$user_gravatar_image_tag = $url;
+        return self::$user_gravatar_image_tag = $img;
     }
 
 }

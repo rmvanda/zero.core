@@ -74,16 +74,17 @@ function file_curl_contents($url, $timeout = true)
     return $data;
 }
 
+//TODO - time to do something different, here... 
 function find($file, $path = null)
 {
-    $stdout = exec($stdin = "find " . ROOT_PATH . $path . ' -not -iwholename "*admin*" -not -iwholename "*helpers*" -type f -name ' . $file . ".php");
+    $stdout = exec($stdin = "find " . ROOT_PATH . $path . ' -not -iwholename "*admin*" -not -iwholename "*helpers*" -type f -iname ' . $file . ".php");
     return (file_exists($stdout) ? $stdout : false);
 }
 
 function sufind($file, $path = null)
 {
-    $stdout = exec("find " . ROOT_PATH . $path . '  -iwholename "*admin*" -type f -name ' . $file . ".php");
-    echo "SuFind Found: $stdout, while looking for $file<br>"; 
+    $stdout = exec("find " . ROOT_PATH . $path . '  -iwholename "*admin*" -type f -iname ' . $file . ".php");
+//    echo "SuFind Found: $stdout, while looking for $file<br>"; 
     return (file_exists($stdout) ? $stdout : false);
 }
 
@@ -143,7 +144,7 @@ if (defined("DEV")) {
     }
 
 } else {
-    // This prevents Errors
+    // This prevents Errors if someone leaves one of these, somewhere. 
     function print_x()
     {
         //pass;
