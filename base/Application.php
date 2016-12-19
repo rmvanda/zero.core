@@ -52,8 +52,8 @@ class Application {
      */ 
     public function fetchExtensions($extensions = null){
 
-        require __DIR__ . "/../dev/Console/Console.php";
-        require __DIR__ . "/Extensions.php";
+       // require __DIR__ . "/../dev/Console/Console.php";
+       // require __DIR__ . "/Extensions.php";
         //require __DIR__ . "/../../modules/Err/Err.php";
 
         if (is_array($extensions)) {
@@ -117,7 +117,7 @@ class Application {
         require __DIR__."/Extensions.php";
 
 //Other logic can be set, here - 
-        require __DIR__."/../defaults/Index/Index.php"; 
+//        require __DIR__."/../defaults/Index/Index.php"; 
  
  //       require __DIR__."/Model.php"; // Database adapter.
       
@@ -125,8 +125,8 @@ class Application {
         //require __DIR__."/Restricted.php";
         //require __DIR__."/Whitelist.php";
 
-        require __DIR__ . "/../dev/Console/Console.php";
-        require __DIR__ . "/../defaults/Err/Err.php";
+ //       require __DIR__ . "/../dev/Console/Console.php";
+ //       require __DIR__ . "/../defaults/Err/Err.php";
 
 
     }

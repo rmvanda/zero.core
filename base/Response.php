@@ -14,7 +14,6 @@ class Response
     {
         //echo "Now this is interesting..." ; 
         //new Model($altconfig); 
-        $this->defineBaseViewPath(); 
         new Model($altconfig); 
         $this->defineBaseViewPath(); 
     }
