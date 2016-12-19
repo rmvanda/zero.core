@@ -13,24 +13,25 @@ class Response
 
     public function __construct($altconfig = null)
     {
-        echo "Now this is interesting..." ; 
-        new Model($altconfig); 
+        //echo "Now this is interesting..." ; 
+        //new Model($altconfig); 
         $this->defineBaseViewPath(); 
     }
 
     protected function defineBaseViewPath()
     {
+        //die(VIEW_PATH); 
         $this -> viewPath = VIEW_PATH;
     }
 
     public function __call($func, $args)
     {
-        if (file_exists($view= $viem = ROOT_PATH . 
+        if (file_exists($view = $viem = ROOT_PATH . 
                     "app/modules/" . 
                     ucfirst(Request::$aspect) . 
                     "/views/" . 
                     Request::$endpoint . ".php") 
-                || file_exists($view = VIEW_PATH . 
+        ||  file_exists($view = VIEW_PATH . 
                     Request::$aspect . "/" .
                     Request::$endpoint . 
                     ".php")
@@ -43,7 +44,7 @@ class Response
 
     protected function render($view)
     {
-        echo $view; 
+        //echo $view; 
         if (isAjax()) {
             $this -> getPage($view);
         } else {
