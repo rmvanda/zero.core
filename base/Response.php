@@ -10,6 +10,9 @@ class Response
     protected $data; 
 
 
+    public $title; 
+
+
     public function __construct($altconfig = null)
     {
         //echo "Now this is interesting..." ; 
@@ -29,7 +32,7 @@ class Response
 
     public function __call($func, $args)
     {
-        if (file_exists($view = MODULE_PATH .
+        if (file_exists($view = $a = MODULE_PATH .
                         ucfirst(Request::$aspect) . 
                         "/views/" . 
                         Request::$endpoint . 
@@ -42,13 +45,13 @@ class Response
            ) {
             $this -> render($view);
         } else { 
-            new Err(404, "Failed to find a respose to give for $func");
+        new Err(404, "Failed to find a respose to give for $func");
         }
     }
 
+
     protected function render($view)
     {
-        //echo $view; 
         if (!isset($this->viewPath)){
             $this->viewPath = VIEW_PATH; 
         }

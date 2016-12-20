@@ -95,8 +95,10 @@ class Application {
     public function run($aspect, $endpoint, $args)
     {
         if (loads(ucfirst($aspect))) {
+            //Console::log("$aspect found and loaded"); 
             $aspect = new $aspect();
         } else {
+            //Console::log("$aspect not found and not loaded."); 
             $aspect = new Response();
         }
 
