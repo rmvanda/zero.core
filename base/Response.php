@@ -45,7 +45,7 @@ class Response
            ) {
             $this -> render($view);
         } else { 
-        new Err(404, "Failed to find a respose to give for $func");
+            new Err(404, "Failed to find a respose to give for $func");
         }
     }
 

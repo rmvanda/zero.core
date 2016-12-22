@@ -117,6 +117,12 @@ function isAjax()
         ? true : false;
 }//@f:on
 
+function isAssoc(array $arr)
+{
+    if (array() === $arr) return false;
+    return array_keys($arr) !== range(0, count($arr) - 1);
+}
+
 /**
  * Development Utility functions.
  */
