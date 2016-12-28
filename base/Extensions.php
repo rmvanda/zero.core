@@ -3,20 +3,20 @@
  * Redirect -
  * Simple alias for header("Location: /*.../*");
  * @param $location - either a local location, assuming "/" - or the URL of
- * the
- * website.
+ * the website.
  * @depends URL
  *
  * @author James Pope
- * @version 0.6
+ * @version 0.7
  *
  */
 function redirect($to)
 {
-    if (strpos($to, "http://") === false) {
-        $url = URL;
-    }
-    header("Location: " . $url . trim($to, '/'));
+    //if (strpos($to, "http://") === false) {
+    //    $url = ;
+    //}
+    //header("Location: " . $url . trim($to, '/'));
+    header("Location: " . $to );//. trim($to, '/'));
 }
 
 /**
@@ -29,12 +29,15 @@ function redirect($to)
  * @var $timestamp = Unix Timestamp
  *
  * @author James Pope
- * @version 0.8
+ * @version 1.0
  *
  */
 function formatDate($timestamp)
 {
-    return (date("Y-m-d", $timestamp) == date("Y-m-d", time()) ? date("H:i:s", $timestamp) : date("Y-m-d", $timestamp));
+    return (date("Y-m-d", $timestamp) == date("Y-m-d", time()) ?
+            date("H:i:s", $timestamp) : 
+            date("Y-m-d", $timestamp)
+            );
 }
 
 function getAge($bday){

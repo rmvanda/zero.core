@@ -158,7 +158,6 @@ class Application {
         $this->zeroCoreLoader();
     // Framework manages it's core, first
         spl_autoload_register("self::load");
-        spl_autoload_register("self::errorHandler");
 
         // for Composer + PSR compatability
         if (file_exists($file = ROOT_PATH . "vendor/autoload.php")) {
@@ -178,7 +177,8 @@ class Application {
                 } 
         }
 
-               return $this;
+       spl_autoload_register("self::errorHandler");
+       return $this;
     }
 
     public function getClientSession(){ 
