@@ -11,7 +11,9 @@
  * useful to the application
  *
  */
-//namespace Zero\Core;
+Namespace Zero\Core;
+
+
 class Client {
 
     public static $isAdmin;

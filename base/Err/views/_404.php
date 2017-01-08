@@ -1,5 +1,0 @@
-<body>
-    <br>
-    <hr>
-</body>
-

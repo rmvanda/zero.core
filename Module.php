@@ -1,5 +1,6 @@
 <?php
 
+Namespace Zero\Core; 
 
 class Module extends Response { 
 // Yes, this class is secretly a way to realias Response to Module.

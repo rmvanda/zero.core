@@ -1,4 +1,8 @@
 <?php
+
+// Global functions for convenience. 
+
+
 /**
  * Redirect -
  * Simple alias for header("Location: /*.../*");
@@ -95,7 +99,9 @@ function loads($filename, $path = null)
 {
     $stdout = find($filename, $path);
     //Console::log() -> loading($filename, $stdout);
+    //if(file_exists($stdout)){echo "and there it is...\n";}else{echo "But that failed for some fucking reason\n";}
     return (file_exists($stdout) ?
+
             require $stdout : false);
 }
 

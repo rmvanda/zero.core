@@ -1,5 +1,7 @@
 <?php
 
+Namespace Zero\Core; 
+
 class Err extends Module
 {
     private $message = array(				

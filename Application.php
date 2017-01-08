@@ -1,5 +1,7 @@
 <?php
 
+Namespace Zero\Core; 
+
 class Application {
 
     public function __construct(array $opts=null){
@@ -205,7 +207,6 @@ class Application {
                   );
             exit();
         } elseif ($_SERVER['HTTP_HOST'] == ADMIN_DOMAIN) {
-            //                echo "Suload says: ".
             $this -> suload("Admin");
             return new Admin();
             /**
@@ -226,11 +227,10 @@ class Application {
 
     public function errorHandler($class)
     {
-        if (defined("DEV")) {
-            xdebug_print_function_stack();
+        if (defined("DEVMODE") && DEVMODE == true) {
             Console::log() -> error($class);
         }
-        new Err(404, $class);
+        new Err(404, "There is no such thing as $class");
     }
 
 } 

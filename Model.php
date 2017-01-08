@@ -3,10 +3,12 @@
  * Model Class
  * This class simply establishes a connection to the database, generically.
  * Any other generic model functions can go here.
- *
- * @version 0.8
+ * 
+ * @version 1.0
  *
  * */
+
+namespace Zero\Core {
 
 class Model{  
     public function __construct($alt_config=null){
@@ -21,6 +23,9 @@ class Model{
         } 
     }
  }
+
+
+}
 
 // Sneaky trick/ hack : 
 // If you know of a better place to put this, I'm all ears. 

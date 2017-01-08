@@ -15,6 +15,8 @@
  * Yeah, it needs to be organized a bit better -
  */
 
+Namespace Zero\Core
+
 class Whitelist
 {
 	// This should be configurable (see: CentOS using /etc/php.fpm.d for example)

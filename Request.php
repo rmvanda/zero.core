@@ -4,6 +4,9 @@
  *
  * @author James Pope
  */
+
+Namespace Zero\Core; 
+
 class Request
 {
     /*
