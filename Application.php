@@ -29,9 +29,9 @@ class Application {
      */ 
 
     public function defineConstants(array $key = null){
-        $inis = array_diff(scandir(ROOT_PATH."app/_configs/"),['.','..']); 
+        $inis = array_diff(scandir(ROOT_PATH."app/config/"),['.','..']); 
         foreach ($inis as $ini) {
-            $inifile   = ROOT_PATH."app/_configs/".$ini; 
+            $inifile   = ROOT_PATH."app/config/".$ini; 
             $constants = parse_ini_file($inifile, false, INI_SCANNER_RAW); 
             foreach ($constants as $constant => $value) {
                 // if we're defining paths, auto-append the ROOT_PATH
@@ -97,7 +97,7 @@ class Application {
     public function run($aspect, $endpoint, $args)
     {
         if (loads(ucfirst($aspect))) {
-            //Console::log("$aspect found and loaded"); 
+        //Console::log("$aspect found and loaded"); 
             $aspect = new $aspect();
         } else {
             //Console::log("$aspect not found and not loaded."); 
@@ -116,14 +116,14 @@ class Application {
         require __DIR__."/Request.php";     
         require __DIR__."/Response.php";
    
-//   require __DIR__."/Client.php"; Sooner the better, for ACL.. but...
+        require __DIR__."/Client.php"; //Sooner the better, for ACL.. but...
 
         require __DIR__."/Extensions.php";
 
 //Other logic can be set, here - 
 //        require __DIR__."/../defaults/Index/Index.php"; 
  
- //       require __DIR__."/Model.php"; // Database adapter.
+       require __DIR__."/Model.php"; // Database adapter.
       
         require __DIR__."/Module.php";
         //require __DIR__."/Restricted.php";
@@ -132,11 +132,13 @@ class Application {
  //       require __DIR__ . "/../dev/Console/Console.php";
  //       require __DIR__ . "/../defaults/Err/Err.php";
 
+        require __DIR__."/Err.php"; 
 
     }
 
     public function load($filename, $path = null)
     {
+        //echo $filename; 
         if (loads($filename)) {
             return true;
         } else {

@@ -1,6 +1,5 @@
-
 <?php
-#TODO:: Rethink this fucking class  - read some fucking design shit 
+//#TODO:: Rethink this fucking class  - read some fucking design shit 
 /**
  * Client Class
  *

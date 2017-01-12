@@ -19,14 +19,10 @@ class Model{
                     "USER" => USER,
                     "PASS" => PASS
                     );
-            ZXC::INIT($db_config);
+            \ZXC::INIT($db_config);
         } 
     }
  }
-
-
-}
-
 // Sneaky trick/ hack : 
 // If you know of a better place to put this, I'm all ears. 
 
@@ -66,3 +62,7 @@ function fetchColumnsFrom($table, $formatType=null){
     return $return; 
 
 }
+
+}
+
+
