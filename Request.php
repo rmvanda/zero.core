@@ -27,9 +27,10 @@ class Request
         $isAjax, 
         $basePath;
 
+    private $safeCharacters = array('-',".","/"); 
+
     public function __construct(){
 
-        $this->convertJSONtoPOST(); 
         self::$uri      = trim(
                 strtok(
                     $_SERVER['REQUEST_URI'],
@@ -37,6 +38,11 @@ class Request
                 "/")
             ?:"index/index";
 
+        if(!$this->isValid(self::$uri)){
+            new Err(403);     
+        }
+
+        $this->convertJSONtoPOST(); 
         self::$uriArray = explode("/", self::$uri); 
 
         self::$uri      = "/".self::$uri; 
@@ -59,14 +65,14 @@ class Request
 
         self::$tld      = array_slice(explode(".", self::$domain), -1); 
 
-        self::$aspect   = self::$uriArray[0]; 
-        self::$endpoint = self::$uriArray[1]; 
+        self::$aspect   = strtolower(self::$uriArray[0]); 
+        self::$endpoint = strtolower(self::$uriArray[1]); 
 
-        if(strpos(self::$aspect,"-")){
+        if(strpos(self::$aspect,"-")!==false){
             self::$aspect = $this->friendlyURLConverter(self::$aspect); 
         }
-        if(strpos(self::$endpoint,"-")){
-            self::$endpoint = $this->friendlyURLConverter(self::$aspect); 
+        if(strpos(self::$endpoint,"-")!==false){
+            self::$endpoint = $this->friendlyURLConverter(self::$endpoint); 
         }
 
         self::$args     = array_slice(self::$uriArray, 2);
@@ -76,9 +82,9 @@ class Request
     }
 
     public static function test(){
+
         print_x(self::$uri);
         print_x(self::$uriArray);
-        print_x(self::$uri);
         print_x(self::$protocol);
         print_x(self::$sub);
         print_x(self::$domain);
@@ -87,6 +93,25 @@ class Request
         print_x(self::$endpoint);
         print_x(self::$args);
         print_x(self::$method);
+    }
+
+    private function isValid($uri){
+        $test = $uri; 
+        
+        if(substr_count($uri,".") > 1){
+            return false; 
+        }
+
+        foreach($this->safeCharacters as $bad){
+        
+            $test = str_replace($bad,"",$test); 
+            
+        }
+
+        if(ctype_alnum($test)){
+            return true; 
+        }
+        
     }
 
     private function convertJSONtoPOST(){
@@ -122,7 +147,8 @@ class Request
  */
     private function friendlyURLConverter($url,$class=null)
     {
-        $urlwords = ucwords($url); 
+        $friendly = str_replace("-", " ", $url); 
+        $urlwords = ucwords($friendly); 
         $friendly = str_replace(" ", "", $urlwords); 
         if($class === null){
             $friendly = lcfirst($friendly); 

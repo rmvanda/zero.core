@@ -47,6 +47,7 @@ class Response
            ) {
             $this -> render($view);
         } else { 
+            xdebug_print_function_stack(); 
             new Err(404, "Failed to find a respose to give for $func");
         }
     }

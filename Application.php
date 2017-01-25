@@ -96,15 +96,27 @@ class Application {
      */
     public function run($aspect, $endpoint, $args)
     {
-        if (loads(ucfirst($aspect))) {
+        if ($this->isModule(ucfirst($aspect))) {
         //Console::log("$aspect found and loaded"); 
             $aspect = new $aspect();
         } else {
             //Console::log("$aspect not found and not loaded."); 
             $aspect = new Response();
         }
-
+        // TODO 
+        // if function does not exist, check for file
+        // if file does not exist, check Index class for something 
         $aspect -> {$endpoint}($args);
+
+    }
+
+    private function isModule($module,$subspace=null){
+        
+        if(file_exists($file=ROOT_PATH."modules/".$module."/".$module.".php")){
+           return require_once $file;  
+        }
+        echo $file; die(); 
+        return false; 
 
     }
 
@@ -132,13 +144,16 @@ class Application {
  //       require __DIR__ . "/../dev/Console/Console.php";
  //       require __DIR__ . "/../defaults/Err/Err.php";
 
+        require ROOT_PATH."lib/zxc/ZXC.php"; 
         require __DIR__."/Err.php"; 
 
     }
 
+    
+
     public function load($filename, $path = null)
     {
-        //echo $filename; 
+        die("$filename with load"); 
         if (loads($filename)) {
             return true;
         } else {
@@ -159,8 +174,10 @@ class Application {
 
     public function registerAutoloaders($autoloader = null)
     {
+        // Framework manages it's core, first
         $this->zeroCoreLoader();
-    // Framework manages it's core, first
+
+        spl_autoload_register("self::isModule"); 
         spl_autoload_register("self::load");
 
         // for Composer + PSR compatability
@@ -232,6 +249,7 @@ class Application {
         if (defined("DEVMODE") && DEVMODE == true) {
             Console::log() -> error($class);
         }
+        xdebug_print_function_stack(); 
         new Err(404, "There is no such thing as $class");
     }
 

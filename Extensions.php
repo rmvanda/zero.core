@@ -96,7 +96,7 @@ function find($file, $path = null)
                   ' -not -iwholename "*admin*" -not -iwholename "*helpers*" -type f -name ' . 
                   $file . 
                   ".php");
-    //echo "\n\nstdin: $stdin\n\nstdout:$stdout"; 
+//    echo "\n\nstdin: $stdin\n\nstdout:$stdout<br>"; 
 
     return (file_exists($stdout) ? $stdout : false);
 }
@@ -112,7 +112,6 @@ function loads($filename, $path = null)
 {
     $stdout = find($filename, $path);
     //Console::log() -> loading($filename, $stdout);
-    //echo $stdout; 
     //if(file_exists($stdout)){echo "and there it is...\n";}else{echo "But that failed for some fucking reason\n";}
     return (file_exists($stdout) ?
 
@@ -149,7 +148,7 @@ function isAssoc(array $arr)
 /**
  * Development Utility functions.
  */
-if (defined("DEV")) {
+if (true) { // TODO
 
     function print_x($x)
     {
