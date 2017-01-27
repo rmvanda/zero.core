@@ -28,7 +28,7 @@ class Client {
         if (method_exists(self,$func)){
             return self::$func();  
         } else {
-            new Err(500,"Called nonexistant Client function $func"); 
+            new Error(500,"Called nonexistant Client function $func"); 
         }    
 
     }

@@ -49,7 +49,7 @@ class Response
         } else {
 
             xdebug_print_function_stack(); 
-            new Err(404, "Failed to find a respose to give for $func");
+            new Error(404, "Failed to find a respose to give for $func");
         }
     }
 

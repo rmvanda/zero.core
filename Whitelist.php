@@ -21,6 +21,7 @@ class Whitelist
 {
 	// This should be configurable (see: CentOS using /etc/php.fpm.d for example)
 	const WHITELIST_PATH = "/etc/php5/fpm/whitelist.lst";
+
 	public static function isOnTheWhitelist()
 	{
 		// Do you mean self::parseWhiteList? .....vv

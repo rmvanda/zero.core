@@ -39,7 +39,7 @@ class Request
             ?:"index/index";
 
         if(!$this->isValid(self::$uri)){
-            new Err(403);     
+            new Error(403);     
         }
 
         $this->convertJSONtoPOST(); 

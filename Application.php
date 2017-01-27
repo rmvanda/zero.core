@@ -179,7 +179,7 @@ class Application {
 //        if(defined(DEVMODE)&&DEVMODE===true){ 
             trigger_error("Failed to load $class after looking in $psrPath");die(); 
 //        } else {
-//            new Err(500,"Oops! Something went missing...");     
+//            new Error(500,"Oops! Something went missing...");     
 //        }
     }
 
@@ -239,7 +239,7 @@ class Application {
         /*            if (in_array(($aspect = ucfirst($aspect)), get_declared_classes()) 
                       && !defined("DEV")
                       ){
-                      new Err(403);
+                      new Error(403);
                       } else {
         if ($_SERVER['HTTP_HOST'] != PRIMARY_DOMAIN && 
                 !$this -> request -> access
@@ -274,7 +274,7 @@ class Application {
             Console::log() -> error($class);
         }
         xdebug_print_function_stack(); 
-        new Err(404, "There is no such thing as $class");
+        new Error(404, "There is no such thing as $class");
     }
 
 } 
