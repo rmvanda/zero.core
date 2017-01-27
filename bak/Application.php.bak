@@ -6,10 +6,9 @@ class Application {
 
     public function __construct(array $opts=null){
 
-        $this 
-            -> registerAutoloaders($opts['autoloaders']) 
-            -> defineConstants($opts['constants'])
+        $this -> defineConstants($opts['constants'])
             -> fetchExtensions($opts['extensions']) 
+            -> registerAutoloaders($opts['autoloaders']) 
             -> getClientSession()
             -> parseRequest() 
             //           -> finalizeRoute() 
@@ -30,13 +29,13 @@ class Application {
      */ 
 
     public function defineConstants(array $key = null){
-        $inis = array_diff(scandir(ZERO_ROOT."app/config/"),['.','..']); 
+        $inis = array_diff(scandir(ROOT_PATH."app/config/"),['.','..']); 
         foreach ($inis as $ini) {
-            $inifile   = ZERO_ROOT."app/config/".$ini; 
+            $inifile   = ROOT_PATH."app/config/".$ini; 
             $constants = parse_ini_file($inifile, false, INI_SCANNER_RAW); 
             foreach ($constants as $constant => $value) {
-                // if we're defining paths, auto-append the ZERO_ROOT
-                define($constant,($ini == "paths.ini"?ZERO_ROOT:"").$value);
+                // if we're defining paths, auto-append the ROOT_PATH
+                define($constant,($ini == "paths.ini"?ROOT_PATH:"").$value);
             }
         }
 
@@ -102,14 +101,15 @@ class Application {
         //Console::log("$aspect found and loaded"); 
             $Aspect = "\\Zero\\Module\\".ucfirst($aspect); 
             $aspect = new $Aspect();
-       // } elseif($this->isProtected()){ TODO
         } else {
             //Console::log("$aspect not found and not loaded."); 
             $aspect = new \Zero\Core\Response();
         }
-        // TODO  ? XXX
+        // TODO 
         // if function does not exist, check for file
         // if file does not exist, check Index class for something 
+
+        // Now that user input is done, flip to general autoloading. 
 
         $aspect -> {$endpoint}($args);
 
@@ -126,6 +126,7 @@ class Application {
     
         require __DIR__."/Client.php"; //Sooner the better, for ACL.. but...
     
+        require __DIR__."/Extensions.php";
     
         //Other logic can be set, here - 
         //        require __DIR__."/../defaults/Index/Index.php"; 
@@ -139,6 +140,7 @@ class Application {
         //       require __DIR__ . "/../dev/Console/Console.php";
         //       require __DIR__ . "/../defaults/Err/Err.php";
      
+        require ROOT_PATH."lib/zxc/ZXC.php"; 
         require __DIR__."/Err.php"; 
 
     }
@@ -165,27 +167,19 @@ class Application {
         }
     }
 
-//XXX Breaks in cases of \GlobalClass 
     public function autoloader($class){
+        echo ROOT_PATH;  die(); 
         $path = explode("\\", strtolower($class)); 
-        $path[count($path)-1] = ucfirst($path[count($path)-1]?:$path[1]); //XXX not anymore TESTME
-//        if(file_exist((
-        $psrPath=ROOT_PATH.implode(DIRECTORY_SEPARATOR,$path).".php";
-//        echo $psrPath."<br>"; 
-        if(file_exists($psrPath)){
-            require_once($psrPath); 
-            return true; 
-        }
-//        if(defined(DEVMODE)&&DEVMODE===true){ 
-            trigger_error("Failed to load $class after looking in $psrPath");die(); 
-//        } else {
-//            new Err(500,"Oops! Something went missing...");     
-//        }
+        $path[count($path)-1] = ucfirst($path[count($path)-1]); 
+        if(file_exists(RRRR_DIR.implode("/")))
+    
+        echo $class;die; 
+        
     }
 
     private function isModule($module){
         
-        if(file_exists($file=ZERO_ROOT."modules/".$module."/".$module.".php")){
+        if(file_exists($file=ROOT_PATH."modules/".$module."/".$module.".php")){
            return require_once $file;  
         }
         echo "Failed to load via new autoloader: ".$file; die(); 
@@ -196,8 +190,6 @@ class Application {
 
     public function registerAutoloaders($autoloader = null)
     {
-        require ZERO_ROOT."lib/zxc/ZXC.php"; 
-        require __DIR__."/Extensions.php";
         // Framework manages it's core, first
 //        $this->zeroCoreLoader();
 
@@ -205,7 +197,7 @@ class Application {
         //spl_autoload_register("self::load");
 
         // for Composer + PSR compatability
-        if (file_exists($file = ZERO_ROOT . "vendor/autoload.php")) {
+        if (file_exists($file = ROOT_PATH . "vendor/autoload.php")) {
             require $file;
         }
         // if you want to add external autoloaders

@@ -26,7 +26,7 @@ class Response
     protected function defineBaseViewPath()
     {
         if(!defined($this->viewPath)){  
-            $this -> viewPath = ZERO_ROOT."app/frontend/global_views/"; 
+            $this -> viewPath = ROOT_PATH."app/frontend/global_views/"; 
         } 
         //die(VIEW_PATH); 
         $this -> viewPath = VIEW_PATH;

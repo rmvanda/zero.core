@@ -23,7 +23,7 @@ class Application {
 			$namespace = explode ( "\\", $class );
 			$class = array_pop ( $namespace );
 		}
-		$stdout = exec ( "find " . ZERO_ROOT . ' -not -iwholename "*admin*" -type f -name ' . $class . ".php" );
+		$stdout = exec ( "find " . ROOT_PATH . ' -not -iwholename "*admin*" -type f -name ' . $class . ".php" );
 		// Console::log() -> autoloading("Class $class in path: $stdout <br>");
 		// echo " $stdout !<br>";
 		return (file_exists ( $stdout ) ? require $stdout : false);

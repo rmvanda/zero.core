@@ -48,8 +48,8 @@ class Restricted//extends Request
         //@f:off        
         //new Admin();
 
-        define("ADMIN_PATH", ZERO_ROOT);
-        define("ADMIN_VIEW_PATH", ZERO_ROOT . "views/");
+        define("ADMIN_PATH", ROOT_PATH);
+        define("ADMIN_VIEW_PATH", ROOT_PATH . "views/");
         require "../Admin.php"; 
 
         Request::$basePath = ADMIN_VIEW_PATH;

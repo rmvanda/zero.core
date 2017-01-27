@@ -1,0 +1,30 @@
+<?php
+
+
+namespace Zero\Core;
+
+class Autoloader {
+
+ 
+    private function isModule($module){
+        
+        if(file_exists($file=ROOT_PATH."modules/".$module."/".$module.".php")){
+           return require_once $file;  
+        }
+        echo "Failed to load via new autoloader: ".$file; die(); 
+        return false; 
+
+    }
+
+
+    public function general($class){
+        
+        echo $class; die;      
+        
+   }
+    
+    
+    
+    
+
+}
