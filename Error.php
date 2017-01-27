@@ -2,7 +2,7 @@
 
 Namespace Zero\Core; 
 
-class Err extends Module
+class Error extends Module
 {
     private $message = array(				
             400 => "BAD REQUEST", 				
@@ -25,7 +25,16 @@ class Err extends Module
             417 => "EXPECTATION FAILED", 				
             418 => "I'M A LITTLE TEAPOT", 				
             420 => "ENHANCE YOUR CALM",
-            505 => "STOP THAT"
+            500 => "SERVER ERROR", 
+            501 => "NOT IMPLEMENTED",
+            502 => "BAD GATEWAY", 
+            503 => "SERVICE UNAVAILABLE", 
+            505 => "HTTP VERSION NOT SUPPORTED",
+            506 => "VARIANT ALSO NEGOTIATES",
+            509 => "BANDWIDTH LIMIT EXCEEDED",
+            510 => "NOT EXTENDED",
+            598 => "NETWORK READ TIMEOUT ERROR", 
+
             ); 
 
     public function __construct($code, $err = null) {

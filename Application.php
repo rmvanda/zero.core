@@ -106,6 +106,7 @@ class Application {
         } else {
             //Console::log("$aspect not found and not loaded."); 
             $aspect = new \Zero\Core\Response();
+
         }
         // TODO  ? XXX
         // if function does not exist, check for file
