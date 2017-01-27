@@ -17,11 +17,19 @@ class Response
 
     public function __construct($altconfig = null)
     {
-        //echo "Now this is interesting..." ; 
-        //new Model($altconfig); 
-        new Model($altconfig); 
         $this->defineBaseViewPath(); 
+        $this->buildHead(); 
+        $this->buildHeader(); 
+        // echo "Now this is interesting..." ; 
+        // new Model($altconfig); 
+        // new Model($altconfig); 
     }
+
+    public function __destruct(){
+    
+        $this->buildFooter(); 
+    
+    } 
 
     protected function defineBaseViewPath()
     {
@@ -101,19 +109,18 @@ class Response
     private function getStylesheets()
     {
         foreach(array(Request::$aspect, Request::$endpoint) as $resource){
-            if (file_exists(WEB_PATH . "assets/css/pg-specific/" . $resource . ".css")) {
+            if (file_exists(WEB_PATH . "assets/pg-specific/".Request::$aspect."/css/".$resource.".css")) {
                 echo '<link rel="stylesheet" type="text/css" href="/assets/css/pg-specific/' . $resource . '.css" />';
             } else {
                 echo "<!-- " . $resource . ".css not found, so not loaded. -->";
             }
-
         }
     }
 
     private function getScripts()
     {
         foreach(array(Request::$aspect, Request::$endpoint) as $resource){
-            if (file_exists(WEB_PATH . "assets/js/pg-specific/{$this->aspect}.js")) {
+            if (file_exists(WEB_PATH . "assets/pg-specific/".Request::$aspect."/js/$resource.js")) {
                 echo '<script type="text/javascript" src="/assets/js/pg-specific/' . $resource . '.js" ></script>';
             } else {
                 echo "<!-- " . $resource . ".js not found, so not loaded. -->";

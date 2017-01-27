@@ -10,7 +10,7 @@ class Application {
             -> registerAutoloaders($opts['autoloaders']) 
             -> defineConstants($opts['constants'])
             -> fetchExtensions($opts['extensions']) 
-            -> getClientSession()
+//            -> getClientSession()
             -> parseRequest() 
             //           -> finalizeRoute() 
             -> run(
@@ -98,11 +98,15 @@ class Application {
     public function run($aspect, $endpoint, $args)
     {
         //TODO $NamedAspect = $this->hasNamespace(ucfirst($aspect))) { 
-        if ($this->isModule(ucfirst($aspect))) {
+        if ($this->isModule($Aspect=ucfirst($aspect))) {
         //Console::log("$aspect found and loaded"); 
-            $Aspect = "\\Zero\\Module\\".ucfirst($aspect); 
+            $Aspect = "\\Zero\\Module\\".$Aspect; 
             $aspect = new $Aspect();
-       // } elseif($this->isProtected()){ TODO
+        } else if($this->isProtected($Aspect)){ 
+            $this->getClientSession(); 
+            if(Client::hasAccess($Aspect, $endpoint)){
+                $Aspect = new $Aspect;     
+            }
         } else {
             //Console::log("$aspect not found and not loaded."); 
             $aspect = new \Zero\Core\Response();
