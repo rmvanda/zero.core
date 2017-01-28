@@ -39,9 +39,11 @@ class Error extends Module
 
     public function __construct($code, $err = null) {
 
-        parent::__construct(); 
         header("HTTP/1.1 $code " . $this -> message[$code]);
-        
+
+        xdebug_print_function_stack(); 
+
+        parent::__construct(); 
         if(defined(DEVMODE) && DEV !== false) {
         //    xdebug_print_function_stack();
         }
@@ -70,16 +72,18 @@ class Error extends Module
         
         $this->title = "Error: ".($message=ucwords(strtolower($this->message[$code])));
         
-        $this->buildHead(); 
-        $this->buildHeader(); 
-        
         //if(file_exists($errPg = __DIR__   . "/views/_$code.php")){
         //    include $errPg;
         //}else{
-        echo "<h1>$code - $message</h1><h4>$err</h4><br><hr>";     
+        if(!Request::$accepts){
+            echo "<h1>$code - $message</h1><h4>$err</h4><br><hr>";     
+        } else {
+        
+            $this->export(array()); 
+
+        }
         //}
         
-        $this->buildFooter(); 
 
     }
 

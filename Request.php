@@ -25,18 +25,25 @@ class Request
         $aspect, $endpoint, $args, 
         $uriArray, 
         $isAjax, 
-        $basePath;
+        $basePath,
+        $accepts;
 
     private $safeCharacters = array('-',".","/"); 
 
     public function __construct(){
 
         self::$uri      = trim(
-                strtok(
-                    $_SERVER['REQUEST_URI'],
-                    "?"),
-                "/")
-            ?:"index/index";
+                                strtok(
+                                    $_SERVER['REQUEST_URI'],
+                                    "?"),
+                                "/")
+                            ?:"index/index";
+
+        self::$accepts  = explode(".",self::$uri)[1]; 
+        if(!$this->isValidType(self::$accepts)){
+           new Error(404, "Not sure where that is...");    
+        } 
+        self::$uri      = explode(".",self::$uri)[0]; 
 
         if(!$this->isValid(self::$uri)){
             new Error(403);     
@@ -80,6 +87,7 @@ class Request
 
         self::$method   = (empty($_POST) && count($_POST) === 0 )?"GET":"POST";
         self::$isAjax   = isAjax(); // cheating.
+
     }
 
     public static function test(){
@@ -94,6 +102,7 @@ class Request
         print_x(self::$endpoint);
         print_x(self::$args);
         print_x(self::$method);
+        print_x(self::$accepts); 
     }
 
     private function isValid($uri){
@@ -113,6 +122,17 @@ class Request
             return true; 
         }
         
+    }
+
+    private function isValidType($type){
+    
+
+        if(empty($type)   ||
+           $type == "json"||
+           $type == "xml" ){
+            return true; 
+        }
+    
     }
 
     private function convertJSONtoPOST(){

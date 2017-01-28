@@ -18,17 +18,20 @@ class Response
     public function __construct($altconfig = null)
     {
         $this->defineBaseViewPath(); 
-        $this->buildHead(); 
-        $this->buildHeader(); 
-        // echo "Now this is interesting..." ; 
+
+        if(!isset(Request::$accepts)){
+            $this->buildHead(); 
+            $this->buildHeader(); 
+        }
+
         // new Model($altconfig); 
-        // new Model($altconfig); 
-    }
+
+}
 
     public function __destruct(){
-    
-        $this->buildFooter(); 
-    
+        if(!isset(Request::$accepts)){
+            @$this->buildFooter(); 
+        }
     } 
 
     protected function defineBaseViewPath()
@@ -36,7 +39,6 @@ class Response
         if(!defined($this->viewPath)){  
             $this -> viewPath = ZERO_ROOT."app/frontend/global_views/"; 
         } 
-        //die(VIEW_PATH); 
         $this -> viewPath = VIEW_PATH;
     }
 
@@ -201,5 +203,28 @@ class Response
         die(json_encode($json, empty(DEVMODE)?0:JSON_PRETTY_PRINT));
 
     }
+
+	private $xml_data; 
+
+	private function toXML($data){
+		if(empty($xml_data)){
+			$xml_data = new SimpleXMLElement('<?xml version="1.0"?><data></data>');
+		}
+
+		// function defination to convert array to xml
+		foreach( $data as $key => $value ) {
+			if( is_numeric($key) ){
+				$key = 'item'.$key; //dealing with <0/>..<n/> issues
+			}
+			if( is_array($value) ) {
+				$subnode = $xml_data->addChild($key);
+				array_to_xml($value, $subnode);
+			} else {
+				$xml_data->addChild("$key",htmlspecialchars("$value"));
+			}
+		}
+	}
+
+}
 
 }

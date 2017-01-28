@@ -63,9 +63,10 @@
 	<button id="server">
 		server
 		<display>
-			<?=print_x($_SESSION);
+			<?php
             print_x($_SERVER);
-        ?>
+            print_x($_SESSION);
+            ?>
 		</display>
 	</button>
 
@@ -93,7 +94,7 @@
 		}
 	};
 	$("arrow").click(function() {
-		console.log("ello");
+		console.log("'ello");
 		konsole.toggle();
 
 	});

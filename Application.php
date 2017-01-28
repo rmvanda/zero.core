@@ -92,7 +92,7 @@ class Application {
      * takes 
      * @param $aspect
      * @param $endpoint
-     * @param array $args ($opt)
+     * @param (array) $args ($opt)
      *
      */
     public function run($aspect, $endpoint, $args)
@@ -105,7 +105,7 @@ class Application {
         } else if($this->isProtected($Aspect)){ 
             $this->getClientSession(); 
             if(Client::hasAccess($Aspect, $endpoint)){
-                $Aspect = new $Aspect;     
+                $Aspect = new $Aspect();
             }
         } else {
             //Console::log("$aspect not found and not loaded."); 
@@ -115,9 +115,8 @@ class Application {
         // TODO  ? XXX
         // if function does not exist, check for file
         // if file does not exist, check Index class for something 
-
+        
         $aspect -> {$endpoint}($args);
-
     }
 
     
@@ -276,7 +275,7 @@ class Application {
     public function errorHandler($class)
     {
         if (defined("DEVMODE") && DEVMODE == true) {
-            Console::log() -> error($class);
+           // Console::log() -> error($class);
         }
         xdebug_print_function_stack(); 
         new Error(404, "There is no such thing as $class");
