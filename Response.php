@@ -55,7 +55,8 @@ class Response
                         Request::$endpoint . 
                         ".php")
            ) {
-            $this -> render($view);
+         //   $this -> render($view);
+         include $view; 
         } else {
 
             xdebug_print_function_stack(); 
@@ -227,4 +228,4 @@ class Response
 
 }
 
-}
+
