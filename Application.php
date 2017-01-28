@@ -178,7 +178,6 @@ class Application {
         $path[count($path)-1] = ucfirst($path[count($path)-1]?:$path[1]); //XXX not anymore TESTME
 //        if(file_exist((
         $psrPath=ROOT_PATH.implode(DIRECTORY_SEPARATOR,$path).".php";
-//        echo $psrPath."<br>"; 
         if(file_exists($psrPath)){
             require_once($psrPath); 
             return true; 
