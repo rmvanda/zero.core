@@ -102,7 +102,10 @@ class Application {
         //Console::log("$aspect found and loaded"); 
             $Aspect = "\\Zero\\Module\\".$Aspect; 
             $aspect = new $Aspect();
-        } else if($this->isProtected($Aspect)){ 
+        // This bit is new - the way I used to handle access control is via the "finalizeRoute" method
+        // I think this way might be better because it also provides a more reasonable hook for 
+        // automatically starting a session... 
+        } else if($this->isProtected($Aspect) && Client::sessionExists()){ 
             $this->getClientSession(); 
             if(Client::hasAccess($Aspect, $endpoint)){
                 $Aspect = new $Aspect();
