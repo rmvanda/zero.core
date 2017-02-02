@@ -11,9 +11,9 @@ class Response
     protected $status = true; 
     protected $data; 
 
+    protected $headerIncluded,$headIncluded,$footerIncluded; 
 
     public $title; 
-
 
     public function __construct($altconfig = null)
     {
@@ -23,10 +23,8 @@ class Response
             $this->buildHead(); 
             $this->buildHeader(); 
         }
-
         // new Model($altconfig); 
-
-}
+    }
 
     public function __destruct(){
         if(!isset(Request::$accepts)){
@@ -91,12 +89,14 @@ class Response
 // while still using render. 
     protected function buildHead()
     {
-        include $this -> viewPath . "head.php";
+        $this->headIncluded=true;
+        include_once $this -> viewPath . "head.php";
     }
 
     protected function buildHeader()
     {
-        include $this -> viewPath . "header.php";
+        $this->headerIncluded=true; 
+        include_once $this -> viewPath . "header.php";
     }
 
    // protected function getPage($page) // who the fuck? 
@@ -106,7 +106,8 @@ class Response
 
     protected function buildFooter()
     {
-        include $this -> viewPath . "footer.php";
+        $this->footerIncluded=true; 
+        include_once $this -> viewPath . "footer.php";
     }
 
     private function getStylesheets()
