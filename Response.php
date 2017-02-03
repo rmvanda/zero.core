@@ -48,6 +48,12 @@ class Response
                         Request::$endpoint . 
                         ".php"
                        ) 
+         || file_exists($view = $b = MODULE_PATH . 
+                        ucfirst(Request::$aspect) . 
+                        "/views/" . 
+                        Request::$endpoint ."/".
+                        Request::$uriArray[2].".php"
+                    )
          || file_exists($view = VIEW_PATH  . // I'd like to dprecate this block  <-- 
                         Request::$aspect   . "/" .
                         Request::$endpoint . 
@@ -57,7 +63,8 @@ class Response
          include $view; 
         } else {
 
-            xdebug_print_function_stack(); 
+            echo "<h1>$b</h1>"; die(); 
+            //xdebug_print_function_stack(); 
             new Error(404, "Failed to find a respose to give for $func");
         }
     }
