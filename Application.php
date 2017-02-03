@@ -5,7 +5,6 @@ Namespace Zero\Core;
 class Application {
 
     public function __construct(array $opts=null){
-
         if($_SERVER['SERVER_NAME'] == 'localhost'){
             define("DEVMODE",true);
             ini_set("html_errors",1); 
@@ -19,6 +18,7 @@ class Application {
             error_reporting(~E_ALL); 
         }
 
+        ob_start();
 
         $this 
             -> registerAutoloaders($opts['autoloaders']) 
@@ -32,9 +32,15 @@ class Application {
                     Request::$endpoint, 
                     Request::$args
                   );
-
+        
+    }
+    public function __destruct() {
+    
+        ob_flush(); 
+        
     }
 
+    
 
     /**
      *  @function defineConstants
