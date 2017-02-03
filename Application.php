@@ -8,10 +8,10 @@ class Application {
 
         $this 
             -> registerAutoloaders($opts['autoloaders']) 
+            -> parseRequest() 
             -> defineConstants($opts['constants'])
             -> fetchExtensions($opts['extensions']) 
 //            -> getClientSession()
-            -> parseRequest() 
             //           -> finalizeRoute() 
             -> run(
                     Request::$aspect,
@@ -30,6 +30,10 @@ class Application {
      */ 
 
     public function defineConstants(array $key = null){
+
+        // Since the shift has been towards modules, this should 
+        // be able to change in some way that respects the modules a bit more. 
+        // Also, see the modular-respective block before the return
         $inis = array_diff(scandir(ZERO_ROOT."app/config/"),['.','..']); 
         foreach ($inis as $ini) {
             $inifile   = ZERO_ROOT."app/config/".$ini; 
@@ -45,6 +49,28 @@ class Application {
                 define($k, $v);
             }
         }
+        //$mp for module path
+        //$mf for module folder
+        if(file_exists($inifile=($mp=MODULE_PATH.Request::$Aspect)."/config.ini")){
+            $constants = parse_ini_file($inifile); 
+            foreach($constants as $constant=>$value){
+                define($constant,$value) ;    
+            }
+        }
+        if(file_exists($mf=$mp."/config/")){
+
+            $inis = array_diff(scandir($mf),['.','..']); 
+            foreach ($inis as $ini) {
+                $inifile   = $mf.$ini; 
+                $constants = parse_ini_file($inifile, false, INI_SCANNER_RAW); 
+                foreach ($constants as $constant => $value) {
+                    // if we're defining paths, auto-append the ZERO_ROOT
+                    define($constant,$value);
+                }
+
+            }
+        }
+
         return $this;
     }
 
