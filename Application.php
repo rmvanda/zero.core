@@ -6,6 +6,20 @@ class Application {
 
     public function __construct(array $opts=null){
 
+        if($_SERVER['SERVER_NAME'] == 'localhost'){
+            define("DEVMODE",true);
+            ini_set("html_errors",1); 
+            ini_set("display_errors", "On");
+            error_reporting(E_ALL & ~E_NOTICE); 
+        } else {
+            define("DEVMODE",false); 
+            // we can leave these out after I figure out why my php.ini is blank <_< 
+            ini_set("html_errors",0); 
+            ini_set("display_errors", "Off");
+            error_reporting(~E_ALL); 
+        }
+
+
         $this 
             -> registerAutoloaders($opts['autoloaders']) 
             -> parseRequest() 
