@@ -23,6 +23,7 @@ class Request
         $domain,
         $tld, 
         $aspect, $endpoint, $args, 
+        $Aspect,
         $uriArray, 
         $isAjax, 
         $basePath,
@@ -68,12 +69,14 @@ class Request
                             explode(".", $_SERVER['HTTP_HOST'])), 
                         2)));
 
-        self::$domain   = $_SERVER['HTTP_HOST']; 
+        self::$domain   = $_SERVER['HTTP_HOST'];  // FIXME - Should be a better way... 
 
         self::$tld      = array_slice(explode(".", self::$domain), -1); 
 
-        self::$aspect   = strtolower(self::$uriArray[0]); 
+        self::$aspect   = strtolower(self::$uriArray[0]); // to normalize /BATSHIT/ReQuEsTs
         self::$endpoint = strtolower(self::$uriArray[1]); 
+
+        self::$Aspect   = ucfirst(self::$aspect); 
 
         if(strpos(self::$aspect,"-")!==false){
             self::$aspect = $this->friendlyURLConverter(self::$aspect); 
