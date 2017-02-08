@@ -43,6 +43,12 @@ class Client {
 
     }
 
+    public function sessionExists(){
+    
+    
+        
+    }
+
     public function getLocation($output = 'json')
     {
         //@f:off 

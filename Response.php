@@ -15,6 +15,8 @@ class Response
 
     public $title; 
 
+    protected $response; 
+
     public function __construct($altconfig = null)
     {
         $this->defineBaseViewPath(); 
@@ -173,7 +175,7 @@ class Response
         } 
     
         $json = array(
-                    "status"  => $this->status?"success":"error",
+                    "status"  => $this->status?"error":"success",
                     "message" => $this->message
                     ); 
 
@@ -181,36 +183,10 @@ class Response
             $json['data'] = $this->data; 
         }
 
-        // later, maybe possibly we could refactor all the update/create/delete
-        // endpoints to give out messages.
-        //if ($e['full'])
-        //{
-        //    $json = $e['full'];
-        //}
-        //        {
-        //            $json['status'] = "error"; 
-        //            $json['message'] = $e['error'];    
-        //        }
-        //        else if ($e['success'])
-        //        {
-        //             $json['message'] = $e['success'];
-        //        }
-        //        else 
-        //        {
-        //            $json['data'] = $e; 
-        //        }
-
-        // This seems to be the issue here with backwards compatibility.
-       // unset($e['success']);
-        //unset($e['data']);
-        //unset($e['message']);
-
-        //         $json = array_merge($json,$e?:Array());        
-        // This was causing the size to double.... 
-        // 
-        header("Content-Type: application/json");
-        die(json_encode($json, empty(DEVMODE)?0:JSON_PRETTY_PRINT));
-
+        if(Request::$accepts == 'json'){
+            header("Content-Type: application/json");
+            print(json_encode($json, empty(DEVMODE)?0:JSON_PRETTY_PRINT));
+        }
     }
 
 	private $xml_data; 

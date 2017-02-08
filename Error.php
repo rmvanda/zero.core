@@ -78,9 +78,7 @@ class Error extends Module
         if(!Request::$accepts){
             echo "<h1>$code - $message</h1><h4>$err</h4><br><hr>";     
         } else {
-        
-            $this->export(array()); 
-
+            $this->export(array("status"=>"error","message"=>$this->message[$code])); 
         }
         //}
         

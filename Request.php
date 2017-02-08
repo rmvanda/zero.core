@@ -18,7 +18,6 @@ class Request
         $uri, $url, 
         $protocol,
         $method,
-        $queryString, 
         $sub, $subdomain, 
         $domain,
         $tld, 
@@ -26,7 +25,6 @@ class Request
         $Aspect,
         $uriArray, 
         $isAjax, 
-        $basePath,
         $accepts;
 
     private $safeCharacters = array('-',".","/"); 
@@ -34,11 +32,12 @@ class Request
     public function __construct(){
 
         self::$uri      = trim(
-                                strtok(
-                                    $_SERVER['REQUEST_URI'],
-                                    "?"),
+                                explode("?",
+                                    $_SERVER['REQUEST_URI']
+                                )[0], 
                                 "/")
                             ?:"index/index";
+
 
         self::$accepts  = explode(".",self::$uri)[1]; 
         if(!$this->isValidType(self::$accepts)){
@@ -89,12 +88,26 @@ class Request
         self::$args     = count(self::$args) !== 1 ? self::$args : self::$args[0]; 
 
         self::$method   = (empty($_POST) && count($_POST) === 0 )?"GET":"POST";
-        self::$isAjax   = isAjax(); // cheating.
+        self::$isAjax   = self::isAjax(); 
 
-    }
+	}
+
+	public static function isAjax()
+	{
+		//@f:off
+		return 
+			(
+						@$_SERVER['HTTP_X_REQUESTED_WITH'] &&	
+			 strtolower(@$_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest'
+			) 
+			? true : false;
+	}//@f:on
+
+
 
     public static function test(){
-
+        print_x(self); 
+        /*
         print_x(self::$uri);
         print_x(self::$uriArray);
         print_x(self::$protocol);
@@ -106,6 +119,7 @@ class Request
         print_x(self::$args);
         print_x(self::$method);
         print_x(self::$accepts); 
+        */
     }
 
     private function isValid($uri){
@@ -115,9 +129,8 @@ class Request
             return false; 
         }
 
-        foreach($this->safeCharacters as $bad){
-        
-            $test = str_replace($bad,"",$test); 
+        foreach($this->safeCharacters as $safe){
+            $test = str_replace($safe,"",$test); 
             
         }
 
@@ -126,6 +139,8 @@ class Request
         }
         
     }
+
+//    private function multipleSubdomains() // fuck bloat
 
     private function isValidType($type){
     
