@@ -4,7 +4,7 @@ Namespace Zero\Core;
 
 class Application {
 
-    public function __construct(array $opts=null){
+    public function __construct($opts=null){ // usually an array.
         if($_SERVER['SERVER_NAME'] == 'localhost'){
             define("DEVMODE",true);
             ini_set("html_errors",1); 
@@ -19,6 +19,12 @@ class Application {
         }
 
         ob_start();
+
+        if($opts['autorun']===false|| 
+           $opts           ===false
+          ){
+            return; 
+        }
 
         $this 
             -> registerAutoloaders($opts['autoloaders']) 
@@ -36,7 +42,8 @@ class Application {
     }
     public function __destruct() {
     
-        ob_flush(); 
+        ob_flush(); // Why in destruct? Because there are exit()'s everywhere. 
+                    // This way, there is no escape. 
         
     }
 
