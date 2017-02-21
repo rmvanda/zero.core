@@ -26,14 +26,13 @@ class Application {
             return; 
         }
 
-        $this 
-            -> registerAutoloaders($opts['autoloaders']) 
-            -> parseRequest() 
-            -> defineConstants($opts['constants'])
-            -> fetchExtensions($opts['extensions']) 
+        $this-> registerAutoloaders($opts['autoloaders']) ;
+        $this-> parseRequest() ;
+        $this-> defineConstants($opts['constants']);
+        $this-> fetchExtensions($opts['extensions']); 
 //            -> getClientSession()
             //           -> finalizeRoute() 
-            -> run(
+        $this-> run(
                     Request::$aspect,
                     Request::$endpoint, 
                     Request::$args
