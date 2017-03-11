@@ -5,18 +5,19 @@ Namespace Zero\Core;
 class Application {
 
     public function __construct($opts=null){ // usually an array.
-        if($_SERVER['SERVER_NAME'] == 'localhost'){
+//        if($_SERVER['SERVER_NAME'] == 'localhost'){
             define("DEVMODE",true);
             ini_set("html_errors",1); 
             ini_set("display_errors", "On");
             error_reporting(E_ALL & ~E_NOTICE); 
-        } else {
+/*        } else {
             define("DEVMODE",false); 
             // we can leave these out after I figure out why my php.ini is blank <_< 
             ini_set("html_errors",0); 
             ini_set("display_errors", "Off");
             error_reporting(~E_ALL); 
         }
+        */ 
 
         ob_start();
 
@@ -235,7 +236,7 @@ class Application {
             return true; 
         }
 //        if(defined(DEVMODE)&&DEVMODE===true){ 
-            trigger_error("Failed to load $class after looking in $psrPath");die(); 
+           // trigger_error("Failed to load $class after looking in $psrPath");die(); 
 //        } else {
 //            new Error(500,"Oops! Something went missing...");     
 //        }
@@ -263,7 +264,7 @@ class Application {
         //spl_autoload_register("self::load");
 
         // for Composer + PSR compatability
-        if (file_exists($file = ZERO_ROOT . "vendor/autoload.php")) {
+        if (file_exists($file = ROOT_PATH . "vendor/autoload.php")) {
             require $file;
         }
         // if you want to add external autoloaders
