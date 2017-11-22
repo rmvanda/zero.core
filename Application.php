@@ -7,6 +7,8 @@ class Application {
     public function __construct($opts=null){ // usually an array.
 //        if($_SERVER['SERVER_NAME'] == 'localhost'){
             define("DEVMODE",true);
+            define("LOG_FILE", ZERO_ROOT."app.log"); 
+            include ZERO_ROOT."core/Console.php"; 
             ini_set("html_errors",1); 
             ini_set("display_errors", "On");
             error_reporting(E_ALL & ~E_NOTICE); 

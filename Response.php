@@ -10,7 +10,7 @@ class Response
 
     protected $responseType; 
 
-    protected $status = true; 
+    protected $status; 
     protected $data; 
 
     protected $headerIncluded,$headIncluded,$footerIncluded; 
@@ -21,7 +21,7 @@ class Response
 
     public function __construct($altconfig = null)
     {
-        $this->defineBaseViewPath(); 
+        $this->defineBasePaths(); 
         $this->setResponseType(); 
 
         if($this->responseType == "full"){
@@ -61,12 +61,13 @@ class Response
 
     }
 
-    protected function defineBaseViewPath()
+    protected function defineBasePaths()
     {
         if(!defined($this->viewPath)){  
             $this -> viewPath = ZERO_ROOT."app/frontend/global_views/"; 
         } 
-        $this -> viewPath = VIEW_PATH;
+//        $this -> viewPath  = VIEW_PATH; // what the fuck? 
+        define("ASPECT_PATH", MODULE_PATH."/".Request::$Aspect."/"); 
     }
 
     public function __call($func, $args)
@@ -161,8 +162,12 @@ class Response
     private function getStylesheets()
     {
         foreach(array(Request::$aspect, Request::$endpoint) as $resource){
-            if (file_exists(WEB_PATH . "assets/pg-specific/".Request::$aspect."/css/".$resource.".css")) {
-                echo '<link rel="stylesheet" type="text/css" href="/assets/css/pg-specific/' . $resource . '.css" />';
+            //if (file_exists(WEB_PATH . "assets/pg-specific/".Request::$aspect."/css/".$resource.".css")) {
+            if(file_exists($css=__DIR__."/css/".$resource.".css")){
+                echo "<style>"; 
+                echo file_get_contents($css);
+                echo "</style>"; 
+                //echo '<link rel="stylesheet" type="text/css" href="/assets/css/pg-specific/' . $resource . '.css" />';
             } else {
                 echo "<!-- " . $resource . ".css not found, so not loaded. -->";
             }
@@ -172,10 +177,14 @@ class Response
     private function getScripts()
     {
         foreach(array(Request::$aspect, Request::$endpoint) as $resource){
-            if (file_exists(WEB_PATH . "assets/pg-specific/".Request::$aspect."/js/$resource.js")) {
-                echo '<script type="text/javascript" src="/assets/js/pg-specific/' . $resource . '.js" ></script>';
+            //if (file_exists(WEB_PATH . "assets/pg-specific/".Request::$aspect."/js/$resource.js")) {
+            //    echo '<script type="text/javascript" src="/assets/js/pg-specific/' . $resource . '.js" ></script>';
+            if(file_exists($js=ASPECT_PATH."/js/".$resource.".js")){
+                echo "<script>"; 
+                echo file_get_contents($js);
+                echo "</script>"; 
             } else {
-                echo "<!-- " . $resource . ".js not found, so not loaded. -->";
+                echo "<!-- " . $resource . ".js not found in ".__DIR__.", so not loaded. -->";
             }
         }
     }
@@ -190,7 +199,7 @@ class Response
     protected function error($e)
     {
         $this->message = $e;
-        $this->status  = false; 
+        $this->status  = "error"; 
         $this->export();
     }
 
@@ -201,7 +210,7 @@ class Response
 
     protected function export($e=null)
     {
-        if (!is_array($e)&&!is_null($e)) { 
+        if (!is_array($e)&&!is_null($e) && empty($this->message)) { 
             $this->message = $e; 
         } else if(empty($this->data)){
             $this->data = $e;    
@@ -214,9 +223,10 @@ class Response
         } 
     
         $json = array(
-                    "status"  => $this->status?"error":"success",
+                    "status"  => isset($this->status)?"Error":"Success", 
                     "message" => $this->message
                     ); 
+
 
         if(!empty($this->data)){
             $json['data'] = $this->data; 
@@ -225,6 +235,10 @@ class Response
         if(Request::$accepts == 'json'){
             header("Content-Type: application/json");
             print(json_encode($json, empty(DEVMODE)?0:JSON_PRETTY_PRINT));
+        } else {
+            header("Content-Type: application/json");
+            print(json_encode($json, empty(DEVMODE)?0:JSON_PRETTY_PRINT));
+            
         }
     }
 
