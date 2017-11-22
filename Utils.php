@@ -4,7 +4,7 @@
  * Static Utility Methods
  *
  * @author lmi
- *        
+ *       Yeah, I didn't write this, wtf is this and how did it get here? --James  
  */
 class Utils
 {

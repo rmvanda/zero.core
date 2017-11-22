@@ -41,7 +41,7 @@ class Error extends Module
 
         header("HTTP/1.1 $code " . $this -> message[$code]);
 
-        xdebug_print_function_stack(); 
+        //xdebug_print_function_stack(); 
 
         parent::__construct(); 
         if(defined(DEVMODE) && DEV !== false) {
@@ -76,7 +76,7 @@ class Error extends Module
         //    include $errPg;
         //}else{
         if(!Request::$accepts){
-            echo "<h1>$code - $message</h1><h4>$err</h4><br><hr>";     
+            echo "<h1>$code - $message</h1><hr><h4>$err</h4><br>";     
         } else {
             $this->export(array("status"=>"error","message"=>$this->message[$code])); 
         }

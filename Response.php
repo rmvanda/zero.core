@@ -8,6 +8,8 @@ class Response
     protected $aspect;
     protected $endpoint, $model, $viewPath, $isAjax;
 
+    protected $responseType; 
+
     protected $status = true; 
     protected $data; 
 
@@ -20,8 +22,9 @@ class Response
     public function __construct($altconfig = null)
     {
         $this->defineBaseViewPath(); 
+        $this->setResponseType(); 
 
-        if(!isset(Request::$accepts)){
+        if($this->responseType == "full"){
             $this->buildHead(); 
             $this->buildHeader(); 
         }
@@ -29,10 +32,34 @@ class Response
     }
 
     public function __destruct(){
-        if(!isset(Request::$accepts)){
+        if($this->responseType == "full"){
             @$this->buildFooter(); 
         }
-    } 
+    }
+    
+    /** 
+     * This function was made to address the need of the conditional statements
+     * in the construct and destruct methods. 
+     * This way is likely more future oriented with the ideas of the project
+     * but for the time being, `responseType` may as well really be a boolean
+     * it was made this way to make the code more understandable, however. 
+     * so hopefully you're reading this with appreciation rather than disgust. 
+     */
+
+    protected function setResponseType(){
+
+        if(Request::$isAjax){
+            $this->responseType = "html"; 
+        }
+        else if(isset(Request::$accepts)){
+            $this->responseType = Request::$accepts;    
+        }
+        else{
+            $this->responseType = "full"; 
+        }
+
+
+    }
 
     protected function defineBaseViewPath()
     {
@@ -44,30 +71,39 @@ class Response
 
     public function __call($func, $args)
     {
+        // At this point, we know there's no method to handle the request. 
+        // So, we're going to see if there's a view file to use::
+
+        // -- Maybe in the module's view folder? 
         if (file_exists($view = $a = MODULE_PATH .
                         ucfirst(Request::$aspect) . 
                         "/views/" . 
                         Request::$endpoint . 
                         ".php"
-                       ) 
-         || file_exists($view = $b = MODULE_PATH . 
+                    ) 
+        // Or maybe the module has a sub
+        // (( I don't think we should cater to this, actually ))
+           || file_exists($view = $b = MODULE_PATH . 
                         ucfirst(Request::$aspect) . 
                         "/views/" . 
                         Request::$endpoint ."/".
                         Request::$uriArray[2].".php"
                     )
-         || file_exists($view = VIEW_PATH  . // I'd like to dprecate this block  <-- 
-                        Request::$aspect   . "/" .
-                        Request::$endpoint . 
-                        ".php")
-           ) {
-         //   $this -> render($view);
+        // And finally, defer to index. This is useful for urls like 
+        // site.com/about 
+        // since in most cases, it would be silly to set up an "About" module
+           || file_exists($view = $c = MODULE_PATH . 
+                            "Index/views/" . 
+                            Request::$aspect . 
+                            ".php"
+                    )
+       ){
+         //   $this -> render($view); // whoa, wait, really? When the hell did I do dhat?? 
          include $view; 
         } else {
 
-            echo "<h1>$b</h1>"; die(); 
-            //xdebug_print_function_stack(); 
             new Error(404, "Failed to find a respose to give for $func");
+        
         }
     }
 
@@ -98,6 +134,9 @@ class Response
 // while still using render. 
     protected function buildHead()
     {
+        if(isAjax()){
+            echo "<!-- why are we including the head?? #XXXX-->";     
+        }
         $this->headIncluded=true;
         include_once $this -> viewPath . "head.php";
     }

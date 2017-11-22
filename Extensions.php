@@ -149,7 +149,7 @@ function isAssoc(array $arr)
 /**
  * Development Utility functions.
  */
-if (true) { // TODO
+if (true) { // TODO set DEVMODE constant properly
 
     function print_x($x)
     {

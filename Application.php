@@ -40,11 +40,11 @@ class Application {
                   );
         
     }
+
     public function __destruct() {
     
         ob_flush(); // Why in destruct? Because there are exit()'s everywhere. 
                     // This way, there is no escape. 
-        
     }
 
     
@@ -175,9 +175,17 @@ class Application {
         $aspect -> {$endpoint}($args);
     }
 
+    public function isProtected($module){
     
-    public function zeroCoreLoader(){
+        return false; // not yet implemented
 
+    }
+    
+    //No longer in use.... good?
+    // the new autoloader makes it obsolete. 
+    /*
+    public function zeroCoreLoader(){
+    
         // In order of importance to core functionality.
         // Zero's core framework configurations will be based on this. 
         //
@@ -201,7 +209,7 @@ class Application {
      
         require __DIR__."/Err.php"; 
 
-    }
+    }*/
 
     
 
@@ -226,20 +234,22 @@ class Application {
     }
 
 //XXX Breaks in cases of \GlobalClass 
+//XXX Breaks in cases of CamelCasedClasses. But we knew that already...
+// On the upside, this is a very sane, PSR compliant autoloader. 
     public function autoloader($class){
         $path = explode("\\", strtolower($class)); 
         $path[count($path)-1] = ucfirst($path[count($path)-1]?:$path[1]); //XXX not anymore TESTME
-//        if(file_exist((
+
         $psrPath=ROOT_PATH.implode(DIRECTORY_SEPARATOR,$path).".php";
         if(file_exists($psrPath)){
             require_once($psrPath); 
             return true; 
         }
-//        if(defined(DEVMODE)&&DEVMODE===true){ 
+        if(defined(DEVMODE)&&DEVMODE===true){ 
             trigger_error("Failed to load $class after looking in $psrPath");die(); 
-//        } else {
-//            new Error(500,"Oops! Something went missing...");     
-//        }
+        } else {
+            new Error(500,"Oops! Something went missing...");     
+        }
     }
 
     private function isModule($module){
@@ -247,7 +257,6 @@ class Application {
         if(file_exists($file=ZERO_ROOT."modules/".$module."/".$module.".php")){
            return require_once $file;  
         }
-        echo "Failed to load via new autoloader: ".$file; die(); 
         return false; 
 
     }
@@ -258,7 +267,8 @@ class Application {
         require ZERO_ROOT."lib/zxc/ZXC.php"; 
         require __DIR__."/Extensions.php";
         // Framework manages it's core, first
-//        $this->zeroCoreLoader();
+        //        $this->zeroCoreLoader();
+        // lol just kidding. 
 
         spl_autoload_register("self::autoloader"); 
         //spl_autoload_register("self::load");
