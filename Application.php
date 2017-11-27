@@ -247,6 +247,8 @@ class Application {
             require_once($psrPath); 
             return true; 
         }
+        Console::log("Devmode set to ".DEVMODE);
+        Console::log("Failed to load $class after looking in $psrPath"); 
         if(defined(DEVMODE)&&DEVMODE===true){ 
             trigger_error("Failed to load $class after looking in $psrPath");die(); 
         } else {
@@ -272,13 +274,14 @@ class Application {
         //        $this->zeroCoreLoader();
         // lol just kidding. 
 
-        spl_autoload_register("self::autoloader"); 
         //spl_autoload_register("self::load");
 
         // for Composer + PSR compatability
         if (file_exists($file = ROOT_PATH . "vendor/autoload.php")) {
+            Console::log("Requiring composer's autoloader"); 
             require $file;
         }
+        spl_autoload_register("self::autoloader"); 
         // if you want to add external autoloaders
         if ($autoloader) {
             if (is_array($autoloader)) {
