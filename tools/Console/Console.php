@@ -64,7 +64,7 @@
 
 		public static function output()
 		{
-			print_x(self::$instance);
+			var_dump(self::$instance);
 			// echo '<div id="connnsole">';
 
 			// foreach (self::$instance -> output as $title => $output) {
@@ -126,9 +126,9 @@
 
 		public function sdisplay()
 		{
-			print_x($_SERVER);
-			print_x($_SESSION);
-			print_x($_REQUEST);
+			var_dump($_SERVER);
+			var_dump($_SESSION);
+			var_dump($_REQUEST);
 		}
 
 	}

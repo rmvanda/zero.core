@@ -64,8 +64,8 @@
 		server
 		<display>
 			<?php
-            print_x($_SERVER);
-            print_x($_SESSION);
+            var_dump($_SERVER);
+            var_dump($_SESSION);
             ?>
 		</display>
 	</button>
@@ -73,7 +73,7 @@
 	<button>
 		request
 		<display>
-			<?php print_x($_REQUEST); ?>
+			<?php var_dump($_REQUEST); ?>
 		</display>
 	</button>
 </console>

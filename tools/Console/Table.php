@@ -44,7 +44,7 @@
             $this -> thead -> appendChild($this -> theadtr);
             $this -> table -> appendChild($this -> thead);
             return $this;
-            //print_x($this->table);
+            //var_dump($this->table);
             //   $this -> dom -> appendChild($this -> table);
             //  $this -> dom -> saveHTML();
             //echo htmlspecialchars($this -> display.-> saveHTML());

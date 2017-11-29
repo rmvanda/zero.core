@@ -106,19 +106,19 @@ class Request
 
 
     public static function test(){
-        print_x(self); 
+        var_dump(self); 
         /*
-        print_x(self::$uri);
-        print_x(self::$uriArray);
-        print_x(self::$protocol);
-        print_x(self::$sub);
-        print_x(self::$domain);
-        print_x(self::$tld);
-        print_x(self::$aspect);
-        print_x(self::$endpoint);
-        print_x(self::$args);
-        print_x(self::$method);
-        print_x(self::$accepts); 
+        var_dump(self::$uri);
+        var_dump(self::$uriArray);
+        var_dump(self::$protocol);
+        var_dump(self::$sub);
+        var_dump(self::$domain);
+        var_dump(self::$tld);
+        var_dump(self::$aspect);
+        var_dump(self::$endpoint);
+        var_dump(self::$args);
+        var_dump(self::$method);
+        var_dump(self::$accepts); 
         */
     }
 

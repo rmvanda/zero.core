@@ -24,11 +24,12 @@ class Response
         $this->defineBasePaths(); 
         $this->setResponseType(); 
 
+        new Model($altconfig); 
+
         if($this->responseType == "full"){
             $this->buildHead(); 
             $this->buildHeader(); 
         }
-        // new Model($altconfig); 
     }
 
     public function __destruct(){

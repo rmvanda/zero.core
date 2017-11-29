@@ -249,12 +249,7 @@ class Application {
         }
         Console::log("Devmode set to ".DEVMODE);
         Console::log("Failed to load $class after looking in $psrPath"); 
-        if(defined(DEVMODE)&&DEVMODE===true){ 
-            trigger_error("Failed to load $class after looking in $psrPath");die(); 
-        } else {
-            new Error(500,"Oops! Something went missing...");     
-        }
-   }
+  }
 
     private function isModule($module){
         
@@ -270,18 +265,8 @@ class Application {
     {
         require ZERO_ROOT."lib/zxc/ZXC.php"; 
         require __DIR__."/Extensions.php";
-        // Framework manages it's core, first
-        //        $this->zeroCoreLoader();
-        // lol just kidding. 
 
-        //spl_autoload_register("self::load");
-
-        // for Composer + PSR compatability
-        if (file_exists($file = ROOT_PATH . "vendor/autoload.php")) {
-            Console::log("Requiring composer's autoloader"); 
-            require $file;
-        }
-        spl_autoload_register("self::autoloader"); 
+       spl_autoload_register("self::autoloader"); 
         // if you want to add external autoloaders
         if ($autoloader) {
             if (is_array($autoloader)) {
@@ -295,7 +280,11 @@ class Application {
                     spl_autoload_register($autoloader);
                 } 
         }
-
+        // for Composer + PSR compatability
+        if (file_exists($file = ROOT_PATH . "vendor/autoload.php")) {
+            require $file;
+        }
+ 
        spl_autoload_register("self::errorHandler");
        return $this;
     }
@@ -344,11 +333,8 @@ class Application {
 
     public function errorHandler($class)
     {
-        if (defined("DEVMODE") && DEVMODE == true) {
-           // Console::log() -> error($class);
-        }
+        new Error(404, "We couldn't find the page you are looking for."); 
         xdebug_print_function_stack(); 
-        new Error(404, "There is no such thing as $class");
     }
 
 } 

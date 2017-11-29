@@ -71,14 +71,14 @@ class TestSuite
     {
         class_exists("Auth", true);
         $reflector = new ReflectionClass('Auth');
-        // print_x($reflector); die();
-        //print_x($reflector);
-        // print_x($reflector -> getMethods());
+        // var_dump($reflector); die();
+        //var_dump($reflector);
+        // var_dump($reflector -> getMethods());
         // to get the Class DocBlock
         // echo $reflector -> getDocComment();
-        // print_x($reflector);
-        // print_x($reflector->getMethods());
-        // print_x($reflector->getProperties());
+        // var_dump($reflector);
+        // var_dump($reflector->getMethods());
+        // var_dump($reflector->getProperties());
         //
 
         foreach ($reflector->getMethods() as $method) {// * see documentation
@@ -94,7 +94,7 @@ class TestSuite
             //Console::table("ReflectionMethods") ->
             // setHeaders(get_class_methods($method))->setFirstHeader("AuthMethods#");
 
-            // print_x($method -> getDocComment());
+            // var_dump($method -> getDocComment());
         }
         // to get the Method DocBlock
     }/**

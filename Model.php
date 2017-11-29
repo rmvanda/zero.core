@@ -9,18 +9,21 @@
  * */
 
 namespace Zero\Core {
-
+use \ZXC as ZXC; 
 class Model{  
     public function __construct($alt_config=null){
-        if (!class_exists("ZXC", false)) {
+        if (class_exists("ZXC", false)) {
+            Console::log("This is definitely happening."); 
             $db_config = $alt_config ?: array(
                     "HOST" => HOST,
                     "NAME" => NAME,
                     "USER" => USER,
                     "PASS" => PASS
                     );
-            \ZXC::INIT($db_config);
-        } 
+            ZXC::INIT($db_config);
+        } else {
+            Console::log("Couldn't load ZXC. Don't care /shrug") ;    
+        }
     }
  }
 // Sneaky trick/ hack : 

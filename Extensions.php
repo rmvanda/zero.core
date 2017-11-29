@@ -151,7 +151,7 @@ function isAssoc(array $arr)
  */
 if (true) { // TODO set DEVMODE constant properly
 
-    function print_x($x)
+    function var_dump($x)
     {
         if (is_object($x)) {
             $obj = $x;
@@ -174,7 +174,7 @@ if (true) { // TODO set DEVMODE constant properly
 
 } else {
     // This prevents Errors if someone leaves one of these, somewhere. 
-    function print_x()
+    function var_dump()
     {
         //pass;
     };
