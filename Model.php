@@ -13,7 +13,6 @@ use \ZXC as ZXC;
 class Model{  
     public function __construct($alt_config=null){
         if (class_exists("ZXC", false)) {
-            Console::log("This is definitely happening."); 
             $db_config = $alt_config ?: array(
                     "HOST" => HOST,
                     "NAME" => NAME,
