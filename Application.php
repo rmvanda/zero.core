@@ -35,6 +35,7 @@ class Application {
         $this-> fetchExtensions($opts['extensions']); 
 //            -> getClientSession()
             //           -> finalizeRoute() 
+        
         $this-> run(
                     Request::$aspect,
                     Request::$endpoint, 
@@ -240,15 +241,20 @@ class Application {
 // On the upside, this is a very sane, PSR compliant autoloader. 
     public function autoloader($class){
         $path = explode("\\", strtolower($class)); 
+        $camel= array_pop(explode("\\", $class)); 
         $path[count($path)-1] = ucfirst($path[count($path)-1]?:$path[1]); //XXX not anymore TESTME
 
         $psrPath=ROOT_PATH.implode(DIRECTORY_SEPARATOR,$path).".php";
+        $path[count($path)-1] = $camel; 
+        $altPath=ROOT_PATH.implode(DIRECTORY_SEPARATOR,$path).".php"; 
         if(file_exists($psrPath)){
             require_once($psrPath); 
             return true; 
+        } elseif (file_exists($altPath)){ // this should maybe be the way we do it... 
+            require_once($altPath); 
+            return true; 
         }
-        Console::log("Devmode set to ".DEVMODE);
-        Console::log("Failed to load $class after looking in $psrPath"); 
+        Console::log("Failed to load $class after looking in $psrPath and $altPath"); 
   }
 
     private function isModule($module){

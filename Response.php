@@ -19,13 +19,16 @@ class Response
 
     protected $response; 
 
+    protected $sideNavBefore; 
+    protected $sideNavAfter; 
+
     public function __construct($altconfig = null)
     {
         $this->defineBasePaths(); 
         $this->setResponseType(); 
 
-        new Model($altconfig); 
 
+        new Model($altconfig);  // not sure where the fuck to put this. 
         if($this->responseType == "full"){
             $this->buildHead(); 
             $this->buildHeader(); 
@@ -34,7 +37,8 @@ class Response
 
     public function __destruct(){
         if($this->responseType == "full"){
-            @$this->buildFooter(); 
+            $this->buildSideNav(); 
+            $this->buildFooter();  // why does this have a fucking @ on it? 
         }
     }
     
@@ -136,9 +140,6 @@ class Response
 // while still using render. 
     protected function buildHead()
     {
-        if(isAjax()){
-            echo "<!-- why are we including the head?? #XXXX-->";     
-        }
         $this->headIncluded=true;
         include_once $this -> viewPath . "head.php";
     }
@@ -149,10 +150,12 @@ class Response
         include_once $this -> viewPath . "header.php";
     }
 
-   // protected function getPage($page) // who the fuck? 
-   // {
-   //     include $page;
-   // }
+    protected function buildSideNav(){
+
+        $this->sideBarIncluded=true; 
+        include_once $this -> viewPath . "sideNav.php"; 
+
+    }
 
     protected function buildFooter()
     {

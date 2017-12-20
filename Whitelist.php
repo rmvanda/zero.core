@@ -15,7 +15,7 @@
  * Yeah, it needs to be organized a bit better -
  */
 
-Namespace Zero\Core
+Namespace Zero\Core; 
 
 class Whitelist
 {

@@ -2,7 +2,7 @@
 
 Namespace Zero\Core; 
 
-class Error extends Module
+class Error extends \Zero\Core\Module
 {
     private $message = array(				
             400 => "BAD REQUEST", 				
@@ -41,7 +41,6 @@ class Error extends Module
 
         header("HTTP/1.1 $code " . $this -> message[$code]);
 
-        //xdebug_print_function_stack(); 
 
         parent::__construct(); 
         if(defined(DEVMODE) && DEV !== false) {
@@ -77,6 +76,7 @@ class Error extends Module
         //}else{
         if(!Request::$accepts){
             echo "<h1>$code - $message</h1><hr><h4>$err</h4><br>";     
+            xdebug_print_function_stack(); 
         } else {
             $this->export(array("status"=>"error","message"=>$this->message[$code])); 
         }

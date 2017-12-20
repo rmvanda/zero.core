@@ -92,37 +92,24 @@ class Request
 
 	}
 
+    public static function redirect($url){
+        header("Location: ".$url) ; 
+        ob_clean_end(); 
+        exit(); 
+    }
+
 	public static function isAjax()
 	{
-		//@f:off
 		return 
 			(
 						@$_SERVER['HTTP_X_REQUESTED_WITH'] &&	
 			 strtolower(@$_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest'
 			) 
 			? true : false;
-	}//@f:on
-
-
-
-    public static function test(){
-        var_dump(self); 
-        /*
-        var_dump(self::$uri);
-        var_dump(self::$uriArray);
-        var_dump(self::$protocol);
-        var_dump(self::$sub);
-        var_dump(self::$domain);
-        var_dump(self::$tld);
-        var_dump(self::$aspect);
-        var_dump(self::$endpoint);
-        var_dump(self::$args);
-        var_dump(self::$method);
-        var_dump(self::$accepts); 
-        */
-    }
+	}
 
     private function isValid($uri){
+
         $test = $uri; 
         
         if(substr_count($uri,".") > 1){
@@ -140,10 +127,7 @@ class Request
         
     }
 
-//    private function multipleSubdomains() // fuck bloat
-
     private function isValidType($type){
-    
 
         if(empty($type)   ||
            $type == "json"||
