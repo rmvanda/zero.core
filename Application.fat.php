@@ -1,26 +1,28 @@
 <?php
 
 Namespace Zero\Core; 
-use \Zero\Core\Request as Request; 
+
 class Application {
 
-    public function __construct(){ // usually an array.
-        if($_SERVER['SERVER_NAME'] == 'localhost'){
+    public function __construct($opts=null){ // usually an array.
+//        if($_SERVER['SERVER_NAME'] == 'localhost'){
             define("DEVMODE",true);
+            define("LOG_FILE", ZERO_ROOT."app.log"); 
+            include ZERO_ROOT."core/Console.php"; 
             ini_set("html_errors",1); 
             ini_set("display_errors", "On");
             error_reporting(E_ALL & ~E_NOTICE); 
-        } else {
+/*        } else {
             define("DEVMODE",false); 
             // we can leave these out after I figure out why my php.ini is blank <_< 
             ini_set("html_errors",0); 
             ini_set("display_errors", "Off");
             error_reporting(~E_ALL); 
         }
-         
+        */ 
 
         ob_start();
-/*
+
         if($opts['autorun']===false|| 
            $opts           ===false
           ){
@@ -30,13 +32,16 @@ class Application {
         $this-> registerAutoloaders($opts['autoloaders']) ;
         $this-> parseRequest() ;
         $this-> defineConstants($opts['constants']);
-        //$this-> fetchExtensions($opts['extensions']); 
+        $this-> fetchExtensions($opts['extensions']); 
+//            -> getClientSession()
+            //           -> finalizeRoute() 
+        
         $this-> run(
                     Request::$aspect,
                     Request::$endpoint, 
                     Request::$args
                   );
-  */       
+        
     }
 
     public function __destruct() {
@@ -103,9 +108,13 @@ class Application {
     /**
      *  @function fetchExtensions
      *  Loads additional things to make everyone's lives easier. 
-     * 
+     */ 
     public function fetchExtensions($extensions = null){
-        
+
+       // require __DIR__ . "/../dev/Console/Console.php";
+       // require __DIR__ . "/Extensions.php";
+        //require __DIR__ . "/../../modules/Err/Err.php";
+
         if (is_array($extensions)) {
             foreach ($extensions as $extension) {
                 if(file_exists($extension)){
@@ -119,7 +128,7 @@ class Application {
         }
         return $this;
     }
-*/ // life shouldn't be too easy. 
+
 
     /**
      *  @function parseRequest
@@ -144,16 +153,49 @@ class Application {
      */
     public function run($aspect, $endpoint, $args)
     {
+        //TODO $NamedAspect = $this->hasNamespace(ucfirst($aspect))) { 
         if ($this->isModule($Aspect=ucfirst($aspect))) {
+        //Console::log("$aspect found and loaded"); 
             $Aspect = "\\Zero\\Module\\".$Aspect; 
             $aspect = new $Aspect();
-       } else {
+        // This bit is new - the way I used to handle access control is via the "finalizeRoute" method
+        // I think this way might be better because it also provides a more reasonable hook for 
+        // automatically starting a session... 
+        /*} else if($this->isProtected($Aspect) && Client::sessionExists()){ 
+            $this->getClientSession(); 
+            if(Client::hasAccess($Aspect, $endpoint)){
+                $Aspect = new $Aspect();
+            }*/ // Nevermind. I don't like this^ anymore. Let another class handle ACL and session mgmt
+
+        } else {
             $aspect = new \Zero\Core\Response();
-       }
+        }
+        // TODO  ? XXX
+        // if function does not exist, check for file
+        // if file does not exist, check Index class for something 
         
         $aspect -> {$endpoint}($args);
     }
 
+/*    public function load($filename, $path = null) no more bullshit loaders. 
+    {
+        die("$filename with load"); 
+        if (loads($filename)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public function suload($filename)
+    {
+        if (suloads($filename)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+*/
     public function autoloader($class){
         $path = explode("\\", strtolower($class)); 
         $camel= array_pop(explode("\\", $class)); 
@@ -185,7 +227,8 @@ class Application {
     public function registerAutoloaders($autoloader = null)
     {
         require ZERO_ROOT."lib/zxc/ZXC.php"; 
-        spl_autoload_register("self::autoloader"); 
+
+       spl_autoload_register("self::autoloader"); 
         // if you want to add external autoloaders
         if ($autoloader) {
             if (is_array($autoloader)) {
@@ -203,15 +246,53 @@ class Application {
         if (file_exists($file = ROOT_PATH . "vendor/autoload.php")) {
             require $file;
         }
+ 
        spl_autoload_register("self::errorHandler");
        return $this;
     }
-/*
+
     public function getClientSession(){ 
         new Client(); 
         return $this; 
     }
-*/
+
+    // TODO
+    // ACL HOOK?
+    public function finalizeRoute()
+    {
+        return $this ; // your AC is no good here
+        /*            if (in_array(($aspect = ucfirst($aspect)), get_declared_classes()) 
+                      && !defined("DEV")
+                      ){
+                      new Error(403);
+                      } else {
+        if ($_SERVER['HTTP_HOST'] != PRIMARY_DOMAIN && 
+                !$this -> request -> access
+           ) {
+            header("Location: " . 
+                    $this -> request -> protocol . 
+                    "://" . PRIMARY_DOMAIN
+                  );
+            exit();
+        } elseif ($_SERVER['HTTP_HOST'] == ADMIN_DOMAIN) {
+            $this -> suload("Admin");
+            return new Admin();
+            /**
+             * APP_MODE simply designated that this Application should act
+             * like an app
+             * and force the user to login if they want to do anything -
+             * otherwise, display a page,
+             * or take some action - (perhaps redirect to an info.domain.com
+             * which is not running Zero)
+             *
+             */
+            //  } elseif (!$_SESSION['uid'] && defined("APP_MODE") && APP_MODE == true && $this -> request -> aspect != "auth") {
+            //	header("Location: /auth/login");
+            //include VIEW_PATH . "_global/login.html";
+            //  exit();
+        //}
+    }
+
     public function errorHandler($class)
     {
         new Error(404, "We couldn't find the page you are looking for."); 

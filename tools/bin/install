@@ -1,9 +1,0 @@
-#!/bin/sh
-# installs the zero framework -- 
-if [ -d ".git" ]; then
-        git remote add framework ssh://adminijames@unisolu.com/var/git/zero-framework
-        git pull framework master
-else
-        echo "The current working directory is not already a git repo - if you wish to create a project with the framework and not a git repo, then you are a fool.";
-        echo "\n However, we can just go ahead and create you a project, provided you have a remote git URI handy - \n Just enter 
-fi

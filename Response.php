@@ -27,8 +27,6 @@ class Response
         $this->defineBasePaths(); 
         $this->setResponseType(); 
 
-
-        new Model($altconfig);  // not sure where the fuck to put this. 
         if($this->responseType == "full"){
             $this->buildHead(); 
             $this->buildHeader(); 

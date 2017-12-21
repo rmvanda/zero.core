@@ -1,5 +1,0 @@
-#!/bin/sh
-# "Better Update Now"
-# Updates framework applications. 
-# v0.1
-(cd $1; git pull framework master)
