@@ -142,8 +142,7 @@ class Application {
      * @param (array) $args ($opt)
      *
      */
-    public function run($aspect, $endpoint, $args)
-    {
+    public function run($aspect, $endpoint, $args){
         if ($this->isModule($Aspect=ucfirst($aspect))) {
             $Aspect = "\\Zero\\Module\\".$Aspect; 
             $aspect = new $Aspect();
@@ -155,6 +154,7 @@ class Application {
     }
 
     public function autoloader($class){
+        //echo "Autoloading $class<br>"; 
         $path = explode("\\", strtolower($class)); 
         $camel= array_pop(explode("\\", $class)); 
         $path[count($path)-1] = ucfirst($path[count($path)-1]?:$path[1]); //XXX not anymore TESTME
@@ -163,12 +163,15 @@ class Application {
         $path[count($path)-1] = $camel; 
         $altPath=ROOT_PATH.implode(DIRECTORY_SEPARATOR,$path).".php"; 
         if(file_exists($psrPath)){
+            //echo "file exists $psrPath<br>";
             require_once($psrPath); 
             return true; 
         } elseif (file_exists($altPath)){ // this should maybe be the way we do it... 
+            //echo "file exists $altPath<br>"; 
             require_once($altPath); 
             return true; 
         }
+        //echo "Neither $psrPath nor $altPath exist <br>"; 
         Console::log("Failed to load $class after looking in $psrPath and $altPath"); 
   }
 

@@ -1,9 +1,11 @@
-# zero.core v4.0 (alpha)
+# zero.core v1.0 (alpha)
 The core components of the Zero Framework
+
+This bit is basically just a front controller that provides reasonable defaults for your web application. 
 
 The heart of this is to get people coding modularly and writing object oriented. 
 If you work with this framework, you will be able to see the benefits of this style of coding. 
-Also, at the heart of this framework is a burning hatred for other frameworks that do way more than be just a frame. 
+Also, at the heart of this framework is a burning hatred for other frameworks that are more "kitchen-sink" than "frame"
 
 Zero Routing 
 Zero Configuration 
@@ -11,9 +13,43 @@ Zero Bloat
 
 # How to use it. 
 
-Shit you can't use this without zero.app. Fuck. 
-include Application.php and instantiate it. It'll load your vendor/autoloader.php and whatever other autoloader you feed it and 
-try to load a Class and call it's method, passing in arguments
+
+First, you need to define some constants to let the Core Frame know where it is and what the things you want are. 
+In Zero.Skeleton, there's a great example of how this can be done automatically, without much though. 
+
+The only required paths are ZERO_ROOT, VIEW_PATH, and MODULE_PATH. 
+ZERO_ROOT is the folder that you put the core/ into.
+ROOT_PATH for autoloading external classes not in the above folder. 
+VIEW_PATH is the path of your global views, such as your head.php, header.php, sideNav.php, and footer.php
+MODULE_PATH is the base path of where your code lives. 
+
+Inside of MODULE_PATH, you keep your modules. More on that, later. 
+
+Once you have those constants defined, 
+Include Application.php and instantiate it. 
+
+In previous iterations, that was it, but in order to be transparent about what this class does, it's methods are now called externally. 
+Again, the index.php in Zero.Skeleton has a great example of this. 
+
+Frame does 4 things for you: 
+1). Registers autoloaders. You can pass your own function, or an array of functions to be added to the autoload stack. 
+By default, it adds :
+    -it's own, PSR autoloader, that looks up classes according to ROOT_PATH and namespacing, 
+    -[Your passed-on-runtime autoloaders then go here ]
+    -your vendor/autoloader
+    -An autoloader that throws in the towel and gives a 404 message. 
+
+2). Parses request. 
+    - Really all this does is instantiate the Request class which gives you static access to information about the request. 
+    for example: 
+    $protocol://$sub.$domain.$tld/$aspect/$endpoint/$arg1/$arg2/$arg3
+
+3). Define Constants. 
+    - This is where some of the "magic" happens, because in addition to loading .ini files from a default location, it also looks into MODULE_PATH for a configuration files that may correspond with the module that's being called. Thus, if your application class needs some constants defined, they can be defined before your class is even loaded, simply by putting a .ini file into your module's folder
+    - or, if you prefer, you can have the constants defined by passing them in as an argument to this method at runtime. Although I personally thing that goes against what we're trying to do, here. 
+
+4). Run. 
+    Now, it puts all the above into motion to create a Response that suits the Request given. 
 
 For example: 
 
@@ -21,17 +57,18 @@ domain.com/class/method/arg1/arg2/argX/
 
 `Application` will try to load `Class` and execute `method`, passing in `array("arg1","arg2","arg3")` as the argument 
 
-`Application` has some methods you can use to guide it. juse see the documentation. 
+Now, for security reasons, it will only load "Class" if it finds it in the MODULE_PATH. 
+If the Class it finds also Extends \Zero\Core\Module - then it will be armed with Reasonable Defaults ™ - such as where to load the header & footer from
+and what to do if the `method` called does not exist (throw 404 page, automatically). 
 
 
-# What's changed since 'v3' 
+
+# What's changed since 'vX' 
 - Organizational changes (namespaces, fewer core/ subfolders, better separation)
-- No more MUFASA
 - More defaults in Response 
 - +Output Buffering 
 - Better JSON/response-type handling 
 - Access control stuff is moving into it's own thing 
-
 
 # Overview
 
@@ -42,9 +79,8 @@ domain.com/class/method/arg1/arg2/argX/
     1). Registers Autoloaders 
     2). Instantiates the Request object 
     3). Defines constants 
-    4). Includes global functions and the like #TODO KILL
-    5). Loads the Requested Module(aspect) and executes the requested method(endpoint) #TODO Not an aspect, anymore. => $module
-    6). Controls output buffering This allows the framework to do neat things like cache itself. 
+    4). Loads the Requested Module(aspect) and executes the requested method(endpoint) #TODO Not an aspect, anymore. => $module
+    5). Controls output buffering This will eventually allow the framework to do neat things like cache itself. 
 
 - Request.php 
     This is the object that holds information about the Request. See src for details. 
@@ -122,18 +158,4 @@ For a truly in-depth look, look at the code. Otherwise, the methods you really w
 - ZeroZero(min) vs ZeroFW 
 - Better Access Control  - fix up Whitelist & Restricted 
 - OAuth Adapters
-
-
-# Runtime Options:
-
-- Minimal 
-    Minimal will use MUFASA to load your class and call the function, nothing else.
-
-- Simple Frame 
-    Simple Frame will load up some other useful stuff and will also automagically insert the header and footer
-    Of course it isn't perfectly "Simple" it is genuinely easy to get going with. 
-
-- Zero.JS 
-    Acts as a client-side zero framework for rapid prototyping - but also enforces good practices for production
-
 

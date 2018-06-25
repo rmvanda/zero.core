@@ -51,8 +51,8 @@ class Response
 
     protected function setResponseType(){
 
-        if(Request::$isAjax){
-            $this->responseType = "html"; 
+        if(Request::$isAjax){ 
+            $this->responseType = "html"; // hackish XXX
         }
         else if(isset(Request::$accepts)){
             $this->responseType = Request::$accepts;    
@@ -70,7 +70,7 @@ class Response
             $this -> viewPath = ZERO_ROOT."app/frontend/global_views/"; 
         } 
 //        $this -> viewPath  = VIEW_PATH; // what the fuck? 
-        define("ASPECT_PATH", MODULE_PATH."/".Request::$Aspect."/"); 
+        define("ASPECT_PATH", MODULE_PATH.Request::$Aspect."/");  // why is this not the same as MOdule_Path ? 
     }
 
     public function __call($func, $args)
@@ -118,7 +118,7 @@ class Response
             $this->viewPath = VIEW_PATH; 
         }
 
-        if (isAjax()) {
+        if (Request::$isAjax) {
             include $view;
             //$this -> getPage($view);
         } else {
@@ -181,12 +181,12 @@ class Response
         foreach(array(Request::$aspect, Request::$endpoint) as $resource){
             //if (file_exists(WEB_PATH . "assets/pg-specific/".Request::$aspect."/js/$resource.js")) {
             //    echo '<script type="text/javascript" src="/assets/js/pg-specific/' . $resource . '.js" ></script>';
-            if(file_exists($js=ASPECT_PATH."/js/".$resource.".js")){
+            if(file_exists($js=ASPECT_PATH."js/".$resource.".js")){
                 echo "<script>"; 
                 echo file_get_contents($js);
                 echo "</script>"; 
             } else {
-                echo "<!-- " . $resource . ".js not found in ".__DIR__.", so not loaded. -->";
+                echo "<!-- " . $resource . ".js not found in ".ASPECT_PATH.", so not loaded. -->";
             }
         }
     }
