@@ -5,47 +5,29 @@ use \Zero\Core\Request as Request;
 class Application {
 
     public function __construct(){ // usually an array.
-        if($_SERVER['SERVER_NAME'] == 'localhost'){
+        
+        if(true || $_SERVER['SERVER_NAME'] == 'localhost'){
             define("DEVMODE",true);
             ini_set("html_errors",1); 
             ini_set("display_errors", "On");
             error_reporting(E_ALL & ~E_NOTICE); 
         } else {
             define("DEVMODE",false); 
-            // we can leave these out after I figure out why my php.ini is blank <_< 
             ini_set("html_errors",0); 
             ini_set("display_errors", "Off");
             error_reporting(~E_ALL); 
         }
-         
 
         ob_start();
-/*
-        if($opts['autorun']===false|| 
-           $opts           ===false
-          ){
-            return; 
-        }
 
-        $this-> registerAutoloaders($opts['autoloaders']) ;
-        $this-> parseRequest() ;
-        $this-> defineConstants($opts['constants']);
-        //$this-> fetchExtensions($opts['extensions']); 
-        $this-> run(
-                    Request::$aspect,
-                    Request::$endpoint, 
-                    Request::$args
-                  );
-  */       
     }
 
     public function __destruct() {
     
-        ob_flush(); // Why in destruct? Because there are exit()'s everywhere. 
-                    // This way, there is no escape. 
+        ob_flush(); // Why in destruct? Because there are exits() in some places
+                    // So this way, if you don't call ob_flush() when you exit()
+                    // You'll still get output. 
     }
-
-    
 
     /**
      *  @function defineConstants
@@ -54,8 +36,8 @@ class Application {
      * Which is an array of key=>value pairs that are defined as constants 
      */ 
 
-    public function defineConstants(array $key = null){
 
+    public function defineConstants(array $key = null){
         // Since the shift has been towards modules, this should 
         // be able to change in some way that respects the modules a bit more. 
         // Also, see the modular-respective block before the return
@@ -68,7 +50,6 @@ class Application {
                 define($constant,($ini == "paths.ini"?ZERO_ROOT:"").$value);
             }
         }
-
         if ($key) {
             foreach ($key as $k => $v) {
                 define($k, $v);
@@ -83,7 +64,6 @@ class Application {
             }
         }
         if(file_exists($mf=$mp."/config/")){
-
             $inis = array_diff(scandir($mf),['.','..']); 
             foreach ($inis as $ini) {
                 $inifile   = $mf.$ini; 
@@ -92,13 +72,10 @@ class Application {
                     // if we're defining paths, auto-append the ZERO_ROOT
                     define($constant,$value);
                 }
-
             }
         }
-
         return $this;
     }
-
 
     /**
      *  @function fetchExtensions
@@ -154,31 +131,40 @@ class Application {
     }
 
     public function autoloader($class){
-        //echo "Autoloading $class<br>"; 
         $path = explode("\\", strtolower($class)); 
         $camel= array_pop(explode("\\", $class)); 
         $path[count($path)-1] = ucfirst($path[count($path)-1]?:$path[1]); //XXX not anymore TESTME
+        $newpath[count($path)-2] = ucfirst($newpath[count($path)-2]?:$newpath[1]); //XXX 
 
         $psrPath=ROOT_PATH.implode(DIRECTORY_SEPARATOR,$path).".php";
+
         $path[count($path)-1] = $camel; 
         $altPath=ROOT_PATH.implode(DIRECTORY_SEPARATOR,$path).".php"; 
+
+        $fixPath=ROOT_PATH.implode(DIRECTORY_SEPARATOR,$newpath).".php"; 
+
         if(file_exists($psrPath)){
-            //echo "file exists $psrPath<br>";
             require_once($psrPath); 
             return true; 
         } elseif (file_exists($altPath)){ // this should maybe be the way we do it... 
-            //echo "file exists $altPath<br>"; 
             require_once($altPath); 
             return true; 
-        }
+        } 
+//            if(file_exists($altaltpath=)) //XXX TODO
+        
+
         //echo "Neither $psrPath nor $altPath exist <br>"; 
         Console::log("Failed to load $class after looking in $psrPath and $altPath"); 
   }
 
     private function isModule($module){
         
-        if(file_exists($file=ZERO_ROOT."modules/".$module."/".$module.".php")){
+        if(file_exists($file=ZERO_ROOT."modules/".$module."/".$module.".php")||
+           file_exists($file=ZERO_ROOT."modules/".strtolower($module)."/".$module.".php")
+        ){
            return require_once $file;  
+        }  else if(file_exists($file=ZERO_ROOT."modules/".$module."/".$module.".php")){
+
         }
         return false; 
 

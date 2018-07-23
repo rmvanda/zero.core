@@ -26,6 +26,7 @@ class Response
     {
         $this->defineBasePaths(); 
         $this->setResponseType(); 
+        $this->registerAutoloader(); 
 
         if($this->responseType == "full"){
             $this->buildHead(); 
@@ -36,10 +37,26 @@ class Response
     public function __destruct(){
         if($this->responseType == "full"){
             $this->buildSideNav(); 
-            $this->buildFooter();  // why does this have a fucking @ on it? 
+            $this->buildFooter();  
         }
     }
     
+    public function registerAutoloader(){
+        spl_autoload_register(function($class){
+
+            $a = array_pop(explode("\\",get_called_class())) ; 
+            if(file_exists($a."/"."$class.php")){
+                require_once($a); 
+                return true;
+            }
+            
+        },false,true);
+        
+
+
+    }
+
+
     /** 
      * This function was made to address the need of the conditional statements
      * in the construct and destruct methods. 
