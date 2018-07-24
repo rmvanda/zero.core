@@ -102,6 +102,13 @@ class Response
                         Request::$endpoint . 
                         ".php"
                     ) 
+            || file_exists($view = $d = MODULE_PATH . // XXX better way to handle Aspect vs aspect ?? 
+                        Request::$aspect. 
+                        "/views/" . 
+                        Request::$endpoint . 
+                        ".php"
+                    ) 
+
         // Or maybe the module has a sub
         // (( I don't think we should cater to this, actually ))
            || file_exists($view = $b = MODULE_PATH . 
@@ -122,6 +129,8 @@ class Response
          //   $this -> render($view); // whoa, wait, really? When the hell did I do dhat?? 
          include $view; 
         } else {
+            
+            echo "$a<br>$b<br>$c"; 
 
             new Error(404, "Failed to find a respose to give for $func");
         
@@ -180,6 +189,10 @@ class Response
 
     private function getStylesheets()
     {
+        if(file_exists(WEB_ROOT.($css="/zero/assets/".Request::$aspect."/".Request::$aspect.".css"))){
+            echo '<link rel="stylesheet" type="text/css" href="'.$css.'">' ;    
+        }
+        /*
         foreach(array(Request::$aspect, Request::$endpoint) as $resource){
             //if (file_exists(WEB_PATH . "assets/pg-specific/".Request::$aspect."/css/".$resource.".css")) {
             if(file_exists($css=__DIR__."/css/".$resource.".css")){
@@ -190,7 +203,7 @@ class Response
             } else {
                 echo "<!-- " . $resource . ".css not found, so not loaded. -->";
             }
-        }
+        }*/
     }
 
     private function getScripts()
