@@ -189,7 +189,7 @@ class Response
 
     private function getStylesheets()
     {
-        if(file_exists(WEB_ROOT.($css="/zero/assets/".Request::$aspect."/".Request::$aspect.".css"))){
+        if(file_exists(WEB_ROOT.($css="/zero/assets/".Request::$aspect."/css/".Request::$aspect.".css"))){
             echo '<link rel="stylesheet" type="text/css" href="'.$css.'">' ;    
         }
         /*
@@ -208,6 +208,10 @@ class Response
 
     private function getScripts()
     {
+        if(file_exists(WEB_ROOT.($js="/zero/assets/".Request::$aspect."/js/".Request::$aspect.".js"))){
+            echo '<script src="'.$js.'"></script>'; 
+        }
+        return; 
         foreach(array(Request::$aspect, Request::$endpoint) as $resource){
             //if (file_exists(WEB_PATH . "assets/pg-specific/".Request::$aspect."/js/$resource.js")) {
             //    echo '<script type="text/javascript" src="/assets/js/pg-specific/' . $resource . '.js" ></script>';
