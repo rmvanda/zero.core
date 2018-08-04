@@ -42,32 +42,29 @@ class Adapter{
 
     public function __construct($params=null){ 
         
-        $this->pdo = Connector::getSqlConnection();
-        $this->mem = Connector::getMemConnection(); 
-
         if(is_array($params)){
             foreach ($params as $key => $value) {
                 $this->{$key} = $value;     
             }   
         }
 
-        if($params && isset($this->create)){
-            $this->doQuery($this->create,$params);     
-        }
+    //    if($params && isset($this->create)){
+    //        $this->doQuery($this->create,$params);     
+    //    }
 
     }
     
     public function doQuery($query,$params=null){
-        $stmnt = $this->pdo->prepare($query); 
+        $stmnt = Connector::getSqlConnection()->prepare($query); 
         $stmnt->execute($params); 
         if(strpos($query, "INSERT") !== false){
-            return $this->pdo->lastInsertId();            
+            return Connector::getSqlConnection()->lastInsertId();            
         } else
         if(strpos($query, "SELECT") !== false){
             return $stmnt->fetchAll(); 
         }
         return $stmnt; 
-        //return $this->pdo->prepare($query)->execute($params);
+        //return Connector::getSqlConnection()->prepare($query)->execute($params);
     }
 
     public function __call($func,$args){
@@ -105,12 +102,15 @@ class Adapter{
      */
 
     public function __get($attr){
-        return unserialize($this->mem->get($attr)); 
+        return unserialize(Connector::getMemConnection()->get($attr)); 
     }
 
     public function __set($attr,$val){
         $this->{$attr} = $val; 
-        $this->mem->set($attr,serialize($val)); 
+        Connector::getMemConnection()->set($attr,serialize($val)); 
+        $map = json_decode(file_get_contents("/home/james/dev/php/zero/modules/poker/memmap.json"));
+        $map->{$attr} = $val; 
+        file_put_contents("/home/james/dev/php/zero/modules/poker/memmap.json", json_encode($map, JSON_PRETTY_PRINT)); 
     }
 
 }
