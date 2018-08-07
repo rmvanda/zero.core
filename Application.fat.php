@@ -1,5 +1,12 @@
 <?php
 
+
+/**
+
+* not sure why I kept this...
+
+*/ 
+
 Namespace Zero\Core; 
 
 class Application {
