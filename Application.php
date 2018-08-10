@@ -174,9 +174,13 @@ class Application {
 
     private function isModule($module){
         
-        if(file_exists($file=ZERO_ROOT."modules/".$module."/".$module.".php")){
+        if(
+            file_exists($file=$a=ZERO_ROOT."modules/".$module."/".$module.".php")||
+            file_exists($file=$b=ZERO_ROOT."modules/".strtolower($module)."/".$module.".php")
+        ){
            return require_once $file;  
         }
+        Console::log("Could not find a $module module in $a or $b"); 
         return false; 
 
     }
