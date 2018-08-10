@@ -85,14 +85,17 @@ class Adapter{
         if(!isset(self::$obj)){
             self::$obj = new static;    
         } 
+
         Console::log("Called Statically..."); 
         if(property_exists(self::$obj, $func)){
             Console::log("Property $func exists...?");
             return self::$obj->{$func}($args); 
         } else {
             Console::log("Property $func does NOT exist...?");
+            Console::log("The value of $func is ".self::$obj->{$func}); 
             return self::$obj->{$func};
         }
+
     }
 
     /**
@@ -102,15 +105,19 @@ class Adapter{
      */
 
     public function __get($attr){
-        return unserialize(Connector::getMemConnection()->get($attr)); 
+        Console::log("Attempting to retrieve attribute $attr from memcached:\n\n".($a=Connector::getMemConnection()->get($attr))."\n\n");
+        return unserialize($a); 
     }
 
     public function __set($attr,$val){
         $this->{$attr} = $val; 
-        Connector::getMemConnection()->set($attr,serialize($val)); 
+        Console::log("attempting to set $attr with the value of $val");
+        Connector::getMemConnection()->set($attr,$sd=serialize($val)); 
+        Console::log("After serializing, value appears as: ".$attr); 
         $map = json_decode(file_get_contents("/home/james/dev/php/zero/modules/poker/memmap.json"));
         $map->{$attr} = $val; 
         file_put_contents("/home/james/dev/php/zero/modules/poker/memmap.json", json_encode($map, JSON_PRETTY_PRINT)); 
+        Console::log("Complete."); 
     }
 
 }
