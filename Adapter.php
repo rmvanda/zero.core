@@ -55,6 +55,7 @@ class Adapter{
     }
     
     public function doQuery($query,$params=null){
+        die($query); 
         $stmnt = Connector::getSqlConnection()->prepare($query); 
         $stmnt->execute($params); 
         if(strpos($query, "INSERT") !== false){
@@ -68,13 +69,17 @@ class Adapter{
     }
 
     public function __call($func,$args){
-        if(is_arraY($args) && count($args) == 1){
+        if(is_array($args) && count($args) == 1){
             $args = $args[0];     
         }
-        if(isset($this->{$func})){
-            $a = $this->doQuery($this->{$func},$args[0]);     
+        // this is a cheap hack ~ 
+        $queryBank = get_called_class()."Query"; 
+        if((class_exists($queryBank,false) && isset($queryBank::$$func) ) ||
+           isset($this->{$func}  )){
+            $a = $this->doQuery($queryBank::$$func?:$this->{$func},$args[0]);     
             return $a; 
         } else {
+            die("<h1>Fail</h1>");
             new Error(404);     
         }
         
