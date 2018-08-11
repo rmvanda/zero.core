@@ -37,8 +37,8 @@ class Adapter{
 
     public static $obj; 
 
-    public $pdo;
-    public $mem; 
+//    public $pdo;
+//    public $mem; 
 
     public function __construct($params=null){ 
         
