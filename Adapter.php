@@ -54,6 +54,10 @@ class Adapter{
 
     }
     
+    public function getMemConnection(){
+        return Connector::getMemConnection();    
+    }
+
     public function doQuery($query,$params=null){
         $stmnt = Connector::getSqlConnection()->prepare($query); 
         $stmnt->execute($params); 
@@ -73,12 +77,13 @@ class Adapter{
         }
         // this is a cheap hack ~ 
         $queryBank = get_called_class()."Query"; 
-        if(class_exists($queryBank, false) && isset($queryBank::$$func)) {
-            return $this->doQuery($queryBank::$$func,$args[0]);     
+        if(class_exists($queryBank, false)){
+            return $this->doQuery($queryBank::$$func,$args);     
         }if(isset($this->{$func}  )){
-            return $this->doQuery($this->{$func},$args[0]);     
+            return $this->doQuery($this->{$func},$args);     
         } else {
-            die("<h1>Fail</h1>");
+            \xdebug_print_function_stack(); 
+            die("<h1>Failed for $func</h1>");
             new Error(404);     
         }
         
@@ -89,12 +94,9 @@ class Adapter{
         if(!isset(self::$obj)){
             self::$obj = new static;    
         } 
-        Console::log("Called Statically..."); 
         if(property_exists(self::$obj, $func)){
-            Console::log("Property $func exists...?");
             return self::$obj->{$func}($args); 
         } else {
-            Console::log("Property $func does NOT exist...?");
             return self::$obj->{$func};
         }
     }
@@ -111,6 +113,10 @@ class Adapter{
 
     public function __set($attr,$val){
         $this->{$attr} = $val; 
+        Console::log("Setting $attr to...");
+        Console::log($val); 
+
+        
         Connector::getMemConnection()->set($attr,serialize($val)); 
         $map = json_decode(file_get_contents("/home/james/dev/php/zero/modules/poker/memmap.json"));
         $map->{$attr} = $val; 
