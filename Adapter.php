@@ -56,7 +56,9 @@ class Adapter{
     
     public function doQuery($query,$params=null){
         $stmnt = Connector::getSqlConnection()->prepare($query); 
+        var_dump($query);var_dump($params); 
         $stmnt->execute($params); 
+            
         if(strpos($query, "INSERT") !== false){
             return Connector::getSqlConnection()->lastInsertId();            
         } else
@@ -114,3 +116,42 @@ class Adapter{
     }
 
 }
+
+class SQLAdapter extends Adapter{
+
+    public $getQuery = "SELECT %s FROM %s WHERE %s=:classnameid"; 
+    public $setQuery = "UPDATE %s  SET %s=:val WHERE %s=:classnameid"; 
+
+    public $tablename; 
+
+
+    public function getParams($attrs=array()){
+
+        $classname = explode("\\",strtolower(get_called_class())); 
+        $classname = array_pop($classname); 
+        $classidnm = $classname."id"; 
+
+        $this->tablename = $classname; 
+        
+
+        $return = array(
+            "classnameid"       => $this->{$classidnm} 
+        ); 
+        return array_merge($return,$attrs);  
+    }
+
+    public function __get($attr){
+        echo "trying to get $attr"; 
+        $params = $this->getParams();
+        $query  = sprintf($this->getQuery, $attr,$this->tablename,$this->{$this->tablename."id"}); 
+        return $this->doQuery($query,$params); 
+    }
+    
+    public function __set($attr,$val){
+        $params = $this->getParams(array("val"=>$val)); 
+        $query  = sprintf($this->setQuery, $this->tablename,$attr,$this->tablename."id"); 
+        return $this->doQuery($query,$params); 
+    }
+
+}
+
