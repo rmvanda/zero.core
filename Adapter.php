@@ -37,11 +37,11 @@ class Adapter{
 
     public static $obj; 
 
+//    public $fetchAsObject = array();  // That was almost properly clever
 //    public $pdo;
 //    public $mem; 
 
     public function __construct($params=null){ 
-        
         if(is_array($params)){
             foreach ($params as $key => $value) {
                 $this->{$key} = $value;     
@@ -59,14 +59,28 @@ class Adapter{
     }
 
     public function doQuery($query,$params=null){
+        
+        if(is_array($params)&&count($params) ==1 && isset($params[0])){
+            $params = $params[0]    ; 
+        }
+
+        Console::log($query); 
+        Console::log($params); 
         $stmnt = Connector::getSqlConnection()->prepare($query); 
-        var_dump($query);var_dump($params); 
         $stmnt->execute($params); 
-            
+          
         if(strpos($query, "INSERT") !== false){
             return Connector::getSqlConnection()->lastInsertId();            
         } else
         if(strpos($query, "SELECT") !== false){
+            // so clever, yet so very stupid...
+           /* foreach($this->fetchAsObject as $object){
+                if(strpos($query,$object)!==false){
+                    // unfortunately, this trick was too cheap 
+                    return $stmnt; //$stmnt->fetchObject(ucfirst($object));    
+                    
+                }    
+            }*/
             return $stmnt->fetchAll(); 
         }
         return $stmnt; 
@@ -96,11 +110,12 @@ class Adapter{
         if(!isset(self::$obj)){
             self::$obj = new static;    
         } 
-        if(property_exists(self::$obj, $func)){
+//        if(property_exists(self::$obj, $func)){
             return self::$obj->{$func}($args); 
-        } else {
-            return self::$obj->{$func};
-        }
+  //      } else {
+    //        Console::log("WARNING: This method of accessing properties - like $func - is soon to be deprecated..."); 
+      //      return self::$obj->{$func};
+       // }
     }
 
     /**
@@ -123,44 +138,6 @@ class Adapter{
         $map = json_decode(file_get_contents("/home/james/dev/php/zero/modules/poker/memmap.json"));
         $map->{$attr} = $val; 
         file_put_contents("/home/james/dev/php/zero/modules/poker/memmap.json", json_encode($map, JSON_PRETTY_PRINT)); 
-    }
-
-}
-
-class SQLAdapter extends Adapter{
-
-    public $getQuery = "SELECT %s FROM %s WHERE %s=:classnameid"; 
-    public $setQuery = "UPDATE %s  SET %s=:val WHERE %s=:classnameid"; 
-
-    public $tablename; 
-
-
-    public function getParams($attrs=array()){
-
-        $classname = explode("\\",strtolower(get_called_class())); 
-        $classname = array_pop($classname); 
-        $classidnm = $classname."id"; 
-
-        $this->tablename = $classname; 
-        
-
-        $return = array(
-            "classnameid"       => $this->{$classidnm} 
-        ); 
-        return array_merge($return,$attrs);  
-    }
-
-    public function __get($attr){
-        echo "trying to get $attr"; 
-        $params = $this->getParams();
-        $query  = sprintf($this->getQuery, $attr,$this->tablename,$this->{$this->tablename."id"}); 
-        return $this->doQuery($query,$params); 
-    }
-    
-    public function __set($attr,$val){
-        $params = $this->getParams(array("val"=>$val)); 
-        $query  = sprintf($this->setQuery, $this->tablename,$attr,$this->tablename."id"); 
-        return $this->doQuery($query,$params); 
     }
 
 }
