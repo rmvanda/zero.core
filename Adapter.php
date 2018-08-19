@@ -60,8 +60,11 @@ class Adapter{
 
     public function doQuery($query,$params=null){
         
-        if(is_array($params)&&count($params) ==1 && isset($params[0])){
-            $params = $params[0]    ; 
+        if(is_array($params) 
+        && count($params) ==1 
+        && isset($params[0]) 
+        && is_array($params[0])){
+            $params = $params[0]; 
         }
 
         Console::log($query); 
