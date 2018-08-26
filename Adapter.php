@@ -97,7 +97,7 @@ class Adapter{
             self::$obj = new static;    
         } 
         if(property_exists(self::$obj, $func)){
-            return self::$obj->{$func}($args); 
+            return self::$obj->{$func}($args[0]); 
         } else {
             return self::$obj->{$func};
         }
