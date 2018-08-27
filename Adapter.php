@@ -59,14 +59,20 @@ class Adapter{
     }
 
     public function doQuery($query,$params=null){
-        
-        if(is_array($params) 
+        Console::log("About to run query:");
+        Console::log($query); 
+        Console::log("With parameters:");
+        Console::log($params);
+        Console::log("Params before conversion:");
+        Console::log($params); 
+        Console::log("Params after conversion:"); 
+/*        if(is_array($params) 
         && count($params) ==1 
         && isset($params[0]) 
         && is_array($params[0])){
             $params = $params[0]; 
-        }
-
+        } // XXX should handle on the static method...
+*/
         Console::log($query); 
         Console::log($params); 
         $stmnt = Connector::getSqlConnection()->prepare($query); 
@@ -91,15 +97,21 @@ class Adapter{
     }
 
     public function __call($func,$args){
+        /*
         if(is_array($args) && count($args) == 1){
             $args = $args[0];     
-        }
+        }*/
         // this is a cheap hack ~ 
+        Console::log("Preparing to run $func, using parameters");
+        Console::log($args); 
+
         $queryBank = get_called_class()."Query"; 
         if(class_exists($queryBank, false)){
-            return $this->doQuery($queryBank::$$func,$args);     
+            Console::log("Found query in query bank"); 
+            return $this->doQuery($queryBank::$$func,$args[0]);     
         }if(isset($this->{$func}  )){
-            return $this->doQuery($this->{$func},$args);     
+            Console::log("Found Query as property."); 
+            return $this->doQuery($this->{$func},$args[0]);     
         } else {
             \xdebug_print_function_stack(); 
             die("<h1>Failed for $func</h1>");
@@ -110,6 +122,8 @@ class Adapter{
 
     public static function __callStatic($func,$args){
     
+        Console::log("Statically caled $func using parameters:"); 
+        Console::log($args); 
         if(!isset(self::$obj)){
             self::$obj = new static;    
         } 
@@ -123,7 +137,10 @@ HEAD
 =======
 */
 //        if(property_exists(self::$obj, $func)){
-            return self::$obj->{$func}($args); 
+        $return = self::$obj->{$func}($args[0]); 
+        Console::log("came back with");
+        Console::log($query); 
+        return $return; 
   //      } else {
     //        Console::log("WARNING: This method of accessing properties - like $func - is soon to be deprecated..."); 
       //      return self::$obj->{$func};
