@@ -13,7 +13,7 @@ class Application {
         } else {
             define("DEVMODE",false); 
             // we can leave these out after I figure out why my php.ini is blank <_< 
-            ini_set("html_errors",0); 
+            //ini_set("html_errors",0); 
             ini_set("display_errors", "Off");
             error_reporting(~E_ALL); 
         }
@@ -214,7 +214,7 @@ class Application {
 */
     public function errorHandler($class)
     {
-        new Error(404, "We couldn't find the page you are looking for."); 
+        new Error(404, "We couldn't find $class."); 
         xdebug_print_function_stack(); 
     }
 
