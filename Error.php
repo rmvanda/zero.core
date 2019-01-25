@@ -38,14 +38,8 @@ class Error extends \Zero\Core\Module
             ); 
 
     public function __construct($code, $err = null) {
-
         header("HTTP/1.1 $code " . $this -> message[$code]);
-
-
         parent::__construct(); 
-        if(defined(DEVMODE) && DEV !== false) {
-        //    xdebug_print_function_stack();
-        }
         $this -> generateErrorPage($code, $err);
         exit(); 
     }
@@ -76,7 +70,9 @@ class Error extends \Zero\Core\Module
         //}else{
         if(!Request::$accepts){
             echo "<h1>$code - $message</h1><hr><h4>$err</h4><br>";     
-            xdebug_print_function_stack(); 
+            if(DEVMODE){
+                \xdebug_print_function_stack(); 
+            }
         } else {
             $this->export(array("status"=>"error","message"=>$this->message[$code])); 
         }

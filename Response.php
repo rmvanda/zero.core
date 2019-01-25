@@ -26,6 +26,7 @@ class Response
     {
         $this->defineBasePaths(); 
         $this->setResponseType(); 
+        $this->registerAutoloader(); 
 
         if($this->responseType == "full"){
             $this->buildHead(); 
@@ -36,10 +37,26 @@ class Response
     public function __destruct(){
         if($this->responseType == "full"){
             $this->buildSideNav(); 
-            $this->buildFooter();  // why does this have a fucking @ on it? 
+            $this->buildFooter();  
         }
     }
     
+    public function registerAutoloader(){
+        spl_autoload_register(function($class){
+
+            $a = array_pop(explode("\\",get_called_class())) ; 
+            if(file_exists($a."/"."$class.php")){
+                require_once($a); 
+                return true;
+            }
+            
+        },false,true);
+        
+
+
+    }
+
+
     /** 
      * This function was made to address the need of the conditional statements
      * in the construct and destruct methods. 
@@ -51,8 +68,8 @@ class Response
 
     protected function setResponseType(){
 
-        if(Request::$isAjax){
-            $this->responseType = "html"; 
+        if(Request::$isAjax){ 
+            $this->responseType = "html"; // hackish XXX
         }
         else if(isset(Request::$accepts)){
             $this->responseType = Request::$accepts;    
@@ -70,7 +87,7 @@ class Response
             $this -> viewPath = ZERO_ROOT."app/frontend/global_views/"; 
         } 
 //        $this -> viewPath  = VIEW_PATH; // what the fuck? 
-        define("ASPECT_PATH", MODULE_PATH."/".Request::$Aspect."/"); 
+        define("ASPECT_PATH", MODULE_PATH.Request::$Aspect."/");  // why is this not the same as MOdule_Path ? 
     }
 
     public function __call($func, $args)
@@ -85,6 +102,13 @@ class Response
                         Request::$endpoint . 
                         ".php"
                     ) 
+            || file_exists($view = $d = MODULE_PATH . // XXX better way to handle Aspect vs aspect ?? 
+                        Request::$aspect. 
+                        "/views/" . 
+                        Request::$endpoint . 
+                        ".php"
+                    ) 
+
         // Or maybe the module has a sub
         // (( I don't think we should cater to this, actually ))
            || file_exists($view = $b = MODULE_PATH . 
@@ -105,6 +129,8 @@ class Response
          //   $this -> render($view); // whoa, wait, really? When the hell did I do dhat?? 
          include $view; 
         } else {
+            
+            echo "$a<br>$b<br>$c"; 
 
             new Error(404, "Failed to find a respose to give for $func");
         
@@ -118,7 +144,7 @@ class Response
             $this->viewPath = VIEW_PATH; 
         }
 
-        if (isAjax()) {
+        if (Request::$isAjax) {
             include $view;
             //$this -> getPage($view);
         } else {
@@ -163,6 +189,10 @@ class Response
 
     private function getStylesheets()
     {
+        if(file_exists(WEB_ROOT.($css="/zero/assets/".Request::$aspect."/css/".Request::$aspect.".css"))){
+            echo '<link rel="stylesheet" type="text/css" href="'.$css.'">' ;    
+        }
+        /*
         foreach(array(Request::$aspect, Request::$endpoint) as $resource){
             //if (file_exists(WEB_PATH . "assets/pg-specific/".Request::$aspect."/css/".$resource.".css")) {
             if(file_exists($css=__DIR__."/css/".$resource.".css")){
@@ -173,20 +203,24 @@ class Response
             } else {
                 echo "<!-- " . $resource . ".css not found, so not loaded. -->";
             }
-        }
+        }*/
     }
 
     private function getScripts()
     {
+        if(file_exists(WEB_ROOT.($js="/zero/assets/".Request::$aspect."/js/".Request::$aspect.".js"))){
+            echo '<script src="'.$js.'"></script>'; 
+        }
+        return; 
         foreach(array(Request::$aspect, Request::$endpoint) as $resource){
             //if (file_exists(WEB_PATH . "assets/pg-specific/".Request::$aspect."/js/$resource.js")) {
             //    echo '<script type="text/javascript" src="/assets/js/pg-specific/' . $resource . '.js" ></script>';
-            if(file_exists($js=ASPECT_PATH."/js/".$resource.".js")){
+            if(file_exists($js=ASPECT_PATH."js/".$resource.".js")){
                 echo "<script>"; 
                 echo file_get_contents($js);
                 echo "</script>"; 
             } else {
-                echo "<!-- " . $resource . ".js not found in ".__DIR__.", so not loaded. -->";
+                echo "<!-- " . $resource . ".js not found in ".ASPECT_PATH.", so not loaded. -->";
             }
         }
     }
