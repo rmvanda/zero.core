@@ -1,4 +1,4 @@
-# zero.core v1.0 (alpha)
+# zero.core v1.0 
 The core components of the Zero Framework
 
 This bit is basically just a front controller that provides reasonable defaults for your web application. 

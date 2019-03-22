@@ -130,7 +130,7 @@ class Response
          include $view; 
         } else {
             
-            echo "$a<br>$b<br>$c"; 
+            //echo "$a<br>$b<br>$c"; 
 
             new Error(404, "Failed to find a respose to give for $func");
         
@@ -191,36 +191,18 @@ class Response
     {
         if(file_exists(WEB_ROOT.($css="/zero/assets/".Request::$aspect."/css/".Request::$aspect.".css"))){
             echo '<link rel="stylesheet" type="text/css" href="'.$css.'">' ;    
+        } else {
+            echo "<!-- $css not found, so not loaded. -->";     
         }
-        /*
-        foreach(array(Request::$aspect, Request::$endpoint) as $resource){
-            //if (file_exists(WEB_PATH . "assets/pg-specific/".Request::$aspect."/css/".$resource.".css")) {
-            if(file_exists($css=__DIR__."/css/".$resource.".css")){
-                echo "<style>"; 
-                echo file_get_contents($css);
-                echo "</style>"; 
-                //echo '<link rel="stylesheet" type="text/css" href="/assets/css/pg-specific/' . $resource . '.css" />';
-            } else {
-                echo "<!-- " . $resource . ".css not found, so not loaded. -->";
-            }
-        }*/
     }
 
     private function getScripts()
     {
-        if(file_exists(WEB_ROOT.($js="/zero/assets/".Request::$aspect."/js/".Request::$aspect.".js"))){
-            echo '<script src="'.$js.'"></script>'; 
-        }
-        return; 
         foreach(array(Request::$aspect, Request::$endpoint) as $resource){
-            //if (file_exists(WEB_PATH . "assets/pg-specific/".Request::$aspect."/js/$resource.js")) {
-            //    echo '<script type="text/javascript" src="/assets/js/pg-specific/' . $resource . '.js" ></script>';
-            if(file_exists($js=ASPECT_PATH."js/".$resource.".js")){
-                echo "<script>"; 
-                echo file_get_contents($js);
-                echo "</script>"; 
+            if(file_exists(WEB_ROOT.($js="/zero/assets/".Request::$aspect."/js/".$resource.".js"))){
+                echo '<script src="'.$js.'"></script>'; 
             } else {
-                echo "<!-- " . $resource . ".js not found in ".ASPECT_PATH.", so not loaded. -->";
+                echo "<!-- $resource not found, so not loaded. -->"; 
             }
         }
     }
@@ -300,5 +282,3 @@ class Response
 	}
 
 }
-
-
