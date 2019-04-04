@@ -158,4 +158,4 @@ For a truly in-depth look, look at the code. Otherwise, the methods you really w
 - ZeroZero(min) vs ZeroFW 
 - Better Access Control  - fix up Whitelist & Restricted 
 - OAuth Adapters
-
+- subdomain support
