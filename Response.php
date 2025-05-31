@@ -1,7 +1,7 @@
 <?php
-
 namespace Zero\Core; 
 
+function head($str){ echo "<h1>".$str."</h1>";  } 
 class Response
 {
 
@@ -13,7 +13,7 @@ class Response
     protected $status; 
     protected $data; 
 
-    protected $headerIncluded,$headIncluded,$footerIncluded; 
+    protected $headerIncluded,$headIncluded,$sideBarIncluded,$footerIncluded; 
 
     public $title; 
 
@@ -68,7 +68,7 @@ class Response
 
     protected function setResponseType(){
 
-        if(Request::$isAjax){ 
+        if(Request::$isAjax){ // yeah this is dated...  TODO 
             $this->responseType = "html"; // hackish XXX
         }
         else if(isset(Request::$accepts)){
@@ -83,7 +83,7 @@ class Response
 
     protected function defineBasePaths()
     {
-        if(!defined($this->viewPath)){  
+        if(!$this->viewPath){  
             $this -> viewPath = ZERO_ROOT."app/frontend/global_views/"; 
         } 
 //        $this -> viewPath  = VIEW_PATH; // what the fuck? 
@@ -120,6 +120,8 @@ class Response
         // And finally, defer to index. This is useful for urls like 
         // site.com/about 
         // since in most cases, it would be silly to set up an "About" module
+           // TODO - this actually prevents us from loading a method from the 
+           // Index module.. which may be something you actually want. 
            || file_exists($view = $c = MODULE_PATH . 
                             "Index/views/" . 
                             Request::$aspect . 
@@ -162,10 +164,15 @@ class Response
 
 // Doing it like this allows individual classed to override the methods
 // while still using render. 
+// The extra difference on this function was a test in 2024 to continue this^ idea.
     protected function buildHead()
     {
         $this->headIncluded=true;
-        include_once $this -> viewPath . "head.php";
+        if(file_exists($head = $this->viewPath."head.php")){
+            include_once $head; 
+        } elseif(file_exists($head = VIEW_PATH."head.php")){
+            include_once $head; 
+        }
     }
 
     protected function buildHeader()
@@ -189,21 +196,61 @@ class Response
 
     private function getStylesheets()
     {
-        if(file_exists(WEB_ROOT.($css="/zero/assets/".Request::$aspect."/css/".Request::$aspect.".css"))){
+
+        $assetdir = WEB_ROOT."/assets/".Request::$aspect."/css/"; 
+        // TODO: maybe only load certain things by endpoint? meh, write better CSS.
+        if(is_dir($assetdir)){
+            $this->loadAssetTypeFromDir("css",$assetdir);
+        } else {
+            echo "<!-- ".WEB_ROOT."$css not found, so not loaded. -->";     
+        }
+        /*
+        if(file_exists(WEB_ROOT.($css="/assets/".Request::$aspect."/css/".Request::$aspect.".css"))){
             echo '<link rel="stylesheet" type="text/css" href="'.$css.'">' ;    
         } else {
-            echo "<!-- $css not found, so not loaded. -->";     
+        */
+        /*
         }
+        if(file_exists(WEB_ROOT.($css="/assets/".Request::$aspect."/css/".Request::$.".css"))){
+            echo '<link rel="stylesheet" type="text/css" href="'.$css.'">' ;    
+        } else {
+            echo "<!-- ".WEB_ROOT."$css not found, so not loaded. -->";     
+        }
+        */
     }
 
     private function getScripts()
     {
+        $assetdir = WEB_ROOT."/assets/".Request::$aspect."/js/"; 
+        // TODO: maybe only load certain things by endpoint? meh, write better CSS.
+        if(is_dir($assetdir)){
+            $this->loadAssetTypeFromDir("js",$assetdir);
+        } else {
+            echo "<!-- ".WEB_ROOT."$css not found, so not loaded. -->";     
+        }
+        /*
         foreach(array(Request::$aspect, Request::$endpoint) as $resource){
             if(file_exists(WEB_ROOT.($js="/zero/assets/".Request::$aspect."/js/".$resource.".js"))){
                 echo '<script src="'.$js.'"></script>'; 
             } else {
                 echo "<!-- $resource not found, so not loaded. -->"; 
             }
+        }
+        */
+    }
+
+    private function loadAssetTypeFromDir($type,$dir){
+        $assets = scandir($dir); 
+        if($type == "css"){
+            $html_asset = '<link rel="stylesheet" type="text/css" href="%s">' ;    
+        } else 
+        if($type == "js"){
+            $html_asset = '<script src="%s"></script>'; 
+        }
+        $pubdir = str_replace(WEB_ROOT, "", $dir);
+        foreach($assets as $asset){
+            if($asset[0] == "."){continue;}// murders . and ..  .*swp files
+            echo sprintf($html_asset,$pubdir.$asset);  // TODO return? we have buffering.. so.. 
         }
     }
 

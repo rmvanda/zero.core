@@ -38,8 +38,14 @@ class Error extends \Zero\Core\Module
             ); 
 
     public function __construct($code, $err = null) {
-        header("HTTP/1.1 $code " . $this -> message[$code]);
+
+        header("HTTP/1.1 $code " . $this -> message[$code]??"Unspecified");
+
+
         parent::__construct(); 
+        if(defined(DEVMODE) && DEV !== false) {
+        //    xdebug_print_function_stack();
+        }
         $this -> generateErrorPage($code, $err);
         exit(); 
     }
@@ -65,13 +71,14 @@ class Error extends \Zero\Core\Module
         
         $this->title = "Error: ".($message=ucwords(strtolower($this->message[$code])));
         
+        
         //if(file_exists($errPg = __DIR__   . "/views/_$code.php")){
         //    include $errPg;
         //}else{
         if(!Request::$accepts){
             echo "<h1>$code - $message</h1><hr><h4>$err</h4><br>";     
-            if(DEVMODE){
-                \xdebug_print_function_stack(); 
+            if(defined(DEVMODE) && DEVMODE == True){
+                xdebug_print_function_stack(); 
             }
         } else {
             $this->export(array("status"=>"error","message"=>$this->message[$code])); 

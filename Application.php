@@ -4,20 +4,22 @@ Namespace Zero\Core;
 use \Zero\Core\Request as Request; 
 class Application {
 
-    public function __construct(){ // usually an array.
+    public function __construct(){ // usually an array. // JDP 2024.. what? 
         
-        if(true || $_SERVER['SERVER_NAME'] == 'localhost'){
+        //if($_SERVER['SERVER_NAME'] == 'localhost'){
             define("DEVMODE",true);
             ini_set("html_errors",1); 
             ini_set("display_errors", "On");
-            error_reporting(E_ALL & ~E_NOTICE); 
-        } else {
-            define("DEVMODE",false); 
+            error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING); 
+	//} else {
+	    // reviving this in 2024 became problematic because of the damn ini_sets all over... TODO FIXME
+            //define("DEVMODE",false); 
+            define("DEVMODE",true); 
             // we can leave these out after I figure out why my php.ini is blank <_< 
-            ini_set("html_errors",0); 
-            ini_set("display_errors", "Off");
-            error_reporting(~E_ALL); 
-        }
+            //ini_set("html_errors",0); 
+            //ini_set("display_errors", "Off");
+            //error_reporting(~E_ALL); 
+        //}
 
         ob_start();
 
@@ -131,11 +133,11 @@ class Application {
         $aspect -> {$endpoint}($args);
     }
 
-    public function autoloader($class){
+    public static function autoloader($class){
         $path = explode("\\", strtolower($class)); 
         $camel= array_pop(explode("\\", $class)); 
-        $path[count($path)-1] = ucfirst($path[count($path)-1]?:$path[1]); //XXX not anymore TESTME
-        $newpath[count($path)-2] = ucfirst($newpath[count($path)-2]?:$newpath[1]); //XXX 
+        $path[count($path)-1] = ucfirst(($path[count($path)-1]?:$path[1])??""); //XXX not anymore TESTME
+        $newpath[count($path)-2] = ucfirst(($newpath[count($path)-2]?:$newpath[1])??""); //XXX 
 
         $psrPath=ROOT_PATH.implode(DIRECTORY_SEPARATOR,$path).".php";
 
@@ -175,7 +177,7 @@ class Application {
     public function registerAutoloaders($autoloader = null)
     {
         require ZERO_ROOT."lib/zxc/ZXC.php"; 
-        spl_autoload_register("self::autoloader"); 
+        spl_autoload_register("\Zero\Core\Application::autoloader"); 
         // if you want to add external autoloaders
         if ($autoloader) {
             if (is_array($autoloader)) {
@@ -193,7 +195,7 @@ class Application {
         if (file_exists($file = ROOT_PATH . "vendor/autoload.php")) {
             require $file;
         }
-       spl_autoload_register("self::errorHandler");
+       spl_autoload_register("\Zero\Core\Application::errorHandler");
        return $this;
     }
 /*

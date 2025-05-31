@@ -4,9 +4,7 @@ namespace Zero\Core;
 
 class Console {
 
-    //private static $tabs; // wait what was this for? 
-
-    public static function log($message,$logfile=LOG_FILE){
+    public static function log($message,$logfile="/var/log/php-fpm/zero.log"){
         if(is_array($message)||is_object($message)){
             $message = print_r($message,true);     
         }
@@ -18,4 +16,5 @@ class Console {
         $mesg = $msg[0]; 
         self::log($mesg,LOG_FILE."_".$loglvl); 
     }
+
 }
