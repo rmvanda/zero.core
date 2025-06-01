@@ -4,23 +4,8 @@ Namespace Zero\Core;
 use \Zero\Core\Request as Request; 
 class Application {
 
-    public function __construct(){ // usually an array. // JDP 2024.. what? 
+    public function __construct(){ 
         
-        //if($_SERVER['SERVER_NAME'] == 'localhost'){
-            define("DEVMODE",true);
-            ini_set("html_errors",1); 
-            ini_set("display_errors", "On");
-            error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING); 
-	//} else {
-	    // reviving this in 2024 became problematic because of the damn ini_sets all over... TODO FIXME
-            //define("DEVMODE",false); 
-            define("DEVMODE",true); 
-            // we can leave these out after I figure out why my php.ini is blank <_< 
-            //ini_set("html_errors",0); 
-            //ini_set("display_errors", "Off");
-            //error_reporting(~E_ALL); 
-        //}
-
         ob_start();
 
     }
@@ -40,7 +25,7 @@ class Application {
      */ 
 
 
-    public function defineConstants(array $key = null){
+    public function defineConstants(?array $key = null){
         // Since the shift has been towards modules, this should 
         // be able to change in some way that respects the modules a bit more. 
         // Also, see the modular-respective block before the return
@@ -124,9 +109,11 @@ class Application {
      */
     public function run($aspect, $endpoint, $args){
         if ($this->isModule($Aspect=ucfirst($aspect))) {
+            print("Loading $aspect"); 
             $Aspect = "\\Zero\\Module\\".$Aspect; 
             $aspect = new $Aspect();
        } else {
+            print("Couldn't load aspect.. $aspect"); 
             $aspect = new \Zero\Core\Response();
        }
         
@@ -135,16 +122,17 @@ class Application {
 
     public static function autoloader($class){
         $path = explode("\\", strtolower($class)); 
-        $camel= array_pop(explode("\\", $class)); 
-        $path[count($path)-1] = ucfirst(($path[count($path)-1]?:$path[1])??""); //XXX not anymore TESTME
-        $newpath[count($path)-2] = ucfirst(($newpath[count($path)-2]?:$newpath[1])??""); //XXX 
+        $step = explode("\\", $class);
+        $camel= array_pop($step); 
+        $path[count($path)-1] = ucfirst($path[count($path)-1]?:$path[1])??""; //XXX not anymore TESTME
+        //$newpath[count($path)-2] = ucfirst(($newpath[count($path)-2]?:$newpath[1])??""); //XXX 
 
         $psrPath=ROOT_PATH.implode(DIRECTORY_SEPARATOR,$path).".php";
 
         $path[count($path)-1] = $camel; 
         $altPath=ROOT_PATH.implode(DIRECTORY_SEPARATOR,$path).".php"; 
 
-        $fixPath=ROOT_PATH.implode(DIRECTORY_SEPARATOR,$newpath).".php"; 
+        //$fixPath=ROOT_PATH.implode(DIRECTORY_SEPARATOR,$newpath).".php"; 
 
         if(file_exists($psrPath)){
             require_once($psrPath); 

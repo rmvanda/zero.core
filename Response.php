@@ -43,14 +43,14 @@ class Response
     
     public function registerAutoloader(){
         spl_autoload_register(function($class){
-
-            $a = array_pop(explode("\\",get_called_class())) ; 
+            $step = explode("\\",get_called_class()); 
+            $a = array_pop($step) ; 
             if(file_exists($a."/"."$class.php")){
                 require_once($a); 
                 return true;
             }
             
-        },false,true);
+        },true,true);
         
 
 
@@ -86,8 +86,6 @@ class Response
         if(!$this->viewPath){  
             $this -> viewPath = ZERO_ROOT."app/frontend/global_views/"; 
         } 
-//        $this -> viewPath  = VIEW_PATH; // what the fuck? 
-        define("ASPECT_PATH", MODULE_PATH.Request::$Aspect."/");  // why is this not the same as MOdule_Path ? 
     }
 
     public function __call($func, $args)
@@ -96,13 +94,13 @@ class Response
         // So, we're going to see if there's a view file to use::
 
         // -- Maybe in the module's view folder? 
-        if (file_exists($view = $a = MODULE_PATH .
+        if (file_exists($view = MODULE_PATH .
                         ucfirst(Request::$aspect) . 
                         "/views/" . 
                         Request::$endpoint . 
                         ".php"
                     ) 
-            || file_exists($view = $d = MODULE_PATH . // XXX better way to handle Aspect vs aspect ?? 
+            || file_exists($view = MODULE_PATH . 
                         Request::$aspect. 
                         "/views/" . 
                         Request::$endpoint . 
@@ -115,7 +113,7 @@ class Response
                         ucfirst(Request::$aspect) . 
                         "/views/" . 
                         Request::$endpoint ."/".
-                        Request::$uriArray[2].".php"
+                       (Request::$uriArray[2]??"").".php"
                     )
         // And finally, defer to index. This is useful for urls like 
         // site.com/about 
@@ -128,14 +126,10 @@ class Response
                             ".php"
                     )
        ){
-         //   $this -> render($view); // whoa, wait, really? When the hell did I do dhat?? 
+         //   $this -> render($view); 
          include $view; 
         } else {
-            
-            //echo "$a<br>$b<br>$c"; 
-
             new Error(404, "Failed to find a respose to give for $func");
-        
         }
     }
 
@@ -202,7 +196,7 @@ class Response
         if(is_dir($assetdir)){
             $this->loadAssetTypeFromDir("css",$assetdir);
         } else {
-            echo "<!-- ".WEB_ROOT."$css not found, so not loaded. -->";     
+            echo "<!-- ".WEB_ROOT." css not found, so not loaded. -->";     
         }
         /*
         if(file_exists(WEB_ROOT.($css="/assets/".Request::$aspect."/css/".Request::$aspect.".css"))){
@@ -226,7 +220,7 @@ class Response
         if(is_dir($assetdir)){
             $this->loadAssetTypeFromDir("js",$assetdir);
         } else {
-            echo "<!-- ".WEB_ROOT."$css not found, so not loaded. -->";     
+            echo "<!-- ".WEB_ROOT." js not found, so not loaded. -->";     
         }
         /*
         foreach(array(Request::$aspect, Request::$endpoint) as $resource){

@@ -39,7 +39,7 @@ class Request
                             ?:"index/index";
 
 
-        self::$accepts  = explode(".",self::$uri)[1]; 
+        self::$accepts  = explode(".",self::$uri)[1]??null;  // set this null to an empty string and stuff breaks. XXX
         if(!$this->isValidType(self::$accepts)){
            new Error(404, "Not sure where that is...");    
         } 
@@ -128,7 +128,6 @@ class Request
     }
 
     private function isValidType($type){
-
         if(empty($type)   ||
            $type == "json"||
            $type == "xml" ){

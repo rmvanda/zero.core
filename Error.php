@@ -41,10 +41,11 @@ class Error extends \Zero\Core\Module
 
         header("HTTP/1.1 $code " . $this -> message[$code]??"Unspecified");
 
-
+        echo "<h1>Generating error page...</h1>"; 
         parent::__construct(); 
-        if(defined(DEVMODE) && DEV !== false) {
-        //    xdebug_print_function_stack();
+
+        if(defined("DEVMODE") && DEVMODE !== false) {
+            xdebug_print_function_stack();
         }
         $this -> generateErrorPage($code, $err);
         exit(); 
@@ -71,13 +72,12 @@ class Error extends \Zero\Core\Module
         
         $this->title = "Error: ".($message=ucwords(strtolower($this->message[$code])));
         
-        
         //if(file_exists($errPg = __DIR__   . "/views/_$code.php")){
         //    include $errPg;
         //}else{
         if(!Request::$accepts){
             echo "<h1>$code - $message</h1><hr><h4>$err</h4><br>";     
-            if(defined(DEVMODE) && DEVMODE == True){
+            if(defined("DEVMODE") && DEVMODE == True){
                 xdebug_print_function_stack(); 
             }
         } else {
