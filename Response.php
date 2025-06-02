@@ -118,18 +118,24 @@ class Response
         // And finally, defer to index. This is useful for urls like 
         // site.com/about 
         // since in most cases, it would be silly to set up an "About" module
-           // TODO - this actually prevents us from loading a method from the 
-           // Index module.. which may be something you actually want. 
+        // However, if we need further logic from Index in this way, the else 
+        // block below covers it. 
            || file_exists($view = $c = MODULE_PATH . 
                             "Index/views/" . 
                             Request::$aspect . 
                             ".php"
                     )
        ){
-         //   $this -> render($view); 
-         include $view; 
+            include $view; 
         } else {
-            new Error(404, "Failed to find a respose to give for $func");
+            $fallback = new \Zero\Module\Index(); 
+            if(method_exists($fallback, Request::$aspect)){
+                // TODO: should be Request::$args here? 
+                // this is a half baked fallback, so not very worried. 
+                $fallback -> {Request::$aspect}(Request::$endpoint); 
+            } else {
+                new Error(404, "Failed to find a respose to give for $func");
+            }
         }
     }
 
@@ -153,6 +159,7 @@ class Response
         $this -> buildHead();
         $this -> buildHeader();
         include $view ; //$this -> getPage($view);
+        $this -> buildSideNav(); // TODO: why didn't i do this previously? 
         $this -> buildFooter();
     }
 
@@ -198,19 +205,6 @@ class Response
         } else {
             echo "<!-- ".WEB_ROOT." css not found, so not loaded. -->";     
         }
-        /*
-        if(file_exists(WEB_ROOT.($css="/assets/".Request::$aspect."/css/".Request::$aspect.".css"))){
-            echo '<link rel="stylesheet" type="text/css" href="'.$css.'">' ;    
-        } else {
-        */
-        /*
-        }
-        if(file_exists(WEB_ROOT.($css="/assets/".Request::$aspect."/css/".Request::$.".css"))){
-            echo '<link rel="stylesheet" type="text/css" href="'.$css.'">' ;    
-        } else {
-            echo "<!-- ".WEB_ROOT."$css not found, so not loaded. -->";     
-        }
-        */
     }
 
     private function getScripts()
@@ -222,15 +216,6 @@ class Response
         } else {
             echo "<!-- ".WEB_ROOT." js not found, so not loaded. -->";     
         }
-        /*
-        foreach(array(Request::$aspect, Request::$endpoint) as $resource){
-            if(file_exists(WEB_ROOT.($js="/zero/assets/".Request::$aspect."/js/".$resource.".js"))){
-                echo '<script src="'.$js.'"></script>'; 
-            } else {
-                echo "<!-- $resource not found, so not loaded. -->"; 
-            }
-        }
-        */
     }
 
     private function loadAssetTypeFromDir($type,$dir){
@@ -300,26 +285,5 @@ class Response
             
         }
     }
-
-	private $xml_data; 
-
-	private function toXML($data){
-		if(empty($xml_data)){
-			$xml_data = new SimpleXMLElement('<?xml version="1.0"?><data></data>');
-		}
-
-		// function defination to convert array to xml
-		foreach( $data as $key => $value ) {
-			if( is_numeric($key) ){
-				$key = 'item'.$key; //dealing with <0/>..<n/> issues
-			}
-			if( is_array($value) ) {
-				$subnode = $xml_data->addChild($key);
-				array_to_xml($value, $subnode);
-			} else {
-				$xml_data->addChild("$key",htmlspecialchars("$value"));
-			}
-		}
-	}
 
 }

@@ -66,27 +66,6 @@ class Application {
     }
 
     /**
-     *  @function fetchExtensions
-     *  Loads additional things to make everyone's lives easier. 
-     * 
-    public function fetchExtensions($extensions = null){
-        
-        if (is_array($extensions)) {
-            foreach ($extensions as $extension) {
-                if(file_exists($extension)){
-                    require $extension;
-                }
-            }
-        } else if ($extensions) {
-            if (file_exists($extensions)) {
-                require $extensions;
-            } else {} //#TODO log warning
-        }
-        return $this;
-    }
-*/ // life shouldn't be too easy. 
-
-    /**
      *  @function parseRequest
      * Instantiates the Request interpreter. Simple as that. 
      *
@@ -109,14 +88,16 @@ class Application {
      */
     public function run($aspect, $endpoint, $args){
         if ($this->isModule($Aspect=ucfirst($aspect))) {
-            print("Loading $aspect"); 
+            //print("Loading $aspect"); 
             $Aspect = "\\Zero\\Module\\".$Aspect; 
             $aspect = new $Aspect();
        } else {
-            print("Couldn't load aspect.. $aspect"); 
+            // loading Index here so we can reference it as a fallback in Response
+            // The reason we don't go ahead and do that here is because modules
+            // still get precedence over the built in Index 
+            $this->isModule($Aspect="Index");
             $aspect = new \Zero\Core\Response();
        }
-        
         $aspect -> {$endpoint}($args);
     }
 
@@ -126,7 +107,6 @@ class Application {
         $camel= array_pop($step); 
         $path[count($path)-1] = ucfirst($path[count($path)-1]?:$path[1])??""; //XXX not anymore TESTME
         //$newpath[count($path)-2] = ucfirst(($newpath[count($path)-2]?:$newpath[1])??""); //XXX 
-
         $psrPath=ROOT_PATH.implode(DIRECTORY_SEPARATOR,$path).".php";
 
         $path[count($path)-1] = $camel; 
@@ -141,12 +121,10 @@ class Application {
             require_once($altPath); 
             return true; 
         } 
-//            if(file_exists($altaltpath=)) //XXX TODO
-        
-
-        //echo "Neither $psrPath nor $altPath exist <br>"; 
+        //if(file_exists($altaltpath=)) //XXX TODO
+        //echo "<pre>Neither $psrPath nor $altPath exist <br></pre>"; 
         Console::log("Failed to load $class after looking in $psrPath and $altPath"); 
-  }
+    }
 
     private function isModule($module){
 
@@ -186,16 +164,13 @@ class Application {
        spl_autoload_register("\Zero\Core\Application::errorHandler");
        return $this;
     }
-/*
-    public function getClientSession(){ 
-        new Client(); 
-        return $this; 
-    }
-*/
+
     public function errorHandler($class)
     {
         new Error(404, "We couldn't find $class."); 
-        xdebug_print_function_stack(); 
+        if(defined("DEVMODE") && DEVMODE == true){
+            xdebug_print_function_stack(); 
+        }
     }
 
 } 
