@@ -113,7 +113,7 @@ class Application {
         $altPath=ROOT_PATH.implode(DIRECTORY_SEPARATOR,$path).".php"; 
 
         //$fixPath=ROOT_PATH.implode(DIRECTORY_SEPARATOR,$newpath).".php"; 
-
+        //echo "Looking in $psrPath and $altPath ... <br>"; 
         if(file_exists($psrPath)){
             require_once($psrPath); 
             return true; 

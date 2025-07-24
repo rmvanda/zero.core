@@ -22,7 +22,7 @@ class Module extends Response {
                //echo "Attempting to link $target to $linknm <br>"; 
                $results = symlink($target,$linknm);
                //echo "Link created!";
-               var_dump($results); 
+               //var_dump($results); 
         } else {
             //echo "Nothing to do.";
         }
