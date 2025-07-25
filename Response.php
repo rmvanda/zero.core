@@ -70,6 +70,7 @@ class Response
 
         if(Request::$isAjax){ // yeah this is dated...  TODO 
             $this->responseType = "html"; // hackish XXX
+            $this->responseType = "json"; // hackish XXX
         }
         else if(isset(Request::$accepts)){
             $this->responseType = Request::$accepts;    

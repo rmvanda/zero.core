@@ -87,7 +87,7 @@ class Request
         self::$args     = array_slice(self::$uriArray, 2);
         self::$args     = count(self::$args) !== 1 ? self::$args : self::$args[0]; 
 
-        self::$method   = (empty($_POST) && count($_POST) === 0 )?"GET":"POST";
+        self::$method   = (empty($_POST) && count($_POST??[]) === 0 )?"GET":"POST";
         self::$isAjax   = self::isAjax(); 
 
 	}
@@ -102,8 +102,8 @@ class Request
 	{
 		return 
 			(
-						@$_SERVER['HTTP_X_REQUESTED_WITH'] &&	
-			 strtolower(@$_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest'
+             isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&	
+			 strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest'
 			) 
 			? true : false;
 	}
