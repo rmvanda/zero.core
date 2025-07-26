@@ -6,8 +6,49 @@ class ExternalRequest{
     protected $clientid;
     protected $apikey; 
 
+    private static $instance; 
 
-    public function request($url,array $params){
+    public static function get($url){
+        if(!static::$instance){
+            static::$instance = new self(); 
+        }
+        return static::$instance->curlGet($url); 
+    }
+
+    public function curlGet($url, $headers = []) {
+        // Initialize cURL session
+        $ch = curl_init();
+        
+        // Set default headers if none provided
+        if (empty($headers)) {
+            $headers = [
+                'User-Agent: Mozilla/5.0 (compatible; PHP cURL)',
+                'Accept: application/json'
+            ];
+        }
+        
+        // Set cURL options
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30); 
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        
+        // Execute the request
+        $response = curl_exec($ch);
+        
+
+        // Get HTTP status code
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $result = [$httpCode,$response];
+        
+        // Close cURL session
+        curl_close($ch);
+        
+        return $result;
+    }
+
+    public function request($url,array $params = []){
         
         try {
             $curl = curl_init();
