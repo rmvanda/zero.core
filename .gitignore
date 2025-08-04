@@ -1,9 +1,0 @@
-.project
-.git
-opt/
-app/
-www/
-.settings/
-*.swp
-*.swo
-

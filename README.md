@@ -79,7 +79,7 @@ and what to do if the `method` called does not exist (throw 404 page, automatica
     1). Registers Autoloaders 
     2). Instantiates the Request object 
     3). Defines constants 
-    4). Loads the Requested Module(aspect) and executes the requested method(endpoint) #TODO Not an aspect, anymore. => $module
+    4). Loads the Requested Module(aspect) and executes the requested method(endpoint) 
     5). Controls output buffering This will eventually allow the framework to do neat things like cache itself. 
 
 - Request.php 

@@ -1,30 +1,45 @@
 <?php
 
-Namespace Zero\Core; 
-use \Zero\Core\Request as Request; 
+namespace Zero\Core; 
+//use \Zero\Core\Request as Request; 
+
+function hprint($m){
+    echo "<h1>$m</h1>"; 
+}
+
 class Application {
-
+   /** 
+    * Entry point to the core of the zero framework. 
+    * 
+    * Using this allows us to do things like "send" output before sending headers.
+    * This also allows us to throw HTTP Errors anywhere in the execution flow. 
+    */
     public function __construct(){ 
-        
         ob_start();
-
     }
-
+   /**
+    * Exit point to the core of the zero framework. 
+    * 
+    * Doing this allows us to exit at any time and still get the "right" output
+    * 
+    */ 
     public function __destruct() {
-    
-        ob_flush(); // Why in destruct? Because there are exits() in some places
-                    // So this way, if you don't call ob_flush() when you exit()
-                    // You'll still get output. 
+        ob_flush(); 
     }
 
     /**
      *  @function defineConstants
-     * Defines constants based on .ini files or based on 
+     * Defines constants based on found ini files. 
+     * First scans the ZERO_ROOT/app/config/ directory, 
+     * then allows other constants to be defined via parameter: 
+     *
      * @param @array $key
+     *
      * Which is an array of key=>value pairs that are defined as constants 
+     *
+     * Finally, checks if there's a module-specific config file or config directory
+     * to pull and define constants from. 
      */ 
-
-
     public function defineConstants(?array $key = null){
         // Since the shift has been towards modules, this should 
         // be able to change in some way that respects the modules a bit more. 
@@ -62,7 +77,16 @@ class Application {
                 }
             }
         }
+        // TODO - maybe this goes somewhere else. 
+        if(str_contains($_SERVER['REMOTE_ADDR'], DEV_SUBNET)){
+            define("DEVMODE", true); 
+            ini_set('xdebug.var_display_max_depth', 10);
+            ini_set('xdebug.var_display_max_children', 256);
+            ini_set('xdebug.var_display_max_data', 1024);
+        } 
+
         return $this;
+    
     }
 
     /**
@@ -81,53 +105,68 @@ class Application {
      *  @function run
      * This is where the real magic happens - 
      * takes 
-     * @param $aspect
-     * @param $endpoint
-     * @param (array) $args ($opt)
+     * @param $aspect    the class that must be loaded, defaulting to an Index class.
+     * @param $endpoint  the method that gets called in the class.  
+     * @param (array) $args  Everything else in the URL gets passed to the endpoint method. 
      *
      */
     public function run($aspect, $endpoint, $args){
         if ($this->isModule($Aspect=ucfirst($aspect))) {
-            //print("Loading $aspect"); 
             $Aspect = "\\Zero\\Module\\".$Aspect; 
             $aspect = new $Aspect();
-       } else {
+        } else {
             // loading Index here so we can reference it as a fallback in Response
             // The reason we don't go ahead and do that here is because modules
-            // still get precedence over the built in Index 
-            $this->isModule($Aspect="Index");
+            // still get precedence over the built in Index. 
+            // See Response class for more. 
+            $this->isModule("Index");
             $aspect = new \Zero\Core\Response();
-       }
+        }
+
+        if(method_exists($aspect, $endpoint)){
+            $reflection = new \ReflectionMethod($aspect, $endpoint);
+            foreach($reflection->getAttributes() as $attribute){
+                $attr = $attribute->newInstance();
+                if(!$attr->approved){
+                    new Error(403); 
+                }
+            }
+        }
         $aspect -> {$endpoint}($args);
     }
 
+    /**
+     * autoloader for zero things that are NOT modules... see the isModule method
+     * for how modules are loaded. 
+     * 
+     * This USED to be for loading modules too. 
+     * TODO - maybe this isn't needed? or can be simplified further? 
+     */
     public static function autoloader($class){
         $path = explode("\\", strtolower($class)); 
         $step = explode("\\", $class);
-        $camel= array_pop($step); 
-        $path[count($path)-1] = ucfirst($path[count($path)-1]?:$path[1])??""; //XXX not anymore TESTME
-        //$newpath[count($path)-2] = ucfirst(($newpath[count($path)-2]?:$newpath[1])??""); //XXX 
-        $psrPath=ROOT_PATH.implode(DIRECTORY_SEPARATOR,$path).".php";
 
+        $camel = array_pop($step); 
+        //$path[count($path)-1] = ucfirst($path[count($path)-1]?:$path[1])??""; 
         $path[count($path)-1] = $camel; 
-        $altPath=ROOT_PATH.implode(DIRECTORY_SEPARATOR,$path).".php"; 
 
-        //$fixPath=ROOT_PATH.implode(DIRECTORY_SEPARATOR,$newpath).".php"; 
-        //echo "Looking in $psrPath and $altPath ... <br>"; 
+        $psrPath=ROOT_PATH.implode(DIRECTORY_SEPARATOR,$path).".php";
         if(file_exists($psrPath)){
-            require_once($psrPath); 
-            return true; 
-        } elseif (file_exists($altPath)){ // this should maybe be the way we do it... 
-            require_once($altPath); 
-            return true; 
-        } 
-        //if(file_exists($altaltpath=)) //XXX TODO
-        //echo "<pre>Neither $psrPath nor $altPath exist <br></pre>"; 
-        Console::log("Failed to load $class after looking in $psrPath and $altPath"); 
+            return require_once($psrPath); 
+            //return true; 
+        }
+
+        //echo "Failed to load $class after looking in $psrPath<br>"; 
+        Console::log("Failed to load $class after looking in $psrPath"); 
+        return false; 
+    
     }
-
+    /** 
+     * If a class if found in the MODULE_PATH *TODO: why isn't this using MODULE_PATH
+     * Then it loads it and returns true. 
+     * Doing this ensures the controller can't call things outside of the module path
+     */
     private function isModule($module){
-
         if(
             file_exists($file=$a=ZERO_ROOT."modules/".$module."/".$module.".php")||
             file_exists($file=$b=ZERO_ROOT."modules/".strtolower($module)."/".$module.".php")
@@ -136,13 +175,17 @@ class Application {
         } 
         Console::log("Could not find a $module module in $a or $b"); 
         return false; 
-
     }
 
-
-    public function registerAutoloaders($autoloader = null)
-    {
-        require ZERO_ROOT."lib/zxc/ZXC.php"; 
+    /** 
+     * Registers other autoloaders. 
+     * May optionally pass your own autoloader functions to be called. 
+     * Can pass as a string referencing a callable function, an array or such strings
+     * or a function directly, or an array of functions. #TODO: test this... 
+     *
+     * Finally, also loads the vendor autoload. 
+     */
+    public function registerAutoloaders(null|string|callable|array $autoloader = null){
         spl_autoload_register("\Zero\Core\Application::autoloader"); 
         // if you want to add external autoloaders
         if ($autoloader) {
@@ -152,26 +195,15 @@ class Application {
                         spl_autoload_register($al);
                     }
                 }
-            }else 
-                if (is_callable($autoloader)) {
+            } else if (is_callable($autoloader)) {
                     spl_autoload_register($autoloader);
-                } 
+            } 
         }
         // for Composer + PSR compatability
         if (file_exists($file = ROOT_PATH . "vendor/autoload.php")) {
             require $file;
         }
-       spl_autoload_register("\Zero\Core\Application::errorHandler");
        return $this;
     }
 
-    public function errorHandler($class)
-    {
-        new Error(404, "We couldn't find $class."); 
-        if(defined("DEVMODE") && DEVMODE == true){
-            xdebug_print_function_stack(); 
-        }
-    }
-
 } 
-

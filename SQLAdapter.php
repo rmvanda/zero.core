@@ -5,9 +5,6 @@ class SQLAdapter extends Adapter{
 
     private $tablename; 
 
-//    public function __construct($lawl){} // override parent  // nvm
-
-
     public function getParams($attrs=array()){
 
         $classname = explode("\\",strtolower(get_called_class())); 

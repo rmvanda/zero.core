@@ -1,12 +1,12 @@
 <?php
+
 namespace Zero\Core; 
 
-function head($str){ echo "<h1>".$str."</h1>";  } 
 class Response
 {
 
     protected $aspect;
-    protected $endpoint, $model, $viewPath, $isAjax;
+    protected $endpoint, $model, $viewPath;
 
     protected $responseType; 
 
@@ -22,8 +22,7 @@ class Response
     protected $sideNavBefore; 
     protected $sideNavAfter; 
 
-    public function __construct($altconfig = null)
-    {
+    public function __construct($altconfig = null){
         $this->defineBasePaths(); 
         $this->setResponseType(); 
         $this->registerAutoloader(); 
@@ -51,9 +50,6 @@ class Response
             }
             
         },true,true);
-        
-
-
     }
 
 
@@ -67,23 +63,15 @@ class Response
      */
 
     protected function setResponseType(){
-
-        if(Request::$isAjax){ // yeah this is dated...  TODO 
-            $this->responseType = "html"; // hackish XXX
-            $this->responseType = "json"; // hackish XXX
-        }
-        else if(isset(Request::$accepts)){
-            $this->responseType = Request::$accepts;    
-        }
-        else{
+        if(str_contains(Request::$accepts, "json")){
+            $this->responseType = "json"; 
+        } else {
             $this->responseType = "full"; 
         }
-
-
+        
     }
 
-    protected function defineBasePaths()
-    {
+    protected function defineBasePaths(){
         if(!$this->viewPath){  
             $this -> viewPath = ZERO_ROOT."app/frontend/global_views/"; 
         } 
@@ -131,8 +119,8 @@ class Response
         } else {
             $fallback = new \Zero\Module\Index(); 
             if(method_exists($fallback, Request::$aspect)){
-                // TODO: should be Request::$args here? 
-                // this is a half baked fallback, so not very worried. 
+                // Note this means your args are discarded. But you probably don't 
+                // want to have something that deep in your Index module anyway.
                 $fallback -> {Request::$aspect}(Request::$endpoint); 
             } else {
                 new Error(404, "Failed to find a respose to give for $func");
@@ -140,14 +128,9 @@ class Response
         }
     }
 
-
     protected function render($view)
     {
-        if (!isset($this->viewPath)){
-            $this->viewPath = VIEW_PATH; 
-        }
-
-        if (Request::$isAjax) {
+        if (Request::$accepts == "json") {
             include $view;
             //$this -> getPage($view);
         } else {
@@ -235,8 +218,6 @@ class Response
     }
 
     // JSON API functions... 
-
-
     // This will at least standardize our json output without having to refactor *every endpoint individually*
     // Ideally we would have functions rather than the if/elseif check below, but I didn't have much time to
     // do choice today, and I wanted to make sure we could at least standardize it for the app developers.
@@ -253,20 +234,13 @@ class Response
         $this->export(); 
     }
 
-    protected function export($e=null)
-    {
+    protected function export($e=null){
         if (!is_array($e)&&!is_null($e) && empty($this->message)) { 
             $this->message = $e; 
         } else if(empty($this->data)){
             $this->data = $e;    
         }
 
-        // For endpoints used both on the APP and 
-        if ($this->no_json) { 
-            die("Not implemented"); 
-            $this->render($e); 
-        } 
-    
         $json = array(
                     "status"  => isset($this->status)?"Error":"Success", 
                     "message" => $this->message
@@ -277,14 +251,8 @@ class Response
             $json['data'] = $this->data; 
         }
 
-        if(Request::$accepts == 'json'){
-            header("Content-Type: application/json");
-            print(json_encode($json, empty(DEVMODE)?0:JSON_PRETTY_PRINT));
-        } else {
-            header("Content-Type: application/json");
-            print(json_encode($json, empty(DEVMODE)?0:JSON_PRETTY_PRINT));
-            
-        }
+        header("Content-Type: application/json");
+        print(json_encode($json, empty(DEVMODE)?0:JSON_PRETTY_PRINT));
     }
 
 }

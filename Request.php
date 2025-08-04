@@ -5,7 +5,7 @@
  * @author James Pope
  */
 
-Namespace Zero\Core; 
+namespace Zero\Core; 
 
 class Request
 {
@@ -24,10 +24,9 @@ class Request
         $aspect, $endpoint, $args, 
         $Aspect,
         $uriArray, 
-        $isAjax, 
-        $accepts;
+        $accepts, $acceptsJSON; 
 
-    private $safeCharacters = array('-',".","/"); 
+//    private $safeCharacters = array('-',".","/"); 
 
     public function __construct(){
 
@@ -38,16 +37,19 @@ class Request
                                 "/")
                             ?:"index/index";
 
-
-        self::$accepts  = explode(".",self::$uri)[1]??null;  // set this null to an empty string and stuff breaks. XXX
-        if(!$this->isValidType(self::$accepts)){
-           new Error(404, "Not sure where that is...");    
-        } 
+        self::$accepts  = $_SERVER['HTTP_ACCEPT'] ?? null; 
+        self::$acceptsJSON = false; 
+        if(self::$accepts){
+            $step = explode(",", self::$accepts); 
+            foreach($step as $accept){
+                $type = explode("/", $accept); 
+                if($type == "json"){
+                    self::$acceptsJSON = true;   
+                }
+            }
+        }
         self::$uri      = explode(".",self::$uri)[0]; 
 
-        if(!$this->isValid(self::$uri)){
-            new Error(403);     
-        }
 
         $this->convertJSONtoPOST(); 
         self::$uriArray = explode("/", self::$uri); 
@@ -88,7 +90,6 @@ class Request
         self::$args     = count(self::$args) !== 1 ? self::$args : self::$args[0]; 
 
         self::$method   = (empty($_POST) && count($_POST??[]) === 0 )?"GET":"POST";
-        self::$isAjax   = self::isAjax(); 
 
 	}
 
@@ -96,44 +97,6 @@ class Request
         header("Location: ".$url) ; 
         ob_clean_end(); 
         exit(); 
-    }
-
-	public static function isAjax()
-	{
-		return 
-			(
-             isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&	
-			 strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest'
-			) 
-			? true : false;
-	}
-
-    private function isValid($uri){
-
-        $test = $uri; 
-        
-        if(substr_count($uri,".") > 1){
-            return false; 
-        }
-
-        foreach($this->safeCharacters as $safe){
-            $test = str_replace($safe,"",$test); 
-            
-        }
-
-        if(ctype_alnum($test)){
-            return true; 
-        }
-        
-    }
-
-    private function isValidType($type){
-        if(empty($type)   ||
-           $type == "json"||
-           $type == "xml" ){
-            return true; 
-        }
-    
     }
 
     private function convertJSONtoPOST(){
