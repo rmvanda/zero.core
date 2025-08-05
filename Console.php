@@ -23,6 +23,11 @@ class Console {
                 string|int|null $loglvl = null, 
                    string|null $logfile = null){
 
+        /*
+        if(!str_contains($_SERVER['REMOTE_ADDR'], DEV_SUBNET)){
+            return; // TODO. 
+        }
+        */
 
         if(!defined("ZERO_LOG_LEVEL")){
             define("ZERO_LOG_LEVEL", "INFO"); 
@@ -45,8 +50,6 @@ class Console {
             $loglvlstring = self::$loglvls[$loglvl]; 
         }
 
-
-        echo "Loglvl : $loglvl threshold: $logthreshold <br>"; 
         if($loglvl < $logthreshold){
             return; 
         }
@@ -54,7 +57,6 @@ class Console {
         if(!$logfile){
             $logfile = "/var/log/php-fpm/zero.log"; 
         }
-
 
         if(is_array($message)||is_object($message)){
             $message = print_r($message,true);     
@@ -66,7 +68,6 @@ class Console {
         $ip     = "[{$_SERVER['REMOTE_ADDR']}] "; 
         $loglvlstring = "[$loglvlstring]: "; 
 
-
         file_put_contents($logfile, $date.$ip.$loglvlstring.$message."\n", FILE_APPEND);     
 
     }
@@ -74,7 +75,6 @@ class Console {
     public static function __callStatic($loglvl,$msg){
         $mesg = $msg[0]; 
         self::log($mesg, strtoupper($loglvl)); 
-        self::log("[".$loglvl."] ".$mesg); 
     }
 
 }
