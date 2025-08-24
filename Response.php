@@ -5,7 +5,7 @@ namespace Zero\Core;
 class Response
 {
 
-    protected $aspect;
+    protected $module;
     protected $endpoint, $model, $viewPath;
 
     protected $responseType; 
@@ -84,13 +84,13 @@ class Response
 
         // -- Maybe in the module's view folder? 
         if (file_exists($view = MODULE_PATH .
-                        ucfirst(Request::$aspect) . 
+                        ucfirst(Request::$module) . 
                         "/views/" . 
                         Request::$endpoint . 
                         ".php"
                     ) 
             || file_exists($view = MODULE_PATH . 
-                        Request::$aspect. 
+                        Request::$module. 
                         "/views/" . 
                         Request::$endpoint . 
                         ".php"
@@ -99,7 +99,7 @@ class Response
         // Or maybe the module has a sub
         // (( I don't think we should cater to this, actually ))
            || file_exists($view = $b = MODULE_PATH . 
-                        ucfirst(Request::$aspect) . 
+                        ucfirst(Request::$module) . 
                         "/views/" . 
                         Request::$endpoint ."/".
                        (Request::$uriArray[2]??"").".php"
@@ -111,17 +111,17 @@ class Response
         // block below covers it. 
            || file_exists($view = $c = MODULE_PATH . 
                             "Index/views/" . 
-                            Request::$aspect . 
+                            Request::$module . 
                             ".php"
                     )
        ){
             include $view; 
         } else {
             $fallback = new \Zero\Module\Index(); 
-            if(method_exists($fallback, Request::$aspect)){
+            if(method_exists($fallback, Request::$module)){
                 // Note this means your args are discarded. But you probably don't 
                 // want to have something that deep in your Index module anyway.
-                $fallback -> {Request::$aspect}(Request::$endpoint); 
+                $fallback -> {Request::$module}(Request::$endpoint); 
             } else {
                 new Error(404, "Failed to find a respose to give for $func");
             }
@@ -182,7 +182,7 @@ class Response
     private function getStylesheets()
     {
 
-        $assetdir = WEB_ROOT."/assets/".Request::$aspect."/css/"; 
+        $assetdir = WEB_ROOT."/assets/".Request::$module."/css/"; 
         // TODO: maybe only load certain things by endpoint? meh, write better CSS.
         if(is_dir($assetdir)){
             $this->loadAssetTypeFromDir("css",$assetdir);
@@ -193,7 +193,7 @@ class Response
 
     private function getScripts()
     {
-        $assetdir = WEB_ROOT."/assets/".Request::$aspect."/js/"; 
+        $assetdir = WEB_ROOT."/assets/".Request::$module."/js/"; 
         // TODO: maybe only load certain things by endpoint? meh, write better CSS.
         if(is_dir($assetdir)){
             $this->loadAssetTypeFromDir("js",$assetdir);

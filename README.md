@@ -42,7 +42,7 @@ By default, it adds :
 2). Parses request. 
     - Really all this does is instantiate the Request class which gives you static access to information about the request. 
     for example: 
-    $protocol://$sub.$domain.$tld/$aspect/$endpoint/$arg1/$arg2/$arg3
+    $protocol://$sub.$domain.$tld/$module/$endpoint/$arg1/$arg2/$arg3
 
 3). Define Constants. 
     - This is where some of the "magic" happens, because in addition to loading .ini files from a default location, it also looks into MODULE_PATH for a configuration files that may correspond with the module that's being called. Thus, if your application class needs some constants defined, they can be defined before your class is even loaded, simply by putting a .ini file into your module's folder
@@ -79,7 +79,7 @@ and what to do if the `method` called does not exist (throw 404 page, automatica
     1). Registers Autoloaders 
     2). Instantiates the Request object 
     3). Defines constants 
-    4). Loads the Requested Module(aspect) and executes the requested method(endpoint) 
+    4). Loads the Requested Module(module) and executes the requested method(endpoint) 
     5). Controls output buffering This will eventually allow the framework to do neat things like cache itself. 
 
 - Request.php 

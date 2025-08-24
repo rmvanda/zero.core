@@ -1,7 +1,6 @@
 <?php
 
 namespace Zero\Core; 
-
 use \Attribute;
 
 #[Attribute] 

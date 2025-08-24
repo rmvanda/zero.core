@@ -11,7 +11,7 @@ class Request
 {
     /*
      * Given a URL :
-     * http://sub.domain.tld/aspect/endpoint/arg[0]/arg[1]/...argi[X]?query=string&etc
+     * http://sub.domain.tld/module/endpoint/arg[0]/arg[1]/...argi[X]?query=string&etc
      * Parse it into useful bits so we can use them later, as needed.
      */
     public static 
@@ -21,8 +21,8 @@ class Request
         $sub, $subdomain, 
         $domain,
         $tld, 
-        $aspect, $endpoint, $args, 
-        $Aspect,
+        $module, $endpoint, $args, 
+        $Module,
         $uriArray, 
         $accepts, $acceptsJSON; 
 
@@ -48,7 +48,11 @@ class Request
                 }
             }
         }
-        self::$uri      = explode(".",self::$uri)[0]; 
+        
+        function p($msg){echo "====\n\n$msg\n\n=====";}
+
+
+        //self::$uri      = explode(".",self::$uri)[0]; 
 
 
         $this->convertJSONtoPOST(); 
@@ -74,13 +78,13 @@ class Request
 
         self::$tld      = array_slice(explode(".", self::$domain), -1); 
 
-        self::$aspect   = strtolower(self::$uriArray[0]); // to normalize /BATSHIT/ReQuEsTs
+        self::$module   = strtolower(self::$uriArray[0]); // to normalize /BATSHIT/ReQuEsTs
         self::$endpoint = strtolower(self::$uriArray[1]); 
 
-        self::$Aspect   = ucfirst(self::$aspect); 
+        self::$Module   = ucfirst(self::$module); 
 
-        if(strpos(self::$aspect,"-")!==false){
-            self::$aspect = $this->friendlyURLConverter(self::$aspect); 
+        if(strpos(self::$module,"-")!==false){
+            self::$module = $this->friendlyURLConverter(self::$module); 
         }
         if(strpos(self::$endpoint,"-")!==false){
             self::$endpoint = $this->friendlyURLConverter(self::$endpoint); 

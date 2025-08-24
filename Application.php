@@ -3,8 +3,16 @@
 namespace Zero\Core; 
 //use \Zero\Core\Request as Request; 
 
-function hprint($m){
-    echo "<h1>$m</h1>"; 
+function print_wrap($txt,$tag){
+    printf("<%s>%s</%s>",$tag,$txt,$tag); 
+}
+
+function hprint($m, $n=1){
+    print_wrap($m,"h$n"); 
+}
+
+function pprint($m){
+    print_wrap($m,"pre"); 
 }
 
 class Application {
@@ -60,7 +68,7 @@ class Application {
         }
         //$mp for module path
         //$mf for module folder
-        if(file_exists($inifile=($mp=MODULE_PATH.Request::$Aspect)."/config.ini")){
+        if(file_exists($inifile=($mp=MODULE_PATH.Request::$Module)."/config.ini")){
             $constants = parse_ini_file($inifile); 
             foreach($constants as $constant=>$value){
                 define($constant,$value) ;    
@@ -105,34 +113,53 @@ class Application {
      *  @function run
      * This is where the real magic happens - 
      * takes 
-     * @param $aspect    the class that must be loaded, defaulting to an Index class.
+     * @param $module    the class that must be loaded, defaulting to an Index class.
      * @param $endpoint  the method that gets called in the class.  
      * @param (array) $args  Everything else in the URL gets passed to the endpoint method. 
      *
      */
-    public function run($aspect, $endpoint, $args){
-        if ($this->isModule($Aspect=ucfirst($aspect))) {
-            $Aspect = "\\Zero\\Module\\".$Aspect; 
-            $aspect = new $Aspect();
+    public function run($module, $endpoint, $args){
+
+        if ($this->isModule($Module=ucfirst($module))) {
+            $Module = "\\Zero\\Module\\".$Module; 
         } else {
             // loading Index here so we can reference it as a fallback in Response
             // The reason we don't go ahead and do that here is because modules
             // still get precedence over the built in Index. 
             // See Response class for more. 
             $this->isModule("Index");
-            $aspect = new \Zero\Core\Response();
+            $Module = "\\Zero\\Core\\Response"; 
         }
 
-        if(method_exists($aspect, $endpoint)){
-            $reflection = new \ReflectionMethod($aspect, $endpoint);
-            foreach($reflection->getAttributes() as $attribute){
-                $attr = $attribute->newInstance();
-                if(!$attr->approved){
-                    new Error(403); 
-                }
+        $this->checkForAttributes($Module,$endpoint); 
+        
+        $module = new $Module();
+        $module -> {$endpoint}($args);
+    }
+
+    private function checkForAttributes($Module,$endpoint) : void {
+
+
+        $reflection = new \ReflectionClass($Module); 
+
+        $attributes = $reflection->getAttributes(); 
+        if($reflection->hasMethod($endpoint)){
+            $m_attributes = $reflection->getMethod($endpoint)->getAttributes(); 
+            $attributes = array_merge($attributes,$m_attributes); 
+        }
+
+        $this->handleAttributes($attributes); 
+
+    }
+
+    private function handleAttributes($attributes){
+         foreach($attributes as $attribute){
+            $attr = $attribute->newInstance();
+            // TODO - if/when we add more attibutes, handle them here. 
+            if(!$attr->approved){
+                new Error(403); 
             }
         }
-        $aspect -> {$endpoint}($args);
     }
 
     /**

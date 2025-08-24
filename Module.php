@@ -19,9 +19,9 @@ class Module extends Response {
         //var_dump($this);
         //$class = new \ReflectionClass('\Zero\Core\Request');
         //$staticProperties = $class->getStaticProperties();
-        $aspect = Request::$aspect; 
-        $target = MODULE_PATH.ucfirst($aspect)."/assets";
-        $linknm = WEB_ROOT."/assets/".$aspect; 
+        $module = Request::$module; 
+        $target = MODULE_PATH.ucfirst($module)."/assets";
+        $linknm = WEB_ROOT."/assets/".$module; 
         if(is_dir($target) && !is_dir($linknm)){
                $results = symlink($target,$linknm);
         }
