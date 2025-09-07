@@ -18,8 +18,7 @@ class RequireAuthLevel{
             return false; 
         }
         $this->approved = $_SESSION['auth_level'] >= $lvl; 
-        //if(!$this->approved){
-        if($this->approved){
+        if(!$this->approved){
             return new Error(ERROR_CODE_403); 
         }
         return $this->approved; 
