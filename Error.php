@@ -75,27 +75,35 @@ class Error extends \Zero\Core\Module
 
         header("HTTP/1.1 $code " . ($this->message[$code]?? $err ?? "Unspecified"));
 
+
         if(!$err){
             $err = $this->message[$code]; 
         }
 
-        $this -> generateErrorPage($code, $err);
+        $message=ucwords(strtolower($err)); 
 
-        exit(); 
-    }
+        $this->title = "Error: ".$message;
 
-    private function generateErrorPage(int $code, string $err) {
-        
-        $this->title = "Error: ".($message=ucwords(strtolower($this->message[$code])));
-        
         if(Request::$acceptsJSON){
-            $this->export(array("status"=>"error","message"=>$this->message[$code])); 
+            $this->export([
+                "status"  => "error",
+                "message" => $this->message[$code], 
+                "code"    => $code
+            ]); 
+            exit(); // TODO - better JSON. 
         } else {
-            echo "<h1>$code - $message</h1><hr><h4>$err</h4><br>";     
-            if(defined("DEVMODE") && DEVMODE == True){
-                xdebug_print_function_stack(); 
-            }
+            $page = "<h1>$code - $message</h1><hr><h4>$err</h4><br>";     
         }
+
+        Console::error("$code - $message : $err"); 
+
+        $this->build($page);
+        
+        if(defined("DEVMODE") && DEVMODE == True){
+            xdebug_print_function_stack(); 
+        }
+        
+        exit(); 
 
     }
 

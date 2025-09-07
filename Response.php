@@ -8,7 +8,7 @@ class Response
     protected $module;
     protected $endpoint, $model, $viewPath;
 
-    protected $responseType; 
+    protected $type; 
 
     protected $status; 
     protected $data; 
@@ -17,27 +17,36 @@ class Response
 
     public $title; 
 
-    protected $response; 
-
     protected $sideNavBefore; 
     protected $sideNavAfter; 
+
+    public $body; 
+
+    private $built = false; 
 
     public function __construct($altconfig = null){
         $this->defineBasePaths(); 
         $this->setResponseType(); 
         $this->registerAutoloader(); 
 
-        if($this->responseType == "full"){
+        /*
+        if($this->type == "full"){
             $this->buildHead(); 
             $this->buildHeader(); 
         }
+        */
     }
 
     public function __destruct(){
-        if($this->responseType == "full"){
+        if(!$this->built){
+            $this->build($this->body); 
+        }
+        /*
+        if($this->type == "full"){
             $this->buildSideNav(); 
             $this->buildFooter();  
         }
+        */
     }
     
     public function registerAutoloader(){
@@ -57,16 +66,16 @@ class Response
      * This function was made to address the need of the conditional statements
      * in the construct and destruct methods. 
      * This way is likely more future oriented with the ideas of the project
-     * but for the time being, `responseType` may as well really be a boolean
+     * but for the time being, `type` may as well really be a boolean
      * it was made this way to make the code more understandable, however. 
      * so hopefully you're reading this with appreciation rather than disgust. 
      */
 
     protected function setResponseType(){
         if(str_contains(Request::$accepts, "json")){
-            $this->responseType = "json"; 
+            $this->type = "json"; 
         } else {
-            $this->responseType = "full"; 
+            $this->type = "full"; 
         }
         
     }
@@ -115,13 +124,13 @@ class Response
                             ".php"
                     )
        ){
-            include $view; 
+            $this->build($view); 
         } else {
             $fallback = new \Zero\Module\Index(); 
             if(method_exists($fallback, Request::$module)){
                 // Note this means your args are discarded. But you probably don't 
                 // want to have something that deep in your Index module anyway.
-                $fallback -> {Request::$module}(Request::$endpoint); 
+                $this->build($fallback -> {Request::$module}(Request::$endpoint)); 
             } else {
                 new Error(404, "Failed to find a respose to give for $func");
             }
@@ -132,7 +141,6 @@ class Response
     {
         if (Request::$accepts == "json") {
             include $view;
-            //$this -> getPage($view);
         } else {
             $this -> build($view);
         }
@@ -140,10 +148,18 @@ class Response
 
     protected function build($view)
     {
+        if($this->built){
+            return; 
+        }
+        $this->built = true; 
         $this -> buildHead();
         $this -> buildHeader();
-        include $view ; //$this -> getPage($view);
-        $this -> buildSideNav(); // TODO: why didn't i do this previously? 
+        if(file_exists($view??"")){
+            include $view ; 
+        } else {
+            echo $view; 
+        }
+        $this -> buildSideNav(); 
         $this -> buildFooter();
     }
 
@@ -221,6 +237,8 @@ class Response
     // This will at least standardize our json output without having to refactor *every endpoint individually*
     // Ideally we would have functions rather than the if/elseif check below, but I didn't have much time to
     // do choice today, and I wanted to make sure we could at least standardize it for the app developers.
+
+    // TODO - need a better way to handle these. 
 
     protected function error($e)
     {

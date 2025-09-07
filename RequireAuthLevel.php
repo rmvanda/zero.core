@@ -3,33 +3,26 @@
 namespace Zero\Core; 
 use \Attribute;
 
+// todo, implement AttributeHandle interface or some such. 
 #[Attribute] 
 class RequireAuthLevel{
 
     public $approved;
 
     public function __construct($lvl){
+        session_start(); 
+    }
 
-        /*
-        echo "<h1> Status is: </h1>"; 
-        echo "--> ".session_status()."<-- "; 
-
-        if(session_status() == PHP_SESSION_DISABLED){
-            echo "<h1>Session disabled</h1>";
-        }
-        if(session_status() == PHP_SESSION_NONE){
-            echo "<h1>Session NONE</h1>";
-        }
-        if(session_status() == PHP_SESSION_ACTIVE){
-            echo "<h1>Session ACTIVE</h1>";
-        }
-        */
+    public function handler(){
         if(session_status() == PHP_SESSION_NONE || !$_SESSION['auth_level']){
             return false; 
         }
         $this->approved = $_SESSION['auth_level'] >= $lvl; 
+        //if(!$this->approved){
+        if($this->approved){
+            return new Error(ERROR_CODE_403); 
+        }
         return $this->approved; 
-
     }
 
 }

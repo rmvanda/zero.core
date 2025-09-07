@@ -119,7 +119,6 @@ class Application {
      *
      */
     public function run($module, $endpoint, $args){
-
         if ($this->isModule($Module=ucfirst($module))) {
             $Module = "\\Zero\\Module\\".$Module; 
         } else {
@@ -130,15 +129,13 @@ class Application {
             $this->isModule("Index");
             $Module = "\\Zero\\Core\\Response"; 
         }
-
-        $this->checkForAttributes($Module,$endpoint); 
         
+        $this->checkForAttributes($Module,$endpoint); 
         $module = new $Module();
         $module -> {$endpoint}($args);
     }
 
     private function checkForAttributes($Module,$endpoint) : void {
-
 
         $reflection = new \ReflectionClass($Module); 
 
@@ -155,11 +152,8 @@ class Application {
     private function handleAttributes($attributes){
          foreach($attributes as $attribute){
             $attr = $attribute->newInstance();
-            // TODO - if/when we add more attibutes, handle them here. 
-            if(!$attr->approved){
-                new Error(403); 
-            }
-        }
+            $attr->handler(); 
+         }
     }
 
     /**
