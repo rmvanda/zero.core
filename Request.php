@@ -42,7 +42,7 @@ class Request
         if(self::$accepts){
             $step = explode(",", self::$accepts); 
             foreach($step as $accept){
-                $type = explode("/", $accept); 
+                $type = explode("/", $accept)[1]; 
                 if($type == "json"){
                     self::$acceptsJSON = true;   
                 }

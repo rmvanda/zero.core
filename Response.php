@@ -22,7 +22,7 @@ class Response
 
     public $body; 
 
-    private $built = false; 
+    protected static $built = false; 
 
     public function __construct($altconfig = null){
         $this->defineBasePaths(); 
@@ -38,7 +38,7 @@ class Response
     }
 
     public function __destruct(){
-        if(!$this->built){
+        if(!static::$built){
             $this->build($this->body); 
         }
         /*
@@ -82,7 +82,7 @@ class Response
 
     protected function defineBasePaths(){
         if(!$this->viewPath){  
-            $this -> viewPath = ZERO_ROOT."app/frontend/global_views/"; 
+            $this -> viewPath = ZERO_ROOT."app/frontend/frame/"; 
         } 
     }
 
@@ -90,7 +90,6 @@ class Response
     {
         // At this point, we know there's no method to handle the request. 
         // So, we're going to see if there's a view file to use::
-
         // -- Maybe in the module's view folder? 
         if (file_exists($view = MODULE_PATH .
                         ucfirst(Request::$module) . 
@@ -98,27 +97,21 @@ class Response
                         Request::$endpoint . 
                         ".php"
                     ) 
-            || file_exists($view = MODULE_PATH . 
-                        Request::$module. 
-                        "/views/" . 
-                        Request::$endpoint . 
-                        ".php"
-                    ) 
-
         // Or maybe the module has a sub
         // (( I don't think we should cater to this, actually ))
-           || file_exists($view = $b = MODULE_PATH . 
-                        ucfirst(Request::$module) . 
-                        "/views/" . 
-                        Request::$endpoint ."/".
-                       (Request::$uriArray[2]??"").".php"
-                    )
+        // yeah - let the modules themselves handle this case. 
+        //|| file_exists($view = $b = MODULE_PATH . 
+        //                ucfirst(Request::$module) . 
+        //                "/views/" . 
+        //                Request::$endpoint ."/".
+        //               (Request::$uriArray[2]??"").".php"
+        //            )
         // And finally, defer to index. This is useful for urls like 
         // site.com/about 
         // since in most cases, it would be silly to set up an "About" module
         // However, if we need further logic from Index in this way, the else 
         // block below covers it. 
-           || file_exists($view = $c = MODULE_PATH . 
+           || file_exists($view = MODULE_PATH . 
                             "Index/views/" . 
                             Request::$module . 
                             ".php"
@@ -126,6 +119,7 @@ class Response
        ){
             $this->build($view); 
         } else {
+            require_once MODULE_PATH."Index/Index.php";  // XXX I do not like this. 
             $fallback = new \Zero\Module\Index(); 
             if(method_exists($fallback, Request::$module)){
                 // Note this means your args are discarded. But you probably don't 
@@ -139,8 +133,14 @@ class Response
 
     protected function render($view)
     {
-        if (Request::$accepts == "json") {
-            include $view;
+
+        if (Request::$acceptsJSON) {
+            static::$built = true; 
+            if(file_exists($view)){ 
+                include $view;
+            } else {
+                echo $view; 
+            }
         } else {
             $this -> build($view);
         }
@@ -148,10 +148,10 @@ class Response
 
     protected function build($view)
     {
-        if($this->built){
+        if(static::$built){
             return; 
         }
-        $this->built = true; 
+        static::$built = true; 
         $this -> buildHead();
         $this -> buildHeader();
         if(file_exists($view??"")){
@@ -197,7 +197,6 @@ class Response
 
     private function getStylesheets()
     {
-
         $assetdir = WEB_ROOT."/assets/".Request::$module."/css/"; 
         // TODO: maybe only load certain things by endpoint? meh, write better CSS.
         if(is_dir($assetdir)){

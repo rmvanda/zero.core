@@ -8,6 +8,10 @@ namespace Zero\Core;
  * Note all __desctruct methods will still run after exit();
  * 
  */ 
+// TODO; make this simply return an error page instead of hijacking module flow 
+// and stopping execution ...? 
+// TODO: - absorb this into Response 
+
 
 class Error extends \Zero\Core\Module
 {
@@ -92,12 +96,12 @@ class Error extends \Zero\Core\Module
             ]); 
             exit(); // TODO - better JSON. 
         } else {
-            $page = "<h1>$code - $message</h1><hr><h4>$err</h4><br>";     
+            $this->body = "<h1>$code - $message</h1><hr><h4>$err</h4><br>";     
         }
 
         Console::error("$code - $message : $err"); 
 
-        $this->build($page);
+        $this->build($this->body);
         
         if(defined("DEVMODE") && DEVMODE == True){
             xdebug_print_function_stack(); 
@@ -107,4 +111,5 @@ class Error extends \Zero\Core\Module
 
     }
 
+    public function __toString(){}
 }

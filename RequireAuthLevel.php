@@ -8,20 +8,21 @@ use \Attribute;
 class RequireAuthLevel{
 
     public $approved;
-
+    public $level; 
     public function __construct($lvl){
         session_start(); 
+        $this->level = $lvl;
     }
 
     public function handler(){
-        if(session_status() == PHP_SESSION_NONE || !$_SESSION['auth_level']){
-            return false; 
-        }
-        $this->approved = $_SESSION['auth_level'] >= $lvl; 
-        if(!$this->approved){
+        $this->approved = $_SESSION['auth_level'] >= $this->lvl; 
+        if( session_status() == PHP_SESSION_NONE 
+            || !$_SESSION['auth_level']
+            ||  $_SESSION['auth_level'] < $this->lvl
+        ){
             return new Error(ERROR_CODE_403); 
         }
-        return $this->approved; 
+        return $this->approved = true; 
     }
 
 }
