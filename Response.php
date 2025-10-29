@@ -252,24 +252,58 @@ class Response
     }
 
     protected function export($e=null){
-        if (!is_array($e)&&!is_null($e) && empty($this->message)) { 
-            $this->message = $e; 
+        if (!is_array($e)&&!is_null($e) && empty($this->message)) {
+            $this->message = $e;
         } else if(empty($this->data)){
-            $this->data = $e;    
+            $this->data = $e;
         }
 
         $json = array(
-                    "status"  => isset($this->status)?"Error":"Success", 
+                    "status"  => isset($this->status)?"Error":"Success",
                     "message" => $this->message
-                    ); 
+                    );
 
 
         if(!empty($this->data)){
-            $json['data'] = $this->data; 
+            $json['data'] = $this->data;
         }
 
         header("Content-Type: application/json");
-        print(json_encode($json, empty(DEVMODE)?0:JSON_PRETTY_PRINT));
+        print(json_encode($json, (defined('DEVMODE') && DEVMODE) ? JSON_PRETTY_PRINT : 0));
+    }
+
+    /**
+     * Automatically respond with JSON or HTML based on Accept header
+     *
+     * This eliminates the need for if(Request::$acceptsJSON) checks in every method
+     *
+     * @param mixed $data Data to export as JSON (array/object) or view path (string)
+     * @param string|null $view Optional view path for HTML response (if $data is not a view path)
+     */
+    protected function respond($data, $view = null) {
+        if (Request::$acceptsJSON) {
+            // If $data is a string and looks like a path, it's probably a view misuse
+            if (is_string($data) && (strpos($data, '/') !== false || strpos($data, '.php') !== false)) {
+                // Probably meant to pass view as second param, swap them
+                if ($view !== null) {
+                    $this->export($view);
+                } else {
+                    $this->export([]);
+                }
+            } else {
+                $this->export($data);
+            }
+        } else {
+            // Determine which is the view path
+            $viewPath = is_string($view) ? $view : (is_string($data) ? $data : null);
+
+            if ($viewPath) {
+                $this->build($viewPath);
+            } else {
+                // No view provided, but we have data - just build with data available
+                $this->build('');
+            }
+        }
     }
 
 }

@@ -98,9 +98,9 @@ class Request
 	}
 
     public static function redirect($url){
-        header("Location: ".$url) ; 
-        ob_clean_end(); 
-        exit(); 
+        header("Location: ".$url) ;
+        ob_clean_end();
+        exit();
     }
 
     private function convertJSONtoPOST(){
