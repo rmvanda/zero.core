@@ -157,7 +157,7 @@ class Response
         if(file_exists($view??"")){
             include $view ; 
         } else {
-            echo $view; 
+            echo $view." does not exist?";  // TODO console log instead.. and throw error? 
         }
         $this -> buildSideNav(); 
         $this -> buildFooter();

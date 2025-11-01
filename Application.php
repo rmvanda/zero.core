@@ -137,22 +137,28 @@ class Application {
 
     private function checkForAttributes($Module,$endpoint) : void {
 
-        $reflection = new \ReflectionClass($Module); 
+        $reflection = new \ReflectionClass($Module);
 
-        $attributes = $reflection->getAttributes(); 
+        $attributes = $reflection->getAttributes();
         if($reflection->hasMethod($endpoint)){
-            $m_attributes = $reflection->getMethod($endpoint)->getAttributes(); 
-            $attributes = array_merge($attributes,$m_attributes); 
+            $m_attributes = $reflection->getMethod($endpoint)->getAttributes();
+            $attributes = array_merge($attributes,$m_attributes);
         }
 
-        $this->handleAttributes($attributes); 
+        if(count($attributes) > 0) {
+            Console::debug("Checking " . count($attributes) . " attribute(s) for {$Module}::{$endpoint}");
+        }
+
+        $this->handleAttributes($attributes);
 
     }
 
     private function handleAttributes($attributes){
          foreach($attributes as $attribute){
+            $attributeName = $attribute->getName();
+            Console::debug("Processing attribute: {$attributeName}");
             $attr = $attribute->newInstance();
-            $attr->handler(); 
+            $attr->handler();
          }
     }
 

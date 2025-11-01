@@ -15,14 +15,17 @@ class RequireAuthLevel{
     }
 
     public function handler(){
-        $this->approved = $_SESSION['auth_level'] >= $this->lvl; 
-        if( session_status() == PHP_SESSION_NONE 
+        $this->approved = $_SESSION['auth_level'] >= $this->level;
+        if( session_status() == PHP_SESSION_NONE
             || !$_SESSION['auth_level']
-            ||  $_SESSION['auth_level'] < $this->lvl
+            ||  $_SESSION['auth_level'] < $this->level
         ){
-            return new Error(ERROR_CODE_403); 
+            $userLevel = $_SESSION['auth_level'] ?? 'none';
+            Console::warn("RequireAuthLevel attribute blocked request: required level {$this->level}, user level {$userLevel}");
+            return new Error(ERROR_CODE_403);
         }
-        return $this->approved = true; 
+        Console::debug("RequireAuthLevel attribute passed: user level {$_SESSION['auth_level']} >= required level {$this->level}");
+        return $this->approved = true;
     }
 
 }
