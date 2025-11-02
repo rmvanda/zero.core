@@ -148,7 +148,7 @@ class Response
 
     protected function build($view)
     {
-        if(static::$built){
+        if(static::$built || Request::$acceptsJSON){
             return; 
         }
         static::$built = true; 
@@ -156,9 +156,8 @@ class Response
         $this -> buildHeader();
         if(file_exists($view??"")){
             include $view ; 
-        } else {
-            echo $view." does not exist?";  // TODO console log instead.. and throw error? 
-        }
+        } 
+        
         $this -> buildSideNav(); 
         $this -> buildFooter();
     }
@@ -282,6 +281,7 @@ class Response
      */
     protected function respond($data, $view = null) {
         if (Request::$acceptsJSON) {
+            /*
             // If $data is a string and looks like a path, it's probably a view misuse
             if (is_string($data) && (strpos($data, '/') !== false || strpos($data, '.php') !== false)) {
                 // Probably meant to pass view as second param, swap them
@@ -290,9 +290,9 @@ class Response
                 } else {
                     $this->export([]);
                 }
-            } else {
+            } else { */
                 $this->export($data);
-            }
+            //}
         } else {
             // Determine which is the view path
             $viewPath = is_string($view) ? $view : (is_string($data) ? $data : null);
