@@ -1,9 +1,9 @@
 <?php
 
-namespace Zero\Core; 
+namespace Zero\Core\Attribute; 
 use \Attribute;
+use \Zero\Core\Console; 
 
-// todo, implement AttributeHandle interface or some such. 
 #[Attribute] 
 class RequireAuthLevel{
 
