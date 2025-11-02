@@ -15,7 +15,7 @@ namespace Zero\Core;
 
 class Error extends \Zero\Core\Module
 {
-    private $message = array(				
+    public $message = array(				
 		400 => "Bad Request",
 		401 => "Unauthorized",
 		402 => "Payment Required",

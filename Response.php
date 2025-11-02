@@ -24,9 +24,11 @@ class Response
 
     protected static $built = false; 
 
+    public $message; 
+
     public function __construct($altconfig = null){
         $this->defineBasePaths(); 
-        $this->setResponseType(); 
+        //$this->setResponseType(); 
         $this->registerAutoloader(); 
 
         /*
@@ -70,7 +72,8 @@ class Response
      * it was made this way to make the code more understandable, however. 
      * so hopefully you're reading this with appreciation rather than disgust. 
      */
-
+    // me,2025 - i am disgusted. 
+/*
     protected function setResponseType(){
         if(str_contains(Request::$accepts, "json")){
             $this->type = "json"; 
@@ -79,7 +82,7 @@ class Response
         }
         
     }
-
+*/
     protected function defineBasePaths(){
         if(!$this->viewPath){  
             $this -> viewPath = ZERO_ROOT."app/frontend/frame/"; 
@@ -91,12 +94,21 @@ class Response
         // At this point, we know there's no method to handle the request. 
         // So, we're going to see if there's a view file to use::
         // -- Maybe in the module's view folder? 
-        if (file_exists($view = MODULE_PATH .
+        if (file_exists($a = $view = MODULE_PATH .
                         ucfirst(Request::$module) . 
                         "/views/" . 
                         Request::$endpoint . 
                         ".php"
                     ) 
+        // 
+        || file_exists($b = $view = MODULE_PATH .
+                        ucfirst(Request::$module) . 
+                        "/views/" . 
+                        Request::$endpointOrig . 
+                        ".php"
+                    ) 
+
+
         // Or maybe the module has a sub
         // (( I don't think we should cater to this, actually ))
         // yeah - let the modules themselves handle this case. 
@@ -111,7 +123,7 @@ class Response
         // since in most cases, it would be silly to set up an "About" module
         // However, if we need further logic from Index in this way, the else 
         // block below covers it. 
-           || file_exists($view = MODULE_PATH . 
+           || file_exists($c = $view = MODULE_PATH . 
                             "Index/views/" . 
                             Request::$module . 
                             ".php"
@@ -156,7 +168,9 @@ class Response
         $this -> buildHeader();
         if(file_exists($view??"")){
             include $view ; 
-        } 
+        } else {
+            echo $view;  // TODO
+        }
         
         $this -> buildSideNav(); 
         $this -> buildFooter();

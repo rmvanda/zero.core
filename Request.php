@@ -21,7 +21,8 @@ class Request
         $sub, $subdomain, 
         $domain,
         $tld, 
-        $module, $endpoint, $args, 
+        $module, $endpoint, $args,
+        $moduleOrig, $endpointOrig,
         $Module,
         $uriArray, 
         $accepts, $acceptsJSON; 
@@ -84,9 +85,12 @@ class Request
         self::$Module   = ucfirst(self::$module); 
 
         if(strpos(self::$module,"-")!==false){
+            self::$moduleOrig = self::$module;
             self::$module = $this->friendlyURLConverter(self::$module); 
         }
+
         if(strpos(self::$endpoint,"-")!==false){
+            self::$endpointOrig = self::$endpoint;
             self::$endpoint = $this->friendlyURLConverter(self::$endpoint); 
         }
 

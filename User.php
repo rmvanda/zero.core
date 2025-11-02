@@ -104,4 +104,129 @@ class User
         session_unset();
         session_destroy();
     }
+
+    /**
+     * Check if user has a specific permission
+     *
+     * @param string $permission Permission key to check
+     * @return bool True if user has permission and it's enabled
+     */
+    public static function hasPermission(string $permission): bool
+    {
+        $userId = self::getId();
+        if (!$userId) {
+            return false;
+        }
+
+        try {
+            $db = Database::getConnection();
+
+            $stmt = $db->prepare(
+                "SELECT setting_value FROM user_settings WHERE user_id = ? AND setting_key = ?"
+            );
+            $stmt->execute([$userId, $permission]);
+            $result = $stmt->fetch();
+
+            // Permission exists and is truthy (1, true, "1", etc.)
+            return $result && !empty($result['setting_value']) && $result['setting_value'] !== '0';
+        } catch (\Exception $e) {
+            error_log("User::hasPermission error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get a specific permission value
+     *
+     * @param string $permission Permission key
+     * @return mixed Permission value or null if not found
+     */
+    public static function getPermission(string $permission)
+    {
+        $userId = self::getId();
+        if (!$userId) {
+            return null;
+        }
+
+        try {
+            $db = Database::getConnection();
+
+            $stmt = $db->prepare(
+                "SELECT setting_value FROM user_settings WHERE user_id = ? AND setting_key = ?"
+            );
+            $stmt->execute([$userId, $permission]);
+            $result = $stmt->fetch();
+
+            return $result ? $result['setting_value'] : null;
+        } catch (\Exception $e) {
+            error_log("User::getPermission error: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Get all permissions for the current user
+     *
+     * @return array Associative array of permission => value
+     */
+    public static function getAllPermissions(): array
+    {
+        $userId = self::getId();
+        if (!$userId) {
+            return [];
+        }
+
+        try {
+            $db = Database::getConnection();
+
+            $stmt = $db->prepare(
+                "SELECT setting_key, setting_value FROM user_settings WHERE user_id = ?"
+            );
+            $stmt->execute([$userId]);
+            $results = $stmt->fetchAll();
+
+            $permissions = [];
+            foreach ($results as $row) {
+                $permissions[$row['setting_key']] = $row['setting_value'];
+            }
+
+            return $permissions;
+        } catch (\Exception $e) {
+            error_log("User::getAllPermissions error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Set a permission for the current user
+     *
+     * @param string $permission Permission key
+     * @param mixed $value Permission value
+     * @return bool Success status
+     */
+    public static function setPermission(string $permission, $value): bool
+    {
+        $userId = self::getId();
+        if (!$userId) {
+            return false;
+        }
+
+        try {
+            $db = Database::getConnection();
+
+            $stmt = $db->prepare(
+                "INSERT INTO user_settings (user_id, setting_key, setting_value, updated_by)
+                 VALUES (?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                 setting_value = VALUES(setting_value),
+                 updated_by = VALUES(updated_by),
+                 updated_on = CURRENT_TIMESTAMP"
+            );
+
+            return $stmt->execute([$userId, $permission, $value, $userId]);
+        } catch (\Exception $e) {
+            error_log("User::setPermission error: " . $e->getMessage());
+            return false;
+        }
+    }
 }
