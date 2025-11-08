@@ -128,9 +128,16 @@ class Response
                             Request::$module . 
                             ".php"
                     )
+
+           || file_exists($c = $view = MODULE_PATH . 
+                            "Index/views/" . 
+                            Request::$moduleOrig . 
+                            ".php"
+                    )
        ){
             $this->build($view); 
         } else {
+            die($c);
             require_once MODULE_PATH."Index/Index.php";  // XXX I do not like this. 
             $fallback = new \Zero\Module\Index(); 
             if(method_exists($fallback, Request::$module)){
@@ -272,6 +279,7 @@ class Response
         }
 
         $json = array(
+                    "success" => !isset($this->status),
                     "status"  => isset($this->status)?"Error":"Success",
                     "message" => $this->message
                     );
@@ -281,8 +289,10 @@ class Response
             $json['data'] = $this->data;
         }
 
+        static::$built = true;
         header("Content-Type: application/json");
         print(json_encode($json, (defined('DEVMODE') && DEVMODE) ? JSON_PRETTY_PRINT : 0));
+        exit();
     }
 
     /**
