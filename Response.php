@@ -129,7 +129,7 @@ class Response
                             ".php"
                     )
 
-           || file_exists($c = $view = MODULE_PATH . 
+           || file_exists($d = $view = MODULE_PATH . 
                             "Index/views/" . 
                             Request::$moduleOrig . 
                             ".php"
@@ -137,7 +137,10 @@ class Response
        ){
             $this->build($view); 
         } else {
-            die($c);
+            //echo $a ."<br>"; 
+            //echo $b ."<br>"; 
+            //echo $c ."<br>"; 
+            //echo $d ."<br>"; 
             require_once MODULE_PATH."Index/Index.php";  // XXX I do not like this. 
             $fallback = new \Zero\Module\Index(); 
             if(method_exists($fallback, Request::$module)){

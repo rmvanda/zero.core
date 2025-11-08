@@ -73,41 +73,47 @@ class Error extends \Zero\Core\Module
 		599 => "Network Connect Timeout Error"
 	); 
 
-    public function __construct(int $code, ?string $err = null) {
+    public function __construct(int $code, ?string $err = null, ?string $detailedHTML = null) {
 
-        parent::__construct(); 
+        parent::__construct();
 
         header("HTTP/1.1 $code " . ($this->message[$code]?? $err ?? "Unspecified"));
 
 
         if(!$err){
-            $err = $this->message[$code]; 
+            $err = $this->message[$code];
         }
 
-        $message=ucwords(strtolower($err)); 
+        //$message=ucwords(strtolower($err));
+        $message = $this->message[$code]; 
 
         $this->title = "Error: ".$message;
 
         if(Request::$acceptsJSON){
             $this->export([
                 "status"  => "error",
-                "message" => $this->message[$code], 
+                "message" => $this->message[$code],
                 "code"    => $code
-            ]); 
-            exit(); // TODO - better JSON. 
+            ]);
+            exit(); // TODO - better JSON.
         } else {
-            $this->body = "<h1>$code - $message</h1><hr><h4>$err</h4><br>";     
+            $this->body = "<h1>$code - $message</h1><hr><h4>$err</h4><br>";
+
+            // Append detailed HTML if provided
+            if($detailedHTML){
+                $this->body .= $detailedHTML;
+            }
         }
 
-        Console::error("$code - $message : $err"); 
+        Console::error("$code - $message : $err");
 
         $this->build($this->body);
-        
+
         if(defined("DEVMODE") && DEVMODE == True){
-            xdebug_print_function_stack(); 
+            xdebug_print_function_stack();
         }
-        
-        exit(); 
+
+        exit();
 
     }
 
