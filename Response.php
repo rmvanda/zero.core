@@ -208,30 +208,53 @@ class Response
         }
     }
 
-    // TODO - this could afford to be fixed up. 
+    // TODO - this could afford to be fixed up.
     protected function export($data = null, array $extra = []){
 
-        $export = array(); 
+        $export = array();
         if(is_array($data)){
-            $export['data']    = $data; 
+            $export['data']    = $data;
         } else if(!empty($data)){
-            $export['message'] = strip_tags($data); 
+            $export['message'] = strip_tags($data);
         }
-        
-        // second overwrites the first: 
-        $export = array_merge($export, $extra); 
-        
-        $export['status'] = $extra['status'] ?? $this->status ?: "unknown"; 
-        $export['code']   = $extra['code']   ?? $this->code   ?: 200; 
+
+        // second overwrites the first:
+        $export = array_merge($export, $extra);
+
+        $export['status'] = $extra['status'] ?? $this->status ?: "unknown";
+        $export['code']   = $extra['code']   ?? $this->code   ?: 200;
 
 
         if(!empty($this->data)){
-            $json['data_extra'] = $this->data;
+            $export['data_extra'] = $this->data;
         }
 
         static::$built = true;
         header("Content-Type: application/json");
-        echo json_encode($json, (defined('DEVMODE') && DEVMODE) ? JSON_PRETTY_PRINT : 0);
+        echo json_encode($export, (defined('DEVMODE') && DEVMODE) ? JSON_PRETTY_PRINT : 0);
+    }
+
+    /**
+     * Send success response (JSON) or redirect (HTML)
+     * For CRUD operations that redirect on success
+     */
+    protected function success($message, $data = []) {
+        if (Request::$acceptsJSON) {
+            $this->export(null, array_merge(['success' => true, 'message' => $message], $data));
+            exit;
+        }
+    }
+
+    /**
+     * Send error response (JSON) or return false (HTML renders with error)
+     * For CRUD operations that show error in form
+     */
+    protected function error($message, $data = []) {
+        if (Request::$acceptsJSON) {
+            http_response_code($data['code'] ?? 400);
+            $this->export(null, array_merge(['success' => false, 'error' => $message], $data));
+            exit;
+        }
     }
 
 }
