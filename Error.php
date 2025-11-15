@@ -77,7 +77,7 @@ class Error extends \Zero\Core\Module
 
         parent::__construct();
 
-        header("HTTP/1.1 $code " . ($this->message[$code]?? $err ?? "Unspecified"));
+        header("HTTP/1.1 $code " . ($this->message[$code] ?: "Unspecified"));
 
 
         if(!$err){
@@ -89,15 +89,22 @@ class Error extends \Zero\Core\Module
 
         $this->title = "Error: ".$message;
 
+        $this->body = "<h1>$code - $message</h1><hr><h4>$err</h4><br>";
+
+        $this->respond($this->body, [
+            "status"  => "error",
+            "message" => $message[$code],
+            "code"    => $code
+        ]); 
+
+
         if(Request::$acceptsJSON){
             $this->export([
                 "status"  => "error",
                 "message" => $this->message[$code],
                 "code"    => $code
             ]);
-            exit(); // TODO - better JSON.
         } else {
-            $this->body = "<h1>$code - $message</h1><hr><h4>$err</h4><br>";
 
             // Append detailed HTML if provided
             if($detailedHTML){
@@ -107,14 +114,12 @@ class Error extends \Zero\Core\Module
 
         Console::error("$code - $message : $err");
 
-        $this->build($this->body);
+        //$this->build($this->body);
 
         if(defined("DEVMODE") && DEVMODE == True){
             xdebug_print_function_stack();
         }
-
         exit();
-
     }
 
     public function __toString(){}

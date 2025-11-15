@@ -168,6 +168,7 @@ class Application {
      * 
      * This USED to be for loading modules too. 
      * TODO - maybe this isn't needed? or can be simplified further? 
+     * TODO - deprecate the hell out of this. 
      */
     public static function autoloader($class){
         $path = explode("\\", strtolower($class)); 
@@ -183,8 +184,24 @@ class Application {
             //return true; 
         }
 
+        Console::log("Dumb autoloader Failed to load $class after looking in $psrPath"); 
+
+        // try another, simpler approach for module sub-classes: 
+        $check = str_replace("Zero", "zero", $class); 
+        $check = str_replace("Module", "modules", $check); 
+        $check = str_replace("Model", "model", $check); 
+        $step  = explode("\\", $check); 
+        $newPath = ROOT_PATH.implode(DIRECTORY_SEPARATOR,$step).".php";
+
+        Console::log("Atempting to load $class after looking in $newPath"); 
+
+        if(file_exists($newPath)){
+            return require_once($newPath); 
+        }
+
+        Console::log("STILL Failed to load $class after looking in $newPath"); 
+
         //echo "Failed to load $class after looking in $psrPath<br>"; 
-        Console::log("Failed to load $class after looking in $psrPath"); 
         return false; 
     
     }

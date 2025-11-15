@@ -10,12 +10,12 @@ class RequireAuthLevel{
     public $approved;
     public $level; 
     public function __construct($lvl){
-        session_start(); 
+        session_start(); // TODO consider not starting session here. 
         $this->level = $lvl;
     }
 
     public function handler(){
-        $this->approved = $_SESSION['auth_level'] >= $this->level;
+        return $this->approved = $_SESSION['auth_level']??0 >= $this->level;
         if( session_status() == PHP_SESSION_NONE
             || !$_SESSION['auth_level']
             ||  $_SESSION['auth_level'] < $this->level

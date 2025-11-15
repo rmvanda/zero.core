@@ -25,7 +25,9 @@ class Request
         $moduleOrig, $endpointOrig,
         $Module,
         $uriArray, 
-        $accepts, $acceptsJSON; 
+        $accepts, $acceptsJSON, 
+        $madeWithAJAX;
+
 
 //    private $safeCharacters = array('-',".","/"); 
 

@@ -5,50 +5,26 @@ namespace Zero\Core;
 class Response
 {
 
-    protected $module;
-    protected $endpoint, $model, $viewPath;
-
-    protected $type; 
-
-    protected $status; 
-    protected $data; 
-
-    protected $headerIncluded,$headIncluded,$sideBarIncluded,$footerIncluded; 
-
     public $title; 
 
-    protected $sideNavBefore; 
-    protected $sideNavAfter; 
+    protected $status; 
+    private $message; // TODO DEPRECATED
+    private $body;   // TODO DEPRECATED
+    protected $data; 
 
-    public $body; 
+    protected $included = array(); 
 
     protected static $built = false; 
 
-    public $message; 
-
     public function __construct($altconfig = null){
         $this->defineBasePaths(); 
-        //$this->setResponseType(); 
         $this->registerAutoloader(); 
-
-        /*
-        if($this->type == "full"){
-            $this->buildHead(); 
-            $this->buildHeader(); 
-        }
-        */
     }
 
     public function __destruct(){
         if(!static::$built){
             $this->build($this->body); 
         }
-        /*
-        if($this->type == "full"){
-            $this->buildSideNav(); 
-            $this->buildFooter();  
-        }
-        */
     }
     
     public function registerAutoloader(){
@@ -63,29 +39,16 @@ class Response
         },true,true);
     }
 
-
-    /** 
-     * This function was made to address the need of the conditional statements
-     * in the construct and destruct methods. 
-     * This way is likely more future oriented with the ideas of the project
-     * but for the time being, `type` may as well really be a boolean
-     * it was made this way to make the code more understandable, however. 
-     * so hopefully you're reading this with appreciation rather than disgust. 
-     */
-    // me,2025 - i am disgusted. 
-/*
-    protected function setResponseType(){
-        if(str_contains(Request::$accepts, "json")){
-            $this->type = "json"; 
-        } else {
-            $this->type = "full"; 
-        }
-        
-    }
-*/
     protected function defineBasePaths(){
-        if(!$this->viewPath){  
-            $this -> viewPath = ZERO_ROOT."app/frontend/frame/"; 
+        if(!$this -> viewPath){  
+            $this -> viewPath = ZERO_ROOT."app/frontend/views/"; 
+        } 
+        if(!$this -> framePath){  
+            $this -> framePath = ZERO_ROOT."app/frontend/frame/"; 
+        } 
+        if(!$this -> modelPath){  
+            $class_info = new \ReflectionClass(get_class($this));
+            $this -> modelPath = dirname($class_info->getFileName())."/model/";
         } 
     }
 
@@ -108,41 +71,45 @@ class Response
                         ".php"
                     ) 
 
+        || file_exists($c = $view = MODULE_PATH .
+                        ucfirst(Request::$moduleOrig) . 
+                        "/views/" . 
+                        Request::$endpoint . 
+                        ".php"
+                    ) 
+        || file_exists($d = $view = MODULE_PATH .
+                        ucfirst(Request::$moduleOrig) . 
+                        "/views/" . 
+                        Request::$endpointOrig . 
+                        ".php"
+                    ) 
 
-        // Or maybe the module has a sub
-        // (( I don't think we should cater to this, actually ))
-        // yeah - let the modules themselves handle this case. 
-        //|| file_exists($view = $b = MODULE_PATH . 
-        //                ucfirst(Request::$module) . 
-        //                "/views/" . 
-        //                Request::$endpoint ."/".
-        //               (Request::$uriArray[2]??"").".php"
-        //            )
-        // And finally, defer to index. This is useful for urls like 
-        // site.com/about 
-        // since in most cases, it would be silly to set up an "About" module
-        // However, if we need further logic from Index in this way, the else 
-        // block below covers it. 
-           || file_exists($c = $view = MODULE_PATH . 
-                            "Index/views/" . 
-                            Request::$module . 
-                            ".php"
+        || file_exists($e = $view = MODULE_PATH . 
+                        "Index/views/" . 
+                        Request::$module . 
+                        ".php"
                     )
 
-           || file_exists($d = $view = MODULE_PATH . 
-                            "Index/views/" . 
-                            Request::$moduleOrig . 
-                            ".php"
+        || file_exists($f = $view = MODULE_PATH . 
+                        "Index/views/" . 
+                        Request::$moduleOrig . 
+                        ".php"
                     )
        ){
             $this->build($view); 
         } else {
-            //echo $a ."<br>"; 
-            //echo $b ."<br>"; 
-            //echo $c ."<br>"; 
-            //echo $d ."<br>"; 
+            /*
+            echo $a ."<br>"; 
+            echo $b ."<br>"; 
+            echo $c ."<br>"; 
+            echo $d ."<br>"; 
+            echo "==== index checks: ====<br>";
+            echo $e ."<br>"; 
+            echo $f ."<br>"; 
+            */
             require_once MODULE_PATH."Index/Index.php";  // XXX I do not like this. 
             $fallback = new \Zero\Module\Index(); 
+
             if(method_exists($fallback, Request::$module)){
                 // Note this means your args are discarded. But you probably don't 
                 // want to have something that deep in your Index module anyway.
@@ -153,72 +120,58 @@ class Response
         }
     }
 
-    protected function render($view)
+    /**
+     * Automatically respond with JSON or HTML based on Accept header
+     *
+     * This eliminates the need for if(Request::$acceptsJSON) checks in every method
+     *
+     * @param mixed $data Data to export as JSON (array/object) or view path (string)
+     * @param string|null $view Optional view path for HTML response (if $data is not a view path)
+     */
+    protected function respond($viewOrData, array $extra = []) 
     {
-
         if (Request::$acceptsJSON) {
-            static::$built = true; 
-            if(file_exists($view)){ 
-                include $view;
-            } else {
-                echo $view; 
-            }
+            $this->export($viewOrData, $extra);
         } else {
-            $this -> build($view);
+            $this->build($viewOrData);
         }
     }
 
-    protected function build($view)
+    protected function build($view = "")
     {
         if(static::$built || Request::$acceptsJSON){
             return; 
         }
         static::$built = true; 
-        $this -> buildHead();
-        $this -> buildHeader();
-        if(file_exists($view??"")){
+        $this -> add("head");
+        $this -> add("header");
+
+        if(file_exists($view)){
             include $view ; 
         } else {
-            echo $view;  // TODO
+            echo $view; 
+            Console::warn("Building bad view with text instead of file path."); 
         }
-        
-        $this -> buildSideNav(); 
-        $this -> buildFooter();
+        //$this -> add("sideNav");  // TODO - still needed? 
+        $this -> add("footer");
     }
 
-// Doing it like this allows individual classed to override the methods
-// while still using render. 
-// The extra difference on this function was a test in 2024 to continue this^ idea.
-    protected function buildHead()
-    {
-        $this->headIncluded=true;
-        if(file_exists($head = $this->viewPath."head.php")){
-            include_once $head; 
-        } elseif(file_exists($head = VIEW_PATH."head.php")){
-            include_once $head; 
+    private function add(string $piece){
+        if($this->included[$piece] || Request::$madeWithAJAX){
+            return;
         }
+        $this->included[$piece] = true;
+        if(file_exists($path = $this->framePath.$piece.".php")
+        || file_exists($path = $this->viewPath .$piece.".php")
+        || file_exists($path = VIEW_PATH.$piece.".php")
+        ){
+            Console::debug("Using $path for $piece"); 
+            return include_once $path; 
+        } 
+        Console::warn("Could not find $piece to add to response"); 
     }
 
-    protected function buildHeader()
-    {
-        $this->headerIncluded=true; 
-        include_once $this -> viewPath . "header.php";
-    }
-
-    protected function buildSideNav(){
-
-        $this->sideBarIncluded=true; 
-        include_once $this -> viewPath . "sideNav.php"; 
-
-    }
-
-    protected function buildFooter()
-    {
-        $this->footerIncluded=true; 
-        include_once $this -> viewPath . "footer.php";
-    }
-
-    private function getStylesheets()
+    protected function getStylesheets()
     {
         $assetdir = WEB_ROOT."/assets/".Request::$module."/css/"; 
         // TODO: maybe only load certain things by endpoint? meh, write better CSS.
@@ -229,7 +182,7 @@ class Response
         }
     }
 
-    private function getScripts()
+    protected function getScripts()
     {
         $assetdir = WEB_ROOT."/assets/".Request::$module."/js/"; 
         // TODO: maybe only load certain things by endpoint? meh, write better CSS.
@@ -255,82 +208,30 @@ class Response
         }
     }
 
-    // JSON API functions... 
-    // This will at least standardize our json output without having to refactor *every endpoint individually*
-    // Ideally we would have functions rather than the if/elseif check below, but I didn't have much time to
-    // do choice today, and I wanted to make sure we could at least standardize it for the app developers.
+    // TODO - this could afford to be fixed up. 
+    protected function export($data = null, array $extra = []){
 
-    // TODO - need a better way to handle these. 
-
-    protected function error($e)
-    {
-        $this->message = $e;
-        $this->status  = "error"; 
-        $this->export();
-    }
-
-    protected function success($msg="The operation completed successfully"){
-        $this->message = $msg;
-        $this->export(); 
-    }
-
-    protected function export($e=null){
-        if (!is_array($e)&&!is_null($e) && empty($this->message)) {
-            $this->message = $e;
-        } else if(empty($this->data)){
-            $this->data = $e;
+        $export = array(); 
+        if(is_array($data)){
+            $export['data']    = $data; 
+        } else if(!empty($data)){
+            $export['message'] = strip_tags($data); 
         }
-
-        $json = array(
-                    "success" => !isset($this->status),
-                    "status"  => isset($this->status)?"Error":"Success",
-                    "message" => $this->message
-                    );
+        
+        // second overwrites the first: 
+        $export = array_merge($export, $extra); 
+        
+        $export['status'] = $extra['status'] ?? $this->status ?: "unknown"; 
+        $export['code']   = $extra['code']   ?? $this->code   ?: 200; 
 
 
         if(!empty($this->data)){
-            $json['data'] = $this->data;
+            $json['data_extra'] = $this->data;
         }
 
         static::$built = true;
         header("Content-Type: application/json");
-        print(json_encode($json, (defined('DEVMODE') && DEVMODE) ? JSON_PRETTY_PRINT : 0));
-        exit();
-    }
-
-    /**
-     * Automatically respond with JSON or HTML based on Accept header
-     *
-     * This eliminates the need for if(Request::$acceptsJSON) checks in every method
-     *
-     * @param mixed $data Data to export as JSON (array/object) or view path (string)
-     * @param string|null $view Optional view path for HTML response (if $data is not a view path)
-     */
-    protected function respond($data, $view = null) {
-        if (Request::$acceptsJSON) {
-            /*
-            // If $data is a string and looks like a path, it's probably a view misuse
-            if (is_string($data) && (strpos($data, '/') !== false || strpos($data, '.php') !== false)) {
-                // Probably meant to pass view as second param, swap them
-                if ($view !== null) {
-                    $this->export($view);
-                } else {
-                    $this->export([]);
-                }
-            } else { */
-                $this->export($data);
-            //}
-        } else {
-            // Determine which is the view path
-            $viewPath = is_string($view) ? $view : (is_string($data) ? $data : null);
-
-            if ($viewPath) {
-                $this->build($viewPath);
-            } else {
-                // No view provided, but we have data - just build with data available
-                $this->build('');
-            }
-        }
+        echo json_encode($json, (defined('DEVMODE') && DEVMODE) ? JSON_PRETTY_PRINT : 0);
     }
 
 }

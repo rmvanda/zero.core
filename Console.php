@@ -32,7 +32,9 @@ class Console {
         if(!defined("ZERO_LOG_LEVEL")){
             define("ZERO_LOG_LEVEL", "INFO"); 
         }
-        define("ZERO_LOG_LEVEL_INT", 0); // TODO; put in a config or something. 
+        if(!defined("ZERO_LOG_LEVEL_INT")){
+            define("ZERO_LOG_LEVEL_INT", 0); // TODO; put in a config or something. 
+        }
         if(defined("ZERO_LOG_LEVEL_INT")){
             $logthreshold = ZERO_LOG_LEVEL_INT;  
         } else {
