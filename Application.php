@@ -190,6 +190,7 @@ class Application {
         $check = str_replace("Zero", "zero", $class); 
         $check = str_replace("Module", "modules", $check); 
         $check = str_replace("Model", "model", $check); 
+        $check = str_replace("Lib", "lib", $check); 
         $step  = explode("\\", $check); 
         $newPath = ROOT_PATH.implode(DIRECTORY_SEPARATOR,$step).".php";
 

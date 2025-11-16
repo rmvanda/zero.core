@@ -18,7 +18,7 @@ class Response
 
     public function __construct($altconfig = null){
         $this->defineBasePaths(); 
-        $this->registerAutoloader(); 
+        //$this->registerAutoloaders(); 
     }
 
     public function __destruct(){
@@ -27,7 +27,8 @@ class Response
         }
     }
     
-    public function registerAutoloader(){
+    /*
+    public function registerAutoloaders(){
         spl_autoload_register(function($class){
             $step = explode("\\",get_called_class()); 
             $a = array_pop($step) ; 
@@ -38,16 +39,18 @@ class Response
             
         },true,true);
     }
+    */
 
     protected function defineBasePaths(){
+        $class_info = new \ReflectionClass(get_class($this));
         if(!$this -> viewPath){  
-            $this -> viewPath = ZERO_ROOT."app/frontend/views/"; 
+            $this -> viewPath = dirname($class_info->getFileName())."/views/";
+            //$this -> viewPath = ZERO_ROOT."app/frontend/views/"; 
         } 
         if(!$this -> framePath){  
             $this -> framePath = ZERO_ROOT."app/frontend/frame/"; 
         } 
         if(!$this -> modelPath){  
-            $class_info = new \ReflectionClass(get_class($this));
             $this -> modelPath = dirname($class_info->getFileName())."/model/";
         } 
     }
@@ -173,38 +176,54 @@ class Response
 
     protected function getStylesheets()
     {
-        $assetdir = WEB_ROOT."/assets/".Request::$module."/css/"; 
-        // TODO: maybe only load certain things by endpoint? meh, write better CSS.
+        $assetdir = WEB_ROOT."/assets/".Request::$module."/css/";
         if(is_dir($assetdir)){
-            $this->loadAssetTypeFromDir("css",$assetdir);
+            $this->loadAssetTypeFromDir("css", $assetdir);
         } else {
-            echo "<!-- ".WEB_ROOT." css not found, so not loaded. -->";     
+            echo "<!-- ".$assetdir." not found, so not loading. -->";
         }
     }
 
     protected function getScripts()
     {
-        $assetdir = WEB_ROOT."/assets/".Request::$module."/js/"; 
-        // TODO: maybe only load certain things by endpoint? meh, write better CSS.
+        $assetdir = WEB_ROOT."/assets/".Request::$module."/js/";
         if(is_dir($assetdir)){
-            $this->loadAssetTypeFromDir("js",$assetdir);
+            $this->loadAssetTypeFromDir("js", $assetdir);
         } else {
-            echo "<!-- ".WEB_ROOT." js not found, so not loaded. -->";     
+            echo "<!-- ".$assetdir." not found, so not loading. -->";
         }
     }
 
-    private function loadAssetTypeFromDir($type,$dir){
-        $assets = scandir($dir); 
+    private function loadAssetTypeFromDir($type, $dir){
+        $assets = scandir($dir);
         if($type == "css"){
-            $html_asset = '<link rel="stylesheet" type="text/css" href="%s">' ;    
-        } else 
-        if($type == "js"){
-            $html_asset = '<script src="%s"></script>'; 
+            $html_asset = '<link rel="stylesheet" type="text/css" href="%s">';
+        } else if($type == "js"){
+            $html_asset = '<script src="%s"></script>';
+        } else {
+            Console::warn("Unknown asset type: $type. Refusing to load.");
+            return; 
         }
         $pubdir = str_replace(WEB_ROOT, "", $dir);
+
+        // Build list of filenames to match 
+        // (module name, endpoint name, and their kebab-case versions)
+        $matches = [
+            Request::$module . '.' . $type,
+            Request::$moduleOrig . '.' . $type,
+            Request::$endpoint . '.' . $type,
+            Request::$endpointOrig . '.' . $type,
+        ];
+
         foreach($assets as $asset){
-            if($asset[0] == "."){continue;}// murders . and ..  .*swp files
-            echo sprintf($html_asset,$pubdir.$asset);  // TODO return? we have buffering.. so.. 
+            if($asset[0] == "."){continue;} // Skip dotfiles
+            // Load if it matches module name or endpoint name
+            if(in_array($asset, $matches)){
+                echo sprintf($html_asset, $pubdir . $asset);
+            } else {
+                Console::debug("$asset not found so not loaded");  
+                echo "<!-- $asset not found so not loaded -->"; 
+            }
         }
     }
 
