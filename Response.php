@@ -17,29 +17,36 @@ class Response
     protected static $built = false; 
 
     public function __construct($altconfig = null){
-        $this->defineBasePaths(); 
-        //$this->registerAutoloaders(); 
+        $this->defineBasePaths();
+        $this->registerAutoloaders();
     }
 
     public function __destruct(){
         if(!static::$built){
-            $this->build($this->body); 
+            $this->build($this->body);
         }
     }
-    
-    /*
-    public function registerAutoloaders(){
-        spl_autoload_register(function($class){
-            $step = explode("\\",get_called_class()); 
-            $a = array_pop($step) ; 
-            if(file_exists($a."/"."$class.php")){
-                require_once($a); 
-                return true;
+
+    protected function registerAutoloaders(){
+        $modelPath = $this->modelPath;
+
+        spl_autoload_register(function($class) use ($modelPath) {
+            // Extract just the class name from the fully qualified namespace
+            $parts = explode('\\', $class);
+            $className = array_pop($parts);
+
+            // Check if it's in a Model namespace and modelPath is set
+            if (strpos($class, '\\Model\\') !== false && !empty($modelPath)) {
+                $file = $modelPath . $className . '.php';
+                if (file_exists($file)) {
+                    require_once $file;
+                    return true;
+                }
             }
-            
-        },true,true);
+
+            return false;
+        }, true, true);
     }
-    */
 
     protected function defineBasePaths(){
         $class_info = new \ReflectionClass(get_class($this));
@@ -259,7 +266,7 @@ class Response
      */
     protected function success($message, $data = []) {
         if (Request::$acceptsJSON) {
-            $this->export(null, array_merge(['success' => true, 'message' => $message], $data));
+            $this->export(array_merge(['success' => true, 'message' => $message], $data));
             exit;
         }
     }
@@ -271,7 +278,7 @@ class Response
     protected function error($message, $data = []) {
         if (Request::$acceptsJSON) {
             http_response_code($data['code'] ?? 400);
-            $this->export(null, array_merge(['success' => false, 'error' => $message], $data));
+            $this->export(array_merge(['success' => false, 'error' => $message], $data));
             exit;
         }
     }
