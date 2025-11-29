@@ -15,10 +15,6 @@ class Module extends Response {
 // just creating symlinks for any given _existing_ module. 
 // OTOH, not like this creates much of a performance hit. 
     public function __construct($altconfig = null){
-        // Start session for all module requests
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
 
         //var_dump(get_defined_constants(true)['user']);
         //var_dump($this);

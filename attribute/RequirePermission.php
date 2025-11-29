@@ -21,7 +21,7 @@ class RequirePermission {
         return <<<HTML
     <div class="content-wrapper mx-auto surface-medium p-2 border-radius-8 mt-3">
         <div class="text-center mb-2">
-            <span class="material-symbols-outlined icon-xl" style="color: rgba(255, 200, 0, 0.8);">lock</span>
+            <span class="material-symbols-outlined icon-xl text-warning">lock</span>
             <h2 class="mt-1">Access Required</h2>
             <p>You don't have permission to access this resource. You can request access from the administrator.</p>
         </div>
@@ -33,7 +33,7 @@ class RequirePermission {
             </div>
             <div class="text-center mt-2">
                 <button type="submit" class="btn-primary">
-                    <span class="material-symbols-outlined" style="vertical-align: middle; font-size: 24px; margin-right: 8px;">send</span>
+                    <span class="material-symbols-outlined icon-before-text">send</span>
                     Request Access
                 </button>
             </div>

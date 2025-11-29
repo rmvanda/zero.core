@@ -24,6 +24,10 @@ class Application {
     */
     public function __construct(){ 
         ob_start();
+        // Start session for all module requests
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
     }
    /**
     * Exit point to the core of the zero framework. 
