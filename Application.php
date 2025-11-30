@@ -22,11 +22,23 @@ class Application {
     * Using this allows us to do things like "send" output before sending headers.
     * This also allows us to throw HTTP Errors anywhere in the execution flow. 
     */
-    public function __construct(){ 
+    public function __construct(){
         ob_start();
         // Start session for all module requests
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
+        }
+
+        // Time-based session regeneration for security
+        if (isset($_SESSION['created_at'])) {
+            $sessionAge = time() - $_SESSION['created_at'];
+            if (defined('SESSION_REGENERATE_INTERVAL') && $sessionAge > SESSION_REGENERATE_INTERVAL) {
+                session_regenerate_id(true);
+                $_SESSION['created_at'] = time();
+            }
+        } else {
+            // Initialize timestamp for new sessions
+            $_SESSION['created_at'] = time();
         }
     }
    /**
