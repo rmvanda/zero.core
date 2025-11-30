@@ -201,6 +201,35 @@ class Response
         }
     }
 
+    /**
+     * Load module-specific web components
+     *
+     * Automatically includes component HTML files from the module's components directory.
+     * Components are loaded before they're used in the page.
+     */
+    protected function getComponents()
+    {
+        $componentDir = MODULE_PATH . ucfirst(Request::$module) . "/components/";
+
+        if(!is_dir($componentDir)){
+            echo "<!-- No components directory for " . Request::$module . " module -->";
+            return;
+        }
+
+        $components = scandir($componentDir);
+        foreach($components as $component){
+            if($component[0] == "." || !str_ends_with($component, '.html')){
+                continue; // Skip dotfiles and non-HTML files
+            }
+
+            $componentPath = $componentDir . $component;
+            if(file_exists($componentPath)){
+                echo "<!-- Loading component: $component -->\n";
+                require_once $componentPath;
+            }
+        }
+    }
+
     private function loadAssetTypeFromDir($type, $dir){
         $assets = scandir($dir);
         if($type == "css"){
