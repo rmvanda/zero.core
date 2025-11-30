@@ -5,7 +5,7 @@ namespace Zero\Core;
 class Response
 {
 
-    public $title; 
+    public $title;  // TODO - this isn't quite hooked in correctly. 
 
     protected $status; 
     private $message; // TODO DEPRECATED
@@ -15,6 +15,8 @@ class Response
     protected $included = array(); 
 
     protected static $built = false; 
+
+    public $paths = ["frame", "view", "component", "model"]; 
 
     public function __construct($altconfig = null){
         $this->defineBasePaths();
@@ -50,16 +52,17 @@ class Response
 
     protected function defineBasePaths(){
         $class_info = new \ReflectionClass(get_class($this));
-        if(!$this -> viewPath){  
-            $this -> viewPath = dirname($class_info->getFileName())."/views/";
-            //$this -> viewPath = ZERO_ROOT."app/frontend/views/"; 
-        } 
-        if(!$this -> framePath){  
-            $this -> framePath = ZERO_ROOT."app/frontend/frame/"; 
-        } 
-        if(!$this -> modelPath){  
-            $this -> modelPath = dirname($class_info->getFileName())."/model/";
-        } 
+        $dirname    = dirname($class_info->getFileName())."/"; 
+
+        foreach($this->paths as $path){
+            $pathString = $path."Path"; 
+            if(!$this->$pathString && is_dir($dirname.$path)){
+                $this->$pathString = $dirname.$path."/";  
+            } else {
+                // this is not valid for model, but whatever. FIXME later
+                $this->$pathString = ZERO_ROOT."/app/frontend/".$path."/";
+            }
+        }
     }
 
     public function __call($func, $args)
@@ -240,6 +243,7 @@ class Response
             Console::warn("Unknown asset type: $type. Refusing to load.");
             return; 
         }
+
         $pubdir = str_replace(WEB_ROOT, "", $dir);
 
         // Build list of filenames to match 
@@ -257,8 +261,8 @@ class Response
             if(in_array($asset, $matches)){
                 echo sprintf($html_asset, $pubdir . $asset);
             } else {
-                Console::debug("$asset not found so not loaded");  
-                echo "<!-- $asset not found so not loaded -->"; 
+                Console::debug("$asset doesn't match so not loaded");  
+                echo "<!-- $asset doesn't match so not loaded -->"; 
             }
         }
     }
