@@ -60,8 +60,9 @@ class Response
                 $this->$pathString = $dirname.$path."/";  
             } else {
                 // this is not valid for model, but whatever. FIXME later
-                $this->$pathString = ZERO_ROOT."/app/frontend/".$path."/";
+                $this->$pathString = ZERO_ROOT."app/frontend/".$path."/";
             }
+            //echo "Set $pathString to: {$this->$pathString}<br>"; 
         }
     }
 
@@ -72,39 +73,39 @@ class Response
         // -- Maybe in the module's view folder? 
         if (file_exists($a = $view = MODULE_PATH .
                         ucfirst(Request::$module) . 
-                        "/views/" . 
+                        "/view/" . 
                         Request::$endpoint . 
                         ".php"
                     ) 
         // 
         || file_exists($b = $view = MODULE_PATH .
                         ucfirst(Request::$module) . 
-                        "/views/" . 
+                        "/view/" . 
                         Request::$endpointOrig . 
                         ".php"
                     ) 
 
         || file_exists($c = $view = MODULE_PATH .
                         ucfirst(Request::$moduleOrig) . 
-                        "/views/" . 
+                        "/view/" . 
                         Request::$endpoint . 
                         ".php"
                     ) 
         || file_exists($d = $view = MODULE_PATH .
                         ucfirst(Request::$moduleOrig) . 
-                        "/views/" . 
+                        "/view/" . 
                         Request::$endpointOrig . 
                         ".php"
                     ) 
 
         || file_exists($e = $view = MODULE_PATH . 
-                        "Index/views/" . 
+                        "Index/view/" . 
                         Request::$module . 
                         ".php"
                     )
 
         || file_exists($f = $view = MODULE_PATH . 
-                        "Index/views/" . 
+                        "Index/view/" . 
                         Request::$moduleOrig . 
                         ".php"
                     )
