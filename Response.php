@@ -208,43 +208,51 @@ class Response
     /**
      * Load module-specific web components
      *
-     * Automatically includes component HTML files from the module's components directory.
+     * Automatically includes component HTML files from the module's component directory.
      * Components are loaded before they're used in the page.
      */
     protected function getComponents()
     {
-        $componentDir = MODULE_PATH . ucfirst(Request::$module) . "/components/";
+        $moduleComponentDir = MODULE_PATH . Request::$Module . "/assets/component/";
+        $globalComponentDir = ZERO_ROOT . 'app/frontend/www/shadow-component/components/'; 
 
-        if(!is_dir($componentDir)){
-            echo "<!-- No components directory for " . Request::$module . " module -->";
-            return;
+        $components = scandir($globalComponentDir);
+        
+        if(is_dir($modulemainComponentDir)){
+            $moduleComponents = scandir($moduleComponentDir);
+            $components = array_merge($components,$moduleComponents); 
+        } else {
+            echo "<!-- No component directory for " . Request::$module . " module -->";
         }
 
-        $components = scandir($componentDir);
         foreach($components as $component){
             if($component[0] == "." || !str_ends_with($component, '.html')){
                 continue; // Skip dotfiles and non-HTML files
             }
 
-            $componentPath = $componentDir . $component;
-            if(file_exists($componentPath)){
+            $componentPath = $moduleComponentDir . $component;
+            $globalPath    = $globalComponentDir . $component; 
+            if(file_exists($c = $componentPath) 
+            || file_exists($c = $globalPath  )){
                 echo "<!-- Loading component: $component -->\n";
-                require_once $componentPath;
+                require_once $c;
             }
         }
     }
 
     private function loadAssetTypeFromDir($type, $dir){
-        $assets = scandir($dir);
         if($type == "css"){
             $html_asset = '<link rel="stylesheet" type="text/css" href="%s">';
         } else if($type == "js"){
             $html_asset = '<script src="%s"></script>';
+        } else if($type == "component"){
+            $html_asset = '';
         } else {
             Console::warn("Unknown asset type: $type. Refusing to load.");
             return; 
         }
 
+        $assets = scandir($dir);
         $pubdir = str_replace(WEB_ROOT, "", $dir);
 
         // Build list of filenames to match 
