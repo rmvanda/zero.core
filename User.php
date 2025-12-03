@@ -61,7 +61,7 @@ class User
      */
     public static function getId()
     {
-        return $_SESSION['user']['id'] ?? null;
+        return $_SESSION['user_id'] ?? $_SESSION['user']['id'] ?? null;
     }
 
     /**

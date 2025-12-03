@@ -209,7 +209,11 @@ class Response
      * Load module-specific web components
      *
      * Automatically includes component HTML files from the module's component directory.
-     * Components are loaded before they're used in the page.
+     * Components are loaded before or after they're used in the page, as long as 
+     * components used in other components are loaded in the correct order. 
+     * 
+     * TODO: move this into some odd static method into a class by itself since 
+     * components are ultimately supposed to be an optional feature of this framework. 
      */
     protected function getComponents()
     {
@@ -224,6 +228,8 @@ class Response
         } else {
             echo "<!-- No component directory for " . Request::$module . " module -->";
         }
+
+        $components = array_reverse($components); 
 
         foreach($components as $component){
             if($component[0] == "." || !str_ends_with($component, '.html')){
