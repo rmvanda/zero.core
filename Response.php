@@ -208,40 +208,53 @@ class Response
     /**
      * Load module-specific web components
      *
-     * Automatically includes component HTML files from the module's component directory.
-     * Components are loaded before or after they're used in the page, as long as 
-     * components used in other components are loaded in the correct order. 
-     * 
-     * TODO: move this into some odd static method into a class by itself since 
-     * components are ultimately supposed to be an optional feature of this framework. 
+     * Automatically includes component HTML files from both global and module component directories.
+     * Components are loaded in order: global components first, then module components.
+     * Within each directory, components are loaded in alphabetical order (use numeric prefixes
+     * like "1.component.html" to control load order).
+     *
+     * TODO: move this into some odd static method into a class by itself since
+     * components are ultimately supposed to be an optional feature of this framework.
      */
     protected function getComponents()
     {
+        $globalComponentDir = ZERO_ROOT . 'app/frontend/www/shadow-component/components/';
         $moduleComponentDir = MODULE_PATH . Request::$Module . "/assets/component/";
-        $globalComponentDir = ZERO_ROOT . 'app/frontend/www/shadow-component/components/'; 
 
-        $components = scandir($globalComponentDir);
-        
-        if(is_dir($modulemainComponentDir)){
-            $moduleComponents = scandir($moduleComponentDir);
-            $components = array_merge($components,$moduleComponents); 
+        // Load global components first
+        $this->getComponentsInDirectory($globalComponentDir, 'global');
+
+        // Then load module-specific components
+        if(is_dir($moduleComponentDir)){
+            $this->getComponentsInDirectory($moduleComponentDir, Request::$module);
         } else {
-            echo "<!-- No component directory for " . Request::$module . " module -->";
+            echo "<script>console.log('No component directory for " . Request::$module . " module');</script>";
+        }
+    }
+
+    /**
+     * Load all component HTML files from a specific directory
+     *
+     * @param string $dir The directory path to scan for components
+     * @param string $label Label for console logging (e.g., 'global' or module name)
+     */
+    private function getComponentsInDirectory($dir, $label)
+    {
+        if(!is_dir($dir)){
+            return;
         }
 
-        $components = array_reverse($components); 
+        $components = scandir($dir);
 
         foreach($components as $component){
             if($component[0] == "." || !str_ends_with($component, '.html')){
                 continue; // Skip dotfiles and non-HTML files
             }
 
-            $componentPath = $moduleComponentDir . $component;
-            $globalPath    = $globalComponentDir . $component; 
-            if(file_exists($c = $componentPath) 
-            || file_exists($c = $globalPath  )){
-                echo "<!-- Loading component: $component -->\n";
-                require_once $c;
+            $componentPath = $dir . $component;
+            if(file_exists($componentPath)){
+                echo "<script>console.log('Loading $label component: $component');</script>\n";
+                require_once $componentPath;
             }
         }
     }
