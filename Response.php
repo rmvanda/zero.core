@@ -137,15 +137,23 @@ class Response
     /**
      * Automatically respond with JSON or HTML based on Accept header
      *
-     * This eliminates the need for if(Request::$acceptsJSON) checks in every method
+     * For dual-purpose endpoints (HTML view + JSON API):
+     * - Set $this->data with the JSON payload
+     * - Call respond($viewPath)
+     * - Framework exports $this->data for JSON, renders view for HTML
      *
-     * @param mixed $data Data to export as JSON (array/object) or view path (string)
-     * @param string|null $view Optional view path for HTML response (if $data is not a view path)
+     * @param mixed $viewOrData View path (string) or data array for JSON-only endpoints
+     * @param array $extra Additional data merged at root level of JSON response
      */
-    protected function respond($viewOrData, array $extra = []) 
+    protected function respond($viewOrData, array $extra = [])
     {
         if (Request::$acceptsJSON) {
-            $this->export($viewOrData, $extra);
+            // If it's a view path, export $this->data instead of the path
+            if (is_string($viewOrData) && file_exists($viewOrData)) {
+                $this->export($this->data ?? [], $extra);
+            } else {
+                $this->export($viewOrData, $extra);
+            }
         } else {
             $this->build($viewOrData);
         }
@@ -164,7 +172,13 @@ class Response
             include $view ; 
         } else {
             echo $view; 
-            Console::warn("Building bad view with text instead of file path."); 
+            echo '<script>console.warn("Built bad view with text instead of file path.");</script>'; 
+            Console::warn("Building bad view with text instead of file path:\n".
+            "\tview: $view\n\n".
+            "\tRequest::\$module: ".Request::$module."\n".
+            "\tRequest::\$endpoint: ".Request::$endpoint."\n".
+            "\n"
+            ); 
         }
         //$this -> add("sideNav");  // TODO - still needed? 
         $this -> add("footer");
@@ -295,26 +309,35 @@ class Response
         }
     }
 
-    // TODO - this could afford to be fixed up.
-    protected function export($data = null, array $extra = []){
-
+    /**
+     * Export data as JSON response
+     *
+     * @param mixed $data Array for data payload, string for message, null for empty
+     * @param array $extra Additional fields merged at root level of response
+     */
+    protected function export($data = null, array $extra = []) {
         $export = array();
-        if(is_array($data)){
-            $export['data']    = $data;
-        } else if(!empty($data)){
+
+        if (is_array($data)) {
+            $export['data'] = $data;
+        } else if (!empty($data)) {
             $export['message'] = strip_tags($data);
         }
 
-        // second overwrites the first:
+        // Merge $this->data into data (for dual-purpose endpoints)
+        if (!empty($this->data)) {
+            if (isset($export['data'])) {
+                $export['data'] = array_merge($export['data'], $this->data);
+            } else {
+                $export['data'] = $this->data;
+            }
+        }
+
+        // Extra fields merged at root level
         $export = array_merge($export, $extra);
 
         $export['status'] = $extra['status'] ?? $this->status ?: "unknown";
-        $export['code']   = $extra['code']   ?? $this->code   ?: 200;
-
-
-        if(!empty($this->data)){
-            $export['data_extra'] = $this->data;
-        }
+        $export['code'] = $extra['code'] ?? $this->code ?: 200;
 
         static::$built = true;
         header("Content-Type: application/json");
