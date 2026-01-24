@@ -13,37 +13,15 @@ class RequirePermission {
     public $permissions;
 
     /**
-     * Generate the access request HTML form
+     * Redirect to access request page with permission parameter
      *
-     * @return string HTML form for requesting access
+     * @param string $permission The permission key being requested
+     * @return void
      */
-    private function getRequestAccessHTML(): string {
-        return <<<HTML
-    <div class="content-wrapper mx-auto surface-medium p-2 border-radius-8 mt-3">
-        <div class="text-center mb-2">
-            <span class="material-symbols-outlined icon-xl text-warning">lock</span>
-            <h2 class="mt-1">Access Required</h2>
-            <p>You don't have permission to access this resource. You can request access from the administrator.</p>
-        </div>
-        <form id="accessRequestForm" method="POST" action="/access-request/submit">
-            <input type="hidden" name="requested_url" id="requested_url">
-            <div class="form-group">
-                <label for="reason">Reason for Access Request:</label>
-                <textarea name="reason" id="reason" rows="6" placeholder="Please explain why you need access to this resource..." required></textarea>
-            </div>
-            <div class="text-center mt-2">
-                <button type="submit" class="btn-primary">
-                    <span class="material-symbols-outlined icon-before-text">send</span>
-                    Request Access
-                </button>
-            </div>
-        </form>
-    </div>
-    <script>
-        // Populate requested URL from current location
-        document.getElementById('requested_url').value = window.location.pathname;
-    </script>
-HTML;
+    private function redirectToAccessRequest(string $permission): void {
+        $url = '/access-request/permission?p=' . urlencode($permission);
+        header('Location: ' . $url);
+        exit;
     }
 
     /**
@@ -65,7 +43,8 @@ HTML;
         // Check if user is logged in
         if (session_status() == PHP_SESSION_NONE || !isset($_SESSION['user_id'])) {
             Console::warn("RequirePermission attribute blocked request: user not logged in");
-            return new Error(403, "You require special permissions to view this page.", $this->getRequestAccessHTML());
+            // Redirect to access request page with first permission
+            $this->redirectToAccessRequest($this->permissions[0]);
         }
 
         $userId = $_SESSION['user_id'];
@@ -74,7 +53,8 @@ HTML;
         foreach ($this->permissions as $permission) {
             if (!$this->hasPermission($userId, $permission)) {
                 Console::warn("RequirePermission attribute blocked request: user {$userId} missing permission '{$permission}'");
-                return new Error(403, "You require specific persmissions to view this page.", $this->getRequestAccessHTML());
+                // Redirect to access request page with the missing permission
+                $this->redirectToAccessRequest($permission);
             }
         }
 
