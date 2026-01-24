@@ -91,6 +91,10 @@ class Error extends \Zero\Core\Module
 
         $this->body = "<h1>$code - $message</h1><hr><h4>$err</h4><br>";
 
+        if($detailedHTML){
+            $this->body = $detailedHTML; 
+        }
+
         $this->respond($this->body, [
             "status"  => "error",
             "message" => $message[$code],
@@ -98,6 +102,7 @@ class Error extends \Zero\Core\Module
         ]); 
 
 
+        /*
         if(Request::$acceptsJSON){
             $this->export([
                 "status"  => "error",
@@ -111,6 +116,7 @@ class Error extends \Zero\Core\Module
                 $this->body .= $detailedHTML;
             }
         }
+        */
 
         Console::error("$code - $message : $err");
 

@@ -37,8 +37,6 @@ class AuditLog {
      * @return bool Always returns true (logging should not block execution)
      */
     public function handler(): bool {
-        @session_start();
-
         // Skip logging if requireAuth is true and user is not authenticated
         if ($this->requireAuth && (!isset($_SESSION['user_id']) || empty($_SESSION['user_id']))) {
             Console::debug("AuditLog skipped: requireAuth=true but user not authenticated");
