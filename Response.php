@@ -180,7 +180,7 @@ class Response
             "\n"
             ); 
         }
-        //$this -> add("sideNav");  // TODO - still needed? 
+        $this -> add("sideNav");  // TODO - still needed? 
         $this -> add("footer");
     }
 

@@ -80,7 +80,8 @@ abstract class AdminResponse extends Module {
                 : [];
 
             // Build module configuration
-            $slug = strtolower($moduleName);
+            // Convert PascalCase to kebab-case (TechStack -> tech-stack)
+            $slug = strtolower(preg_replace('/([a-z])([A-Z])/', '$1-$2', $moduleName));
             $adminModules[] = [
                 'name' => $moduleName,
                 'slug' => $slug,

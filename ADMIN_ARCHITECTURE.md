@@ -580,6 +580,50 @@ var_dump(User::getAuthLevel());
 
 ---
 
+## 12. Lessons from Real-World Usage
+
+### Case Study: TechStack Module (January 2026)
+
+The TechStack module provided valuable insights into AdminResponse system capabilities and limitations.
+
+**What Worked Well:**
+
+1. **Auto-Discovery**: Module appeared on admin dashboard immediately upon creating `Admin/` directory
+2. **Routing**: Kebab-case URLs (`/admin/tech-stack`) correctly mapped to PascalCase classes (`TechStackAdmin`)
+3. **Asset Loading**: Inline CSS/JS loading worked without symlink management
+4. **CRUD Patterns**: Standard patterns for list/create/edit/delete worked smoothly
+5. **Relationship Management**: Complex many-to-many relationships with visual previews, strength indicators, validation
+
+**Bugs Discovered & Fixed:**
+
+1. **Kebab-case to PascalCase Conversion** (`/modules/Admin/Admin.php:36`)
+   - **Bug**: `ucfirst(strtolower($moduleName))` converted `tech-stack` → `Techstack` (wrong)
+   - **Fix**: `str_replace(' ', '', ucwords(str_replace('-', ' ', $moduleName)))` → `TechStack` (correct)
+
+2. **PascalCase to Kebab-case Generation** (`/core/AdminResponse.php:83`)
+   - **Bug**: `strtolower($moduleName)` converted `TechStack` → `techstack` (wrong)
+   - **Fix**: `strtolower(preg_replace('/([a-z])([A-Z])/', '$1-$2', $moduleName))` → `tech-stack` (correct)
+
+**Design Patterns Validated:**
+
+- **Live Preview Forms**: Show visual preview of data before submission (e.g., relationship preview)
+- **Strength Indicators**: Visual dots (1-10) for indicating connection strength
+- **Color-Coded Badges**: Different colors for relationship types
+- **Empty States**: Friendly messaging when no data exists with call-to-action
+- **Self-Referential Validation**: Prevent resources from relating to themselves
+
+**Architecture Insights:**
+
+The AdminResponse system scaled well to complex modules with:
+- Multiple entity types (technologies, relationships)
+- Complex relationships (many-to-many with metadata)
+- Visual data requirements (icons, colors, strength indicators)
+- Integration needs (graph visualization)
+
+However, the experience highlighted that **admin capability alone doesn't justify module complexity**. The best modules combine admin functionality with clear daily utility.
+
+---
+
 ## Summary
 
 The admin architecture provides:
