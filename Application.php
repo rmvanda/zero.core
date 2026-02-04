@@ -104,9 +104,12 @@ class Application {
         // TODO - maybe this goes somewhere else. 
         if(str_contains($_SERVER['REMOTE_ADDR'], DEV_SUBNET)){
             define("DEVMODE", true); 
-            ini_set('xdebug.var_display_max_depth', 10);
-            ini_set('xdebug.var_display_max_children', 256);
-            ini_set('xdebug.var_display_max_data', 1024);
+            ini_set("xdebug.var_display_max_children", '-1');
+            ini_set("xdebug.var_display_max_data", '-1');
+            ini_set("xdebug.var_display_max_depth", '-1');
+            //ini_set('xdebug.var_display_max_depth', 10);
+            //ini_set('xdebug.var_display_max_children', 256);
+            //ini_set('xdebug.var_display_max_data', 1024);
         } 
 
         return $this;
@@ -262,6 +265,13 @@ class Application {
         }
         // for Composer + PSR compatability
         if (file_exists($file = ROOT_PATH . "vendor/autoload.php")) {
+            require $file;
+            // TODO - this was shimmed in to get PushNotifications off the ground..
+            // This should be removed as zero framework itself should not have 
+            // composer dependencies... thus the push notification library should 
+            // be moved to zero/lib or some other such benign location. 
+        } 
+        if (file_exists($file = ZERO_ROOT . "vendor/autoload.php")) {
             require $file;
         }
        return $this;
