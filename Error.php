@@ -95,6 +95,12 @@ class Error extends \Zero\Core\Module
             $this->body = $detailedHTML; 
         }
 
+        /*
+        if(defined("DEVMODE") && DEVMODE == True){
+            xdebug_print_function_stack();
+        }
+        */
+
         $this->respond($this->body, [
             "status"  => "error",
             "message" => $message[$code],
@@ -122,9 +128,6 @@ class Error extends \Zero\Core\Module
 
         //$this->build($this->body);
 
-        if(defined("DEVMODE") && DEVMODE == True){
-            xdebug_print_function_stack();
-        }
         exit();
     }
 
