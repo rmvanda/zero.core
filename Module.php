@@ -20,13 +20,46 @@ class Module extends Response {
         //var_dump($this);
         //$class = new \ReflectionClass('\Zero\Core\Request');
         //$staticProperties = $class->getStaticProperties();
-        $module = Request::$module; 
+        $module = Request::$module;
         $target = MODULE_PATH.ucfirst($module)."/assets";
-        $linknm = WEB_ROOT."/assets/".$module; 
+        $linknm = WEB_ROOT."/assets/".$module;
         if(is_dir($target) && !is_dir($linknm)){
                $results = symlink($target,$linknm);
         }
-        parent::__construct($altconfig); 
+        parent::__construct($altconfig);
+    }
+
+    /**
+     * Override __call to check for submodules before falling back to Response::__call
+     * (view file lookup). Naturally recursive — submodules extend Module, so their
+     * own __call does the same check, enabling infinite nesting.
+     */
+    public function __call($func, $args) {
+        $submoduleName = ucfirst($func);
+        $moduleDir = dirname((new \ReflectionClass(get_class($this)))->getFileName());
+        $submodulePath = $moduleDir . '/submodule/' . $submoduleName . '/' . $submoduleName . '.php';
+
+        if (file_exists($submodulePath)) {
+            require_once $submodulePath;
+
+            // Class name mirrors namespace: Zero\Module\Ttrpg + \Characters, etc.
+            $subClass = get_class($this) . '\\' . $submoduleName;
+            $submodule = new $subClass();
+
+            // $args[0] is whatever was passed to the missing method
+            $subArgs = $args[0] ?? [];
+            if (!is_array($subArgs)) {
+                $subArgs = [$subArgs];
+            }
+
+            // Shift first arg as the new endpoint, default to index
+            $subEndpoint = array_shift($subArgs) ?: 'index';
+
+            $submodule->{$subEndpoint}($subArgs);
+            return;
+        }
+
+        parent::__call($func, $args);
     }
 }
 
