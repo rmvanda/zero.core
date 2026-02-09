@@ -20,13 +20,82 @@ class Module extends Response {
         //var_dump($this);
         //$class = new \ReflectionClass('\Zero\Core\Request');
         //$staticProperties = $class->getStaticProperties();
-        $module = Request::$module;
-        $target = MODULE_PATH.ucfirst($module)."/assets";
-        $linknm = WEB_ROOT."/assets/".$module;
-        if(is_dir($target) && !is_dir($linknm)){
-               $results = symlink($target,$linknm);
+
+        // Derive URL path from class namespace for symlink
+        // Zero\Module\Ttrpg -> ttrpg
+        // Zero\Module\Ttrpg\Characters -> ttrpg/characters
+        $fullClass = get_class($this);
+        $modulePath = substr($fullClass, strlen('Zero\\Module\\'));
+        $urlPath = strtolower(str_replace('\\', '/', $modulePath));
+
+        $classDir = dirname((new \ReflectionClass($this))->getFileName());
+        $target = $classDir . "/assets";
+        $linknm = WEB_ROOT . "/assets/" . $urlPath;
+
+        if(is_dir($target) && !is_link($linknm) && !is_dir($linknm)){
+            // Create parent directories if needed for nested submodules
+            $parentDir = dirname($linknm);
+            if (!is_dir($parentDir)) {
+                mkdir($parentDir, 0755, true);
+            }
+            symlink($target, $linknm);
         }
+
         parent::__construct($altconfig);
+    }
+
+    /**
+     * Override defineBasePaths to support frame inheritance for submodules
+     * Submodules inherit their parent's frame if they don't have their own,
+     * walking up the directory tree for proper recursive inheritance
+     */
+    protected function defineBasePaths(){
+        $class_info = new \ReflectionClass(get_class($this));
+        $dirname = dirname($class_info->getFileName())."/";
+
+        foreach($this->paths as $path){
+            $pathString = $path."Path";
+
+            if($this->$pathString) {
+                continue; // Already set
+            }
+
+            // Check if this module/submodule has its own
+            if(is_dir($dirname.$path)){
+                $this->$pathString = $dirname.$path."/";
+                continue;
+            }
+
+            // For frame, walk up directory tree to find parent frame
+            if ($path === 'frame') {
+                $currentDir = rtrim($dirname, '/');
+                $modulePathBase = rtrim(MODULE_PATH, '/');
+
+                while ($currentDir && strlen($currentDir) > strlen($modulePathBase)) {
+                    $parentDir = dirname($currentDir);
+
+                    // Stop if we've gone above MODULE_PATH
+                    if (strlen($parentDir) < strlen($modulePathBase)) {
+                        break;
+                    }
+
+                    if (is_dir($parentDir . '/frame/')) {
+                        $this->$pathString = $parentDir . '/frame/';
+                        break;
+                    }
+
+                    $currentDir = $parentDir;
+                }
+
+                // If found a frame, continue to next path
+                if ($this->$pathString) {
+                    continue;
+                }
+            }
+
+            // Fall back to global default
+            $this->$pathString = ZERO_ROOT."app/frontend/".$path."/";
+        }
     }
 
     /**
