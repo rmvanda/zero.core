@@ -16,11 +16,15 @@ function pprint($m){
 }
 
 class Application {
-   /** 
-    * Entry point to the core of the zero framework. 
-    * 
+
+    /** Loaded plugin instances */
+    private array $plugins = [];
+
+   /**
+    * Entry point to the core of the zero framework.
+    *
     * Using this allows us to do things like "send" output before sending headers.
-    * This also allows us to throw HTTP Errors anywhere in the execution flow. 
+    * This also allows us to throw HTTP Errors anywhere in the execution flow.
     */
     public function __construct(){
         ob_start();
@@ -110,10 +114,12 @@ class Application {
             //ini_set('xdebug.var_display_max_depth', 10);
             //ini_set('xdebug.var_display_max_children', 256);
             //ini_set('xdebug.var_display_max_data', 1024);
-        } 
+        }
+
+        \Zero\Core\PluginLoader::hook($this->plugins, 'afterConstants');
 
         return $this;
-    
+
     }
 
     /**
@@ -124,6 +130,7 @@ class Application {
     public function parseRequest()
     {
         new Request();
+        \Zero\Core\PluginLoader::hook($this->plugins, 'afterParseRequest');
         return $this;
     }
 
@@ -139,19 +146,23 @@ class Application {
      */
     public function run($module, $endpoint, $args){
         if ($this->isModule($Module=ucfirst($module))) {
-            $Module = "\\Zero\\Module\\".$Module; 
+            $Module = "\\Zero\\Module\\".$Module;
         } else {
             // loading Index here so we can reference it as a fallback in Response
             // The reason we don't go ahead and do that here is because modules
-            // still get precedence over the built in Index. 
-            // See Response class for more. 
+            // still get precedence over the built in Index.
+            // See Response class for more.
             $this->isModule("Index");
-            $Module = "\\Zero\\Core\\Response"; 
+            $Module = "\\Zero\\Core\\Response";
         }
-        
-        $this->checkForAttributes($Module,$endpoint); 
+
+        \Zero\Core\PluginLoader::hook($this->plugins, 'beforeRun', $module, $endpoint, $args);
+
+        $this->checkForAttributes($Module,$endpoint);
         $module = new $Module();
         $module -> {$endpoint}($args);
+
+        \Zero\Core\PluginLoader::hook($this->plugins, 'afterRun', $module, $endpoint, $args);
     }
 
     private function checkForAttributes($Module,$endpoint) : void {
@@ -274,6 +285,11 @@ class Application {
         if (file_exists($file = ZERO_ROOT . "vendor/autoload.php")) {
             require $file;
         }
+
+        // Load plugins after all autoloaders are ready
+        $this->plugins = \Zero\Core\PluginLoader::load();
+        \Zero\Core\PluginLoader::hook($this->plugins, 'afterAutoloaders');
+
        return $this;
     }
 

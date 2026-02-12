@@ -17,6 +17,9 @@ class RequireLogin {
      * @return void
      */
     private function redirectToLogin(): void {
+        // Store the current path so we can redirect back after login
+        $_SESSION['return_url'] = $_SERVER['REQUEST_URI'] ?? '/';
+
         $url = '/user/login?r=y';
         header('Location: ' . $url);
         exit;

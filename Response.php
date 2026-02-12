@@ -57,6 +57,9 @@ class Response
         foreach($this->paths as $path){
             $pathString = $path."Path"; 
             if(!$this->$pathString && is_dir($dirname.$path)){
+                if($path == "frame"){
+                    $_SESSION['framePath'] = $dirname.$path."/"; 
+                }
                 $this->$pathString = $dirname.$path."/";  
             } else {
                 // this is not valid for model, but whatever. FIXME later
