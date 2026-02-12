@@ -30,7 +30,6 @@ class RequirePermission {
      * @param string|array $permissions Single permission string or array of permissions
      */
     public function __construct(string|array $permissions) {
-        @session_start(); // TODO - consider not starting the session here. 
         $this->permissions = is_array($permissions) ? $permissions : [$permissions];
     }
 
