@@ -95,7 +95,11 @@ class Module extends Response {
 
             // Fall back to global default
             $this->$pathString = ZERO_ROOT."app/frontend/".$path."/";
+            // and reset this if we didn't set it to something interesting. 
         }
+
+        $_SESSION['framePath'] = $this->framePath; 
+    
     }
 
     /**
