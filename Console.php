@@ -16,6 +16,11 @@ class Console {
     ];
 
     /**
+     * Store all console messages during the request for DevToolbar
+     */
+    private static array $messages = [];
+
+    /**
      * 
      *
      */
@@ -65,18 +70,41 @@ class Console {
         }
         
 
-        //$day  = gmdate("Y-m-d", time()); 
+        //$day  = gmdate("Y-m-d", time());
         $date = "[".gmdate("Y-m-d H:i:s", time())."] ";
-        $ip     = "[{$_SERVER['REMOTE_ADDR']}] "; 
-        $loglvlstring = "[$loglvlstring]: "; 
+        $ip     = "[{$_SERVER['REMOTE_ADDR']}] ";
+        $loglvlstring = "[$loglvlstring]: ";
+
+        // Store message in memory for DevToolbar
+        self::$messages[] = [
+            'timestamp' => time(),
+            'level' => self::$loglvls[$loglvl],
+            'message' => $message
+        ];
 
         file_put_contents($logfile, $date.$ip.$loglvlstring.$message."\n", FILE_APPEND);     
 
     }
     
     public static function __callStatic($loglvl,$msg){
-        $mesg = $msg[0]; 
-        self::log($mesg, strtoupper($loglvl)); 
+        $mesg = $msg[0];
+        self::log($mesg, strtoupper($loglvl));
+    }
+
+    /**
+     * Get all messages logged during this request
+     * Used by DevToolbar plugin
+     */
+    public static function getMessages(): array {
+        return self::$messages;
+    }
+
+    /**
+     * Clear all stored messages
+     * Useful for testing or resetting state
+     */
+    public static function clearMessages(): void {
+        self::$messages = [];
     }
 
 }

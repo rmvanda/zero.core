@@ -40,17 +40,23 @@ class PluginLoader {
 
         $dirs = glob($pluginDir . '*', GLOB_ONLYDIR);
 
+        Console::debug("PluginLoader: Found " . count($dirs) . " plugin directories");
+
         foreach ($dirs as $dir) {
             $name = basename($dir);
             $file = $dir . '/' . $name . '.php';
 
+            Console::debug("PluginLoader: Checking {$name} at {$file}");
+
             if (!file_exists($file)) {
+                Console::debug("PluginLoader: File not found, skipping");
                 continue;
             }
 
             require_once $file;
 
             $class = '\\Zero\\Plugin\\' . $name;
+            Console::debug("PluginLoader: Looking for class {$class}");
 
             if (!class_exists($class)) {
                 Console::warn("Plugin file {$file} exists but class {$class} not found");

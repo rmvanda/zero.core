@@ -20,6 +20,14 @@ class Application {
     /** Loaded plugin instances */
     private array $plugins = [];
 
+    /**
+     * Attribute processing log for DevToolbar.
+     * Each entry: ['name' => string, 'scope' => 'class'|'method', 'target' => string]
+     * Only populated in DEVMODE (when DevToolbar calls enableQueryTracking).
+     * All recorded entries implicitly passed — a failing attribute exits before afterRun().
+     */
+    public static array $attributeLog = [];
+
    /**
     * Entry point to the core of the zero framework.
     *
@@ -159,8 +167,8 @@ class Application {
         \Zero\Core\PluginLoader::hook($this->plugins, 'beforeRun', $module, $endpoint, $args);
 
         $this->checkForAttributes($Module,$endpoint);
-        $module = new $Module();
-        $module -> {$endpoint}($args);
+        $moduleInstance = new $Module();
+        $moduleInstance -> {$endpoint}($args);
 
         \Zero\Core\PluginLoader::hook($this->plugins, 'afterRun', $module, $endpoint, $args);
     }
@@ -169,11 +177,21 @@ class Application {
 
         $reflection = new \ReflectionClass($Module);
 
-        $attributes = $reflection->getAttributes();
+        $classAttributes  = $reflection->getAttributes();
+        $methodAttributes = [];
         if($reflection->hasMethod($endpoint)){
-            $m_attributes = $reflection->getMethod($endpoint)->getAttributes();
-            $attributes = array_merge($attributes,$m_attributes);
+            $methodAttributes = $reflection->getMethod($endpoint)->getAttributes();
         }
+
+        // Record for DevToolbar — scope-tagged so the tab can distinguish class vs method attributes
+        foreach ($classAttributes as $attr) {
+            self::$attributeLog[] = ['name' => $attr->getName(), 'scope' => 'class', 'target' => $Module];
+        }
+        foreach ($methodAttributes as $attr) {
+            self::$attributeLog[] = ['name' => $attr->getName(), 'scope' => 'method', 'target' => $Module . '::' . $endpoint];
+        }
+
+        $attributes = array_merge($classAttributes, $methodAttributes);
 
         if(count($attributes) > 0) {
             Console::debug("Checking " . count($attributes) . " attribute(s) for {$Module}::{$endpoint}");
