@@ -119,16 +119,21 @@ class Module extends Response {
             $subClass = get_class($this) . '\\' . $submoduleName;
             $submodule = new $subClass();
 
-            // $args[0] is whatever was passed to the missing method
-            $subArgs = $args[0] ?? [];
-            if (!is_array($subArgs)) {
-                $subArgs = [$subArgs];
-            }
+            // $args is whatever was passed to the missing method 
+            $subArgs = $args;
 
             // Shift first arg as the new endpoint, default to index
+            // Apply kebab→camelCase conversion (same as Request::friendlyURLConverter)
             $subEndpoint = array_shift($subArgs) ?: 'index';
+            if (strpos($subEndpoint, '-') !== false) {
+                $subEndpoint = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $subEndpoint))));
+            }
 
-            $submodule->{$subEndpoint}($subArgs);
+            try {
+                $submodule->{$subEndpoint}(...$subArgs);
+            } catch(\ArgumentCountError $e){
+                new \Zero\Core\Error(400);
+            }
             return;
         }
 

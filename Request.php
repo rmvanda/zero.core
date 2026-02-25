@@ -84,11 +84,12 @@ class Request
         self::$module   = strtolower(self::$uriArray[0]); // to normalize /BATSHIT/ReQuEsTs
         self::$endpoint = strtolower(self::$uriArray[1]); 
 
-        self::$Module   = ucfirst(self::$module); 
+        self::$Module   = ucfirst(self::$module);
 
         if(strpos(self::$module,"-")!==false){
             self::$moduleOrig = self::$module;
-            self::$module = $this->friendlyURLConverter(self::$module); 
+            self::$module = $this->friendlyURLConverter(self::$module);
+            self::$Module = ucfirst(self::$module);
         }
 
         if(strpos(self::$endpoint,"-")!==false){
@@ -97,7 +98,7 @@ class Request
         }
 
         self::$args     = array_slice(self::$uriArray, 2);
-        self::$args     = count(self::$args) !== 1 ? self::$args : self::$args[0]; 
+        //self::$args     = count(self::$args) !== 1 ? self::$args : self::$args[0]; 
 
         self::$method   = (empty($_POST) && count($_POST??[]) === 0 )?"GET":"POST";
 

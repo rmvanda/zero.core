@@ -168,7 +168,11 @@ class Application {
 
         $this->checkForAttributes($Module,$endpoint);
         $moduleInstance = new $Module();
-        $moduleInstance -> {$endpoint}($args);
+        try { 
+            $moduleInstance -> {$endpoint}(...$args);
+        } catch(\ArgumentCountError $e){
+            new Error(400); 
+        }
 
         \Zero\Core\PluginLoader::hook($this->plugins, 'afterRun', $module, $endpoint, $args);
     }
