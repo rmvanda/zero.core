@@ -28,7 +28,12 @@ class Module extends Response {
         $modulePath = substr($fullClass, strlen('Zero\\Module\\'));
         $urlPath = strtolower(str_replace('\\', '/', $modulePath));
 
+        // Store submodule context for asset loading (Response methods use these)
+        $this->assetUrlPath = $urlPath;
+        $this->moduleName = strtolower(basename(str_replace('\\', '/', $modulePath)));
         $classDir = dirname((new \ReflectionClass($this))->getFileName());
+        $this->moduleAssetDir = $classDir . "/assets/";
+
         $target = $classDir . "/assets";
         $linknm = WEB_ROOT . "/assets/" . $urlPath;
 
@@ -112,6 +117,9 @@ class Module extends Response {
         $moduleDir = dirname((new \ReflectionClass(get_class($this)))->getFileName());
         $submodulePath = $moduleDir . '/submodule/' . $submoduleName . '/' . $submoduleName . '.php';
 
+        Console::debug("Module::__call('{$func}') on " . get_class($this) . " — looking for: {$submodulePath}");
+        Console::debug("Module::__call file_exists: " . (file_exists($submodulePath) ? 'true' : 'false'));
+
         if (file_exists($submodulePath)) {
             require_once $submodulePath;
 
@@ -125,9 +133,14 @@ class Module extends Response {
             // Shift first arg as the new endpoint, default to index
             // Apply kebab→camelCase conversion (same as Request::friendlyURLConverter)
             $subEndpoint = array_shift($subArgs) ?: 'index';
+            //$origEndpoint = $subEndpoint;
             if (strpos($subEndpoint, '-') !== false) {
                 $subEndpoint = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $subEndpoint))));
             }
+
+            // Store active endpoint on submodule for asset loading
+            $submodule->activeEndpoint = $subEndpoint;
+            //$submodule->activeEndpointOrig = $origEndpoint;
 
             try {
                 $submodule->{$subEndpoint}(...$subArgs);
@@ -136,7 +149,7 @@ class Module extends Response {
             }
             return;
         }
-
+        Console::debug("Couldn't find anything. Calling $func using $args"); 
         parent::__call($func, $args);
     }
 }

@@ -197,17 +197,16 @@ abstract class AdminResponse extends Module {
     /**
      * Route to a module's admin controller
      *
-     * @param string $moduleName Module name (e.g., 'links', 'blog')
+     * @param string $moduleClassName PascalCase module class name (e.g., 'Links', 'TechStack')
      * @param string $method Method name (defaults to 'index')
      * @param array $params Method parameters
      * @return mixed Result of controller method
      */
-    protected function routeToModuleAdmin($moduleName, $method = 'index', $params = []) {
-        $moduleClassName = ucfirst(strtolower($moduleName));
+    protected function routeToModuleAdmin($moduleClassName, $method = 'index', $params = []) {
         $adminClass = "Zero\\Module\\{$moduleClassName}\\Admin\\{$moduleClassName}Admin";
 
         if (!class_exists($adminClass)) {
-            new Error(404, "Admin interface not found for module: {$moduleName}");
+            new Error(404, "Admin interface not found for module: {$moduleClassName}");
             return;
         }
 

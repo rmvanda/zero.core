@@ -204,7 +204,7 @@ class Response
 
     protected function getStylesheets()
     {
-        $assetdir = WEB_ROOT."/assets/".Request::$module."/css/";
+        $assetdir = WEB_ROOT . "/assets/" . ($this->assetUrlPath ?? Request::$module) . "/css/";
         if(is_dir($assetdir)){
             $this->loadAssetTypeFromDir("css", $assetdir);
         } else {
@@ -214,7 +214,7 @@ class Response
 
     protected function getScripts()
     {
-        $assetdir = WEB_ROOT."/assets/".Request::$module."/js/";
+        $assetdir = WEB_ROOT . "/assets/" . ($this->assetUrlPath ?? Request::$module) . "/js/";
         if(is_dir($assetdir)){
             $this->loadAssetTypeFromDir("js", $assetdir);
         } else {
@@ -236,16 +236,17 @@ class Response
     protected function getComponents()
     {
         $globalComponentDir = ZERO_ROOT . 'app/frontend/www/shadow-component/components/';
-        $moduleComponentDir = MODULE_PATH . Request::$Module . "/assets/component/";
+        $moduleComponentDir = ($this->moduleAssetDir ?? MODULE_PATH . Request::$Module . "/assets/") . "component/";
 
         // Load global components first
         $this->getComponentsInDirectory($globalComponentDir, 'global');
 
         // Then load module-specific components
+        $componentLabel = $this->moduleName ?? Request::$module;
         if(is_dir($moduleComponentDir)){
-            $this->getComponentsInDirectory($moduleComponentDir, Request::$module);
+            $this->getComponentsInDirectory($moduleComponentDir, $componentLabel);
         } else {
-            echo "<script>console.log('No component directory for " . Request::$module . " module');</script>";
+            echo "<script>console.log('No component directory for " . $componentLabel . " module');</script>";
         }
     }
 
@@ -291,13 +292,18 @@ class Response
         $assets = scandir($dir);
         $pubdir = str_replace(WEB_ROOT, "", $dir);
 
-        // Build list of filenames to match 
+        // Build list of filenames to match
         // (module name, endpoint name, and their kebab-case versions)
+        $moduleName = $this->moduleName ?? Request::$module;
+        $moduleNameOrig = Request::$moduleOrig;
+        $endpointName = $this->activeEndpoint ?? Request::$endpoint;
+        $endpointNameOrig = $this->activeEndpointOrig ?? Request::$endpointOrig;
+
         $matches = [
-            Request::$module . '.' . $type,
-            Request::$moduleOrig . '.' . $type,
-            Request::$endpoint . '.' . $type,
-            Request::$endpointOrig . '.' . $type,
+            $moduleName . '.' . $type,
+            $moduleNameOrig . '.' . $type,
+            $endpointName . '.' . $type,
+            $endpointNameOrig . '.' . $type,
         ];
 
         foreach($assets as $asset){
@@ -351,12 +357,14 @@ class Response
      * Send success response (JSON) or redirect (HTML)
      * For CRUD operations that redirect on success
      */
+    /*
     protected function success($message, $data = []) {
         if (Request::$acceptsJSON) {
             $this->export(array_merge(['success' => true, 'message' => $message], $data));
             exit;
         }
     }
+    */
 
     /**
      * Send error response (JSON) or return false (HTML renders with error)
