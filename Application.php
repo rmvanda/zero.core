@@ -153,6 +153,7 @@ class Application {
      *
      */
     public function run($module, $endpoint, $args){
+        Console::debug("Module: $module Endpoint: $endpoint Args: ".print_r($args,true)); 
         if ($this->isModule($Module=ucfirst($module))) {
             $Module = "\\Zero\\Module\\".$Module;
         } else {

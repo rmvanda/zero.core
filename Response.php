@@ -357,14 +357,12 @@ class Response
      * Send success response (JSON) or redirect (HTML)
      * For CRUD operations that redirect on success
      */
-    /*
     protected function success($message, $data = []) {
         if (Request::$acceptsJSON) {
             $this->export(array_merge(['success' => true, 'message' => $message], $data));
             exit;
         }
     }
-    */
 
     /**
      * Send error response (JSON) or return false (HTML renders with error)

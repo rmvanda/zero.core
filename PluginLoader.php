@@ -40,33 +40,33 @@ class PluginLoader {
 
         $dirs = glob($pluginDir . '*', GLOB_ONLYDIR);
 
-        Console::debug("PluginLoader: Found " . count($dirs) . " plugin directories");
+        //Console::debug("PluginLoader: Found " . count($dirs) . " plugin directories");
 
         foreach ($dirs as $dir) {
             $name = basename($dir);
             $file = $dir . '/' . $name . '.php';
 
-            Console::debug("PluginLoader: Checking {$name} at {$file}");
+            //Console::debug("PluginLoader: Checking {$name} at {$file}");
 
             if (!file_exists($file)) {
-                Console::debug("PluginLoader: File not found, skipping");
+                //Console::debug("PluginLoader: File not found, skipping");
                 continue;
             }
 
             require_once $file;
 
             $class = '\\Zero\\Plugin\\' . $name;
-            Console::debug("PluginLoader: Looking for class {$class}");
+            //Console::debug("PluginLoader: Looking for class {$class}");
 
             if (!class_exists($class)) {
-                Console::warn("Plugin file {$file} exists but class {$class} not found");
+                //Console::warn("Plugin file {$file} exists but class {$class} not found");
                 continue;
             }
 
             $plugin = new $class();
 
             if (!$plugin instanceof Plugin) {
-                Console::warn("Plugin {$class} does not extend \\Zero\\Plugin base class");
+                //Console::warn("Plugin {$class} does not extend \\Zero\\Plugin base class");
                 continue;
             }
 
@@ -74,7 +74,7 @@ class PluginLoader {
             $plugin->cacheDir = $cacheBase . $name . '/';
 
             $plugins[] = $plugin;
-            Console::debug("Loaded plugin: {$name} (priority: {$plugin->getPriority()})");
+            //Console::debug("Loaded plugin: {$name} (priority: {$plugin->getPriority()})");
         }
 
         // Sort by priority (lower first), then alphabetical for ties
@@ -100,7 +100,7 @@ class PluginLoader {
             } catch (\Throwable $e) {
                 // Plugins must never break the framework
                 $name = get_class($plugin);
-                Console::error("Plugin {$name}::{$hook}() threw: " . $e->getMessage());
+                //Console::error("Plugin {$name}::{$hook}() threw: " . $e->getMessage());
             }
         }
     }
