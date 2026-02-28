@@ -44,7 +44,6 @@ class RequireLogin {
             $this->redirectToLogin();
         }
 
-        Console::debug("RequireLogin attribute passed: user {$_SESSION['user_id']} is logged in");
         return $this->approved = true;
     }
 }

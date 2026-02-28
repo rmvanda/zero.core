@@ -21,7 +21,6 @@ class RequireAuthLevel{
             Console::warn("RequireAuthLevel attribute blocked request: required level {$this->level}, user level: {$userLevel}");
             return new Error(401, "Authentication required");
         }
-        Console::debug("RequireAuthLevel attribute passed: user level {$_SESSION['auth_level']} >= required level {$this->level}");
         return $this->approved = true;
     }
 

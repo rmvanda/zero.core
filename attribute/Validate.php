@@ -73,7 +73,6 @@ class Validate {
      * TODO: Implement full validation logic
      */
     public function handler(): bool {
-        Console::debug("Validate processing " . count($this->rules) . " rule(s) [STUB - not fully implemented]");
 
         foreach ($this->rules as $param => $rules) {
             $value = $_POST[$param] ?? $_GET[$param] ?? null;

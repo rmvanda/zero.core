@@ -57,7 +57,6 @@ class RequirePermission {
             }
         }
 
-        Console::debug("RequirePermission attribute passed: user {$userId} has all required permissions");
         return $this->approved = true;
     }
 

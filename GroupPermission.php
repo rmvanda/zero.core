@@ -41,7 +41,6 @@ class GroupPermission {
      */
     public function grant(int $entityId, int $groupId, bool $canRead = true, bool $canUpdate = false, bool $canDelete = false): bool {
         try {
-            Console::debug("Granting permissions for {$this->entityName} $entityId to group $groupId");
 
             $stmt = $this->db->prepare("
                 INSERT INTO {$this->permissionTable} ({$this->entityIdColumn}, group_id, can_read, can_update, can_delete)
@@ -53,7 +52,6 @@ class GroupPermission {
             ");
 
             $stmt->execute([$entityId, $groupId, $canRead ? 1 : 0, $canUpdate ? 1 : 0, $canDelete ? 1 : 0]);
-            Console::log("Permissions granted successfully");
 
             return true;
         } catch (\PDOException $e) {
@@ -72,7 +70,6 @@ class GroupPermission {
      */
     public function revoke(int $entityId, int $groupId): bool {
         try {
-            Console::debug("Revoking permissions for {$this->entityName} $entityId from group $groupId");
 
             $stmt = $this->db->prepare("
                 DELETE FROM {$this->permissionTable}
@@ -80,7 +77,6 @@ class GroupPermission {
             ");
 
             $stmt->execute([$entityId, $groupId]);
-            Console::log("Permissions revoked successfully");
 
             return true;
         } catch (\PDOException $e) {
@@ -100,7 +96,6 @@ class GroupPermission {
      */
     public function update(int $entityId, int $groupId, array $permissions): bool {
         try {
-            Console::debug("Updating permissions for {$this->entityName} $entityId and group $groupId");
 
             $updateFields = [];
             $params = [];
@@ -134,7 +129,6 @@ class GroupPermission {
             ");
 
             $stmt->execute($params);
-            Console::log("Permissions updated successfully");
 
             return true;
         } catch (\PDOException $e) {
@@ -278,7 +272,6 @@ class GroupPermission {
             }
         }
 
-        Console::log("Batch grant completed: " . count($results['success']) . " succeeded, " . count($results['failed']) . " failed");
 
         return $results;
     }

@@ -13,6 +13,7 @@ class Console {
         "CRITICAL",
         "ALERT",
         "EMERGENCY",
+        "BAN"
     ];
 
     /**
@@ -37,9 +38,11 @@ class Console {
         if(!defined("ZERO_LOG_LEVEL")){
             define("ZERO_LOG_LEVEL", "INFO"); 
         }
+
         if(!defined("ZERO_LOG_LEVEL_INT")){
             define("ZERO_LOG_LEVEL_INT", 0); // TODO; put in a config or something. 
         }
+
         if(defined("ZERO_LOG_LEVEL_INT")){
             $logthreshold = ZERO_LOG_LEVEL_INT;  
         } else {
@@ -69,7 +72,6 @@ class Console {
             $message = print_r($message,true);     
         }
         
-
         //$day  = gmdate("Y-m-d", time());
         $date = "[".gmdate("Y-m-d H:i:s", time())."] ";
         $ip     = "[{$_SERVER['REMOTE_ADDR']}] ";
@@ -88,7 +90,14 @@ class Console {
     
     public static function __callStatic($loglvl,$msg){
         $mesg = $msg[0];
-        self::log($mesg, strtoupper($loglvl));
+        $logfile = null; 
+        if($msg[1]){
+            $logfile = $msg[1]; 
+        } else if($loglvl == "ban"){
+            $logfile = "/var/log/php-fpm/zero-tolerance.log"; 
+        }
+        
+        self::log($mesg, strtoupper($loglvl), $logfile);
     }
 
     /**

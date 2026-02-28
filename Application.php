@@ -142,6 +142,21 @@ class Application {
         return $this;
     }
 
+    public function banmotherfuckers(){
+        if(str_contains($_SERVER['REQUEST_URI'], ".php")){
+            Console::ban("trying to call some .php file."); 
+            die("permabanned");
+        }
+        if(str_contains($_SERVER['REQUEST_URI'], ".env")){
+            Console::ban("trying to call some .env file."); 
+            die("permabanned");
+        }
+        if(str_contains($_SERVER['REQUEST_URI'], "wp-")){
+            Console::ban("trying to call some wordpress file."); 
+            die("permabanned");
+        }
+    }
+
 
     /**
      *  @function run
@@ -153,7 +168,9 @@ class Application {
      *
      */
     public function run($module, $endpoint, $args){
-        Console::debug("Module: $module Endpoint: $endpoint Args: ".print_r($args,true)); 
+        $this->banmotherfuckers(); 
+        //Console::log("Module: $module Endpoint: $endpoint Args: ".print_r($args,true)); 
+
         if ($this->isModule($Module=ucfirst($module))) {
             $Module = "\\Zero\\Module\\".$Module;
         } else {
@@ -198,18 +215,12 @@ class Application {
 
         $attributes = array_merge($classAttributes, $methodAttributes);
 
-        if(count($attributes) > 0) {
-            Console::debug("Checking " . count($attributes) . " attribute(s) for {$Module}::{$endpoint}");
-        }
-
         $this->handleAttributes($attributes);
 
     }
 
     private function handleAttributes($attributes){
          foreach($attributes as $attribute){
-            $attributeName = $attribute->getName();
-            Console::debug("Processing attribute: {$attributeName}");
             $attr = $attribute->newInstance();
             $attr->handler();
          }

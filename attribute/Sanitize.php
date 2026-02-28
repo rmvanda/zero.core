@@ -50,7 +50,6 @@ class Sanitize {
     }
 
     public function handler(): bool {
-        Console::debug("Sanitize processing " . count($this->params) . " parameter(s)");
 
         foreach ($this->params as $key => $value) {
             // Determine param name and sanitization method
@@ -98,7 +97,6 @@ class Sanitize {
 
         // Auto-detect ID fields (case-insensitive check for 'id' suffix)
         if ($method === null && preg_match('/id$/i', $paramName)) {
-            Console::debug("  Auto-detected '{$paramName}' as numeric ID");
             return $this->sanitizeAsInt($value);
         }
 
@@ -109,7 +107,6 @@ class Sanitize {
 
         // Method is a preset name (filename, slug, alphanumeric, etc.)
         if (is_string($method) && isset(self::PRESETS[$method])) {
-            Console::debug("  Using preset '{$method}' for '{$paramName}'");
             return $this->sanitizeWithPattern($value, self::PRESETS[$method]);
         }
 
@@ -190,15 +187,6 @@ class Sanitize {
      * Log when a value is changed by sanitization
      */
     private function logChange(string $param, mixed $original, mixed $sanitized, string $source): void {
-        if ($original !== $sanitized) {
-            $origStr = is_array($original) ? json_encode($original) : (string) $original;
-            $sanitizedStr = is_array($sanitized) ? json_encode($sanitized) : (string) $sanitized;
-
-            // Truncate for logging
-            if (strlen($origStr) > 50) $origStr = substr($origStr, 0, 50) . '...';
-            if (strlen($sanitizedStr) > 50) $sanitizedStr = substr($sanitizedStr, 0, 50) . '...';
-
-            Console::debug("  Sanitized {$source}['{$param}']: '{$origStr}' -> '{$sanitizedStr}'");
-        }
+        // No-op: sanitization changes are silent
     }
 }
