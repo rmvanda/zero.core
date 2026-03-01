@@ -248,7 +248,7 @@ class Application {
             //return true; 
         }
 
-        Console::log("Dumb autoloader Failed to load $class after looking in $psrPath"); 
+        Console::warn("Dumb autoloader Failed to load $class after looking in $psrPath");
 
         // try another, simpler approach for module sub-classes: 
         $check = str_replace("Zero", "zero", $class); 
@@ -258,13 +258,13 @@ class Application {
         $step  = explode("\\", $check); 
         $newPath = ROOT_PATH.implode(DIRECTORY_SEPARATOR,$step).".php";
 
-        Console::log("Atempting to load $class after looking in $newPath"); 
+        Console::debug("Atempting to load $class after looking in $newPath");
 
         if(file_exists($newPath)){
             return require_once($newPath); 
         }
 
-        Console::log("STILL Failed to load $class after looking in $newPath"); 
+        Console::warn("STILL Failed to load $class after looking in $newPath");
 
         //echo "Failed to load $class after looking in $psrPath<br>"; 
         return false; 
@@ -282,7 +282,7 @@ class Application {
         ){
            return require_once $file;  
         } 
-        Console::log("Could not find a $module module in $a or $b"); 
+        Console::warn("Could not find a $module module in $a or $b");
         return false; 
     }
 

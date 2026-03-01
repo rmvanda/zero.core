@@ -1,10 +1,11 @@
 <?php
 
-namespace Zero\Core; 
+namespace Zero\Core;
 
 class Console {
 
-    public static $loglvls = [
+    // Log levels in ascending severity order; index = numeric level
+    private const LEVELS = [
         "DEBUG",
         "INFO",
         "NOTICE",
@@ -22,82 +23,113 @@ class Console {
     private static array $messages = [];
 
     /**
-     * 
-     *
+     * Cached log threshold (resolved once from constants, then reused)
      */
-    public static function log($message, 
-                string|int|null $loglvl = null, 
-                   string|null $logfile = null){
+    private static ?int $threshold = null;
 
-        /*
-        if(!str_contains($_SERVER['REMOTE_ADDR'], DEV_SUBNET)){
-            return; // TODO. 
+    /**
+     * Resolve and cache the configured log threshold.
+     * Checks ZERO_LOG_LEVEL_INT (numeric index) first, then ZERO_LOG_LEVEL (string name).
+     * Defaults to 0 (DEBUG) so everything is logged until explicitly configured.
+     */
+    private static function getThreshold(): int {
+        if (self::$threshold === null) {
+            if (defined('ZERO_LOG_LEVEL_INT')) {
+                self::$threshold = (int) ZERO_LOG_LEVEL_INT;
+            } elseif (defined('ZERO_LOG_LEVEL')) {
+                $idx = array_search(ZERO_LOG_LEVEL, self::LEVELS);
+                self::$threshold = $idx !== false ? (int) $idx : 0;
+            } else {
+                self::$threshold = 0; // DEBUG — log everything by default
+            }
         }
-        */
+        return self::$threshold;
+    }
 
-        if(!defined("ZERO_LOG_LEVEL")){
-            define("ZERO_LOG_LEVEL", "INFO"); 
-        }
+    /**
+     * Core log method.
+     *
+     * @param mixed            $message  String, array, or object to log
+     * @param string|int|null  $loglvl   Level name ("WARN") or index (3). Defaults to DEBUG.
+     * @param string|null      $logfile  Override log file path
+     */
+    public static function log($message, string|int|null $loglvl = null, string|null $logfile = null): void {
 
-        if(!defined("ZERO_LOG_LEVEL_INT")){
-            define("ZERO_LOG_LEVEL_INT", 0); // TODO; put in a config or something. 
-        }
-
-        if(defined("ZERO_LOG_LEVEL_INT")){
-            $logthreshold = ZERO_LOG_LEVEL_INT;  
+        // Resolve level to a numeric index and display string
+        if ($loglvl === null) {
+            $loglvl = 0;
+            $loglvlstring = self::LEVELS[0];
+        } elseif (!is_numeric($loglvl)) {
+            $idx = array_search(strtoupper((string) $loglvl), self::LEVELS);
+            if ($idx === false) {
+                // Unknown level name — fall back to DEBUG and surface it in the string
+                $loglvlstring = "UNKNOWN({$loglvl})";
+                $loglvl = 0;
+            } else {
+                $loglvl = (int) $idx;
+                $loglvlstring = self::LEVELS[$loglvl];
+            }
         } else {
-            $logthreshold = array_search(ZERO_LOG_LEVEL, self::$loglvls); 
+            $loglvl = (int) $loglvl;
+            $loglvlstring = self::LEVELS[$loglvl] ?? "LEVEL{$loglvl}";
         }
 
-        if(!$loglvl){
-            $loglvl = 0; // DEBUG by default.. 
+        // Serialize non-string messages
+        if (is_array($message) || is_object($message)) {
+            $message = print_r($message, true);
         }
 
-        if(!is_numeric($loglvl)){
-            $loglvlstring = $loglvl; 
-            $loglvl = array_search($loglvl, self::$loglvls); 
-        } else {
-            $loglvlstring = self::$loglvls[$loglvl]; 
+        // Walk the backtrace to find the first frame outside Console.php
+        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 10);
+        $frame = $trace[0];
+        foreach ($trace as $f) {
+            if (!isset($f['file']) || basename($f['file']) !== 'Console.php') {
+                $frame = $f;
+                break;
+            }
         }
 
-        if($loglvl < $logthreshold){
-            return; 
-        }
-
-        if(!$logfile){
-            $logfile = "/var/log/php-fpm/zero.log"; 
-        }
-
-        if(is_array($message)||is_object($message)){
-            $message = print_r($message,true);     
-        }
-        
-        //$day  = gmdate("Y-m-d", time());
-        $date = "[".gmdate("Y-m-d H:i:s", time())."] ";
-        $ip     = "[{$_SERVER['REMOTE_ADDR']}] ";
-        $loglvlstring = "[$loglvlstring]: ";
-
-        // Store message in memory for DevToolbar
+        // Store for DevToolbar (always, regardless of log threshold)
         self::$messages[] = [
             'timestamp' => time(),
-            'level' => self::$loglvls[$loglvl],
-            'message' => $message
+            'level'     => $loglvlstring,
+            'message'   => $message,
+            'caller'    => ($frame['file'] ?? '') . ':' . ($frame['line'] ?? ''),
         ];
 
-        file_put_contents($logfile, $date.$ip.$loglvlstring.$message."\n", FILE_APPEND);     
-
-    }
-    
-    public static function __callStatic($loglvl,$msg){
-        $mesg = $msg[0];
-        $logfile = null; 
-        if($msg[1]){
-            $logfile = $msg[1]; 
-        } else if($loglvl == "ban"){
-            $logfile = "/var/log/php-fpm/zero-tolerance.log"; 
+        if ($loglvl < self::getThreshold()) {
+            return;
         }
-        
-        self::log($mesg, strtoupper($loglvl), $logfile);
+
+        $caller = '[' . basename($frame['file'] ?? 'unknown') . ':' . ($frame['line'] ?? '?') . '] ';
+
+        $date  = '[' . gmdate('Y-m-d H:i:s') . '] ';
+        $ip    = '[' . ($_SERVER['REMOTE_ADDR'] ?? 'cli') . '] ';
+        $level = "[{$loglvlstring}]: ";
+
+        if (!$logfile) {
+            $logfile = '/var/log/php-fpm/zero.log';
+        }
+
+        file_put_contents($logfile, $date . $ip . $level . $caller . $message . "\n", FILE_APPEND);
+    }
+
+    /**
+     * Magic static dispatch: Console::debug(), ::info(), ::warn(), ::error(), ::ban(), etc.
+     * Optional second argument overrides the log file path.
+     */
+    public static function __callStatic(string $loglvl, array $msg): void {
+        $message      = $msg[0];
+        $loglvlUpper  = strtoupper($loglvl);
+        $logfile      = null;
+
+        if (isset($msg[1])) {
+            $logfile = $msg[1];
+        } elseif ($loglvlUpper === 'BAN') {
+            $logfile = '/var/log/php-fpm/zero-tolerance.log';
+        }
+
+        self::log($message, $loglvlUpper, $logfile);
     }
 
     /**
