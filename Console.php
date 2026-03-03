@@ -104,7 +104,13 @@ class Console {
         $caller = '[' . basename($frame['file'] ?? 'unknown') . ':' . ($frame['line'] ?? '?') . '] ';
 
         $date  = '[' . gmdate('Y-m-d H:i:s') . '] ';
-        $ip    = '[' . ($_SERVER['REMOTE_ADDR'] ?? 'cli') . '] ';
+        $ip    = '[' . (
+            (
+                $_SERVER['HTTP_X_FORWARDED_FOR']  ||
+                $_SERVER['HTTP_CF_CONNECTING_IP'] ||
+                $_SERVER['REMOTE_ADDR'] 
+            )
+            ?? 'cli') . '] ';
         $level = "[{$loglvlstring}]: ";
 
         if (!$logfile) {

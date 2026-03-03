@@ -1,7 +1,8 @@
 <?php
 
-namespace Zero\Core; 
-//use \Zero\Core\Request as Request; 
+namespace Zero\Core;
+//use \Zero\Core\Request as Request;
+use \Zero\Lib\CloudFlare\CloudFlare;
 
 function print_wrap($txt,$tag){
     printf("<%s>%s</%s>",$tag,$txt,$tag); 
@@ -143,16 +144,23 @@ class Application {
     }
 
     public function banmotherfuckers(){
+        // CF-Connecting-IP is the true client IP behind Cloudflare (single, reliable)
+        // X-Forwarded-For can be a chain; grab the first entry as fallback
+        $ip = $_SERVER['HTTP_CF_CONNECTING_IP']
+            ?? explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '')[0]
+            ?? $_SERVER['REMOTE_ADDR'];
+        $ip = trim($ip);
+
         if(str_contains($_SERVER['REQUEST_URI'], ".php")){
-            Console::ban("trying to call some .php file."); 
+            CloudFlare::block($ip, "trying to call some .php file. ({$_SERVER['REQUEST_URI']})");
             die("permabanned");
         }
         if(str_contains($_SERVER['REQUEST_URI'], ".env")){
-            Console::ban("trying to call some .env file."); 
+            CloudFlare::block($ip, "trying to call some .env file. ({$_SERVER['REQUEST_URI']})");
             die("permabanned");
         }
         if(str_contains($_SERVER['REQUEST_URI'], "wp-")){
-            Console::ban("trying to call some wordpress file."); 
+            CloudFlare::block($ip, "trying to call some wordpress file. ({$_SERVER['REQUEST_URI']})");
             die("permabanned");
         }
     }
