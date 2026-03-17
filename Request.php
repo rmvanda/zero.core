@@ -86,14 +86,14 @@ class Request
 
         self::$Module   = ucfirst(self::$module);
 
+        self::$moduleOrig = self::$module;
         if(strpos(self::$module,"-")!==false){
-            self::$moduleOrig = self::$module;
             self::$module = $this->friendlyURLConverter(self::$module);
             self::$Module = ucfirst(self::$module);
         }
 
+        self::$endpointOrig = self::$endpoint;
         if(strpos(self::$endpoint,"-")!==false){
-            self::$endpointOrig = self::$endpoint;
             self::$endpoint = $this->friendlyURLConverter(self::$endpoint); 
         }
 
