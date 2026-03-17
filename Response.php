@@ -132,7 +132,10 @@ class Response
                 // want to have something that deep in your Index module anyway.
                 $this->build($fallback -> {Request::$module}(Request::$endpoint)); 
             } else {
-                new Error(404, "Failed to find a respose to give for $func");
+                new Error(404, "Failed to find a response to give for ".
+                    Request::$moduleOrig . 
+                     ( $func == "index" ? "" : "/".Request::$endpointOrig)
+                ) ;
             }
         }
     }
