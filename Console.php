@@ -105,12 +105,12 @@ class Console {
 
         $date  = '[' . gmdate('Y-m-d H:i:s') . '] ';
         $ip    = '[' . (
-            (
-                $_SERVER['HTTP_X_FORWARDED_FOR']  ||
-                $_SERVER['HTTP_CF_CONNECTING_IP'] ||
-                $_SERVER['REMOTE_ADDR'] 
-            )
-            ?? 'cli') . '] ';
+            
+                $_SERVER['HTTP_X_FORWARDED_FOR']  ??
+                $_SERVER['HTTP_CF_CONNECTING_IP'] ??
+                $_SERVER['REMOTE_ADDR'] ??
+            'cli'
+            ) . '] ';
         $level = "[{$loglvlstring}]: ";
 
         if (!$logfile) {
