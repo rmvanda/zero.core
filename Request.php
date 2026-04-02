@@ -100,7 +100,7 @@ class Request
         self::$args     = array_slice(self::$uriArray, 2);
         //self::$args     = count(self::$args) !== 1 ? self::$args : self::$args[0]; 
 
-        self::$method   = (empty($_POST) && count($_POST??[]) === 0 )?"GET":"POST";
+        self::$method   = $_SERVER['REQUEST_METHOD'];
 
 	}
 

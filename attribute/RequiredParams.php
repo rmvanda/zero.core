@@ -2,7 +2,7 @@
 namespace Zero\Core\Attribute;
 
 use \Attribute;
-use \Zero\Core\Error;
+use \Zero\Core\HTTPError;
 use \Zero\Core\Console;
 
 #[Attribute]
@@ -31,7 +31,7 @@ class RequiredParams {
         if (!empty($missing)) {
             $missingList = implode(', ', $missing);
             Console::error("RequiredParams attribute blocked request - Missing: {$missingList}");
-            new Error(400, "Missing required parameter(s): $missingList");
+            throw new HTTPError(400, "Missing required parameter(s): $missingList");
         }
 
         return true;

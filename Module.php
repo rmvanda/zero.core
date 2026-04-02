@@ -108,6 +108,17 @@ class Module extends Response {
     }
 
     /**
+     * Include an auxiliary file from the current module's aux/ directory
+     */
+    public function getAuxiliary(string $file){
+        $auxFile = MODULE_PATH . Request::$Module . "/aux/" . $file . ".php";
+        Console::debug("Looking for aux file in $auxFile"); 
+        if(file_exists($auxFile)){
+            include $auxFile;
+        }
+    }
+
+    /**
      * Override __call to check for submodules before falling back to Response::__call
      * (view file lookup). Naturally recursive — submodules extend Module, so their
      * own __call does the same check, enabling infinite nesting.
@@ -145,7 +156,7 @@ class Module extends Response {
             try {
                 $submodule->{$subEndpoint}(...$subArgs);
             } catch(\ArgumentCountError $e){
-                new \Zero\Core\Error(400);
+                throw new HTTPError(400);
             }
             return;
         }

@@ -3,7 +3,7 @@ namespace Zero\Core\Attribute;
 
 use \Attribute;
 use \Zero\Core\Console;
-use \Zero\Core\Error;
+use \Zero\Core\HTTPError;
 
 /**
  * Validate Attribute - Validates POST/GET parameters before method execution
@@ -88,7 +88,7 @@ class Validate {
         if (!empty($this->errors)) {
             $errorList = implode('; ', $this->errors);
             Console::error("Validation failed: {$errorList}");
-            new Error(400, "Validation failed: {$errorList}");
+            throw new HTTPError(400, "Validation failed: {$errorList}");
         }
 
         return true;

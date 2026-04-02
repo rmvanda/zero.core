@@ -4,7 +4,7 @@ namespace Zero\Core\Attribute;
 
 use \Attribute;
 use \Zero\Core\Console;
-use \Zero\Core\Error;
+use \Zero\Core\HTTPError;
 use \Zero\Core\Database;
 
 /**
@@ -33,7 +33,7 @@ class AllowWithToken {
     /**
      * Check for Bearer token and authenticate if present
      *
-     * @return bool|Error Returns true to continue, Error to halt
+     * @return bool Returns true to continue, throws HTTPError to halt
      */
     public function handler() {
         // Get the Authorization header
@@ -49,7 +49,7 @@ class AllowWithToken {
         // Must be Bearer format
         if (!preg_match('/^Bearer\s+(.+)$/i', $authHeader, $matches)) {
             Console::warn("AllowWithToken: malformed Authorization header");
-            return new Error(401, "Invalid authorization header");
+            throw new HTTPError(401, "Invalid authorization header");
         }
 
         $token = $matches[1];
@@ -57,7 +57,7 @@ class AllowWithToken {
         // Must be a zk_ prefixed token
         if (!str_starts_with($token, 'zk_')) {
             Console::warn("AllowWithToken: token missing zk_ prefix");
-            return new Error(401, "Invalid API token format");
+            throw new HTTPError(401, "Invalid API token format");
         }
 
         // Look up the token hash
@@ -74,13 +74,13 @@ class AllowWithToken {
 
             if (!$tokenRow) {
                 Console::warn("AllowWithToken: token not found");
-                return new Error(401, "Invalid API token");
+                throw new HTTPError(401, "Invalid API token");
             }
 
             // Check expiration
             if ($tokenRow['expires_at'] !== null && strtotime($tokenRow['expires_at']) < time()) {
                 Console::warn("AllowWithToken: token expired");
-                return new Error(401, "API token expired");
+                throw new HTTPError(401, "API token expired");
             }
 
             // Update last_used_at
@@ -94,7 +94,7 @@ class AllowWithToken {
 
             if (!$user) {
                 Console::warn("AllowWithToken: user not found for token");
-                return new Error(401, "Token owner not found");
+                throw new HTTPError(401, "Token owner not found");
             }
 
             // Populate session — same keys as Auth::complete()
@@ -131,7 +131,7 @@ class AllowWithToken {
 
         } catch (\Exception $e) {
             error_log("AllowWithToken error: " . $e->getMessage());
-            return new Error(500, "Authentication error");
+            throw new HTTPError(500, "Authentication error");
         }
 
         return $this->approved = true;

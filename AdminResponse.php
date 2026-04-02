@@ -32,6 +32,7 @@ abstract class AdminResponse extends Module {
 
     /**
      * Constructor - enforces admin permission check
+     * and prevents public symlink creation for admin assets
      */
     public function __construct() {
         // Check base admin access
@@ -42,6 +43,81 @@ abstract class AdminResponse extends Module {
         }
 
         parent::__construct();
+
+        // Remove any auto-created public symlink — admin assets must not be web-accessible
+        $fullClass = get_class($this);
+        $modulePath = substr($fullClass, strlen('Zero\\Module\\'));
+        $linkPath = WEB_ROOT . '/assets/' . strtolower(str_replace('\\', '/', $modulePath));
+        if (is_link($linkPath)) {
+            unlink($linkPath);
+            // Clean up empty parent dirs created by Module::__construct's mkdir()
+            $parentDir = dirname($linkPath);
+            $assetsRoot = WEB_ROOT . '/assets';
+            while ($parentDir !== $assetsRoot && is_dir($parentDir) && !(new \FilesystemIterator($parentDir))->valid()) {
+                rmdir($parentDir);
+                $parentDir = dirname($parentDir);
+            }
+        }
+    }
+
+    /**
+     * Override: inline admin stylesheets instead of linking to public URLs
+     *
+     * Always loads shared admin base styles first, then module-specific styles.
+     * Mirrors the filename-matching logic of Response::loadAssetTypeFromDir.
+     */
+    protected function getStylesheets() {
+        $this->inlineAdminAssets('css');
+    }
+
+    /**
+     * Override: inline admin scripts instead of linking to public URLs
+     */
+    protected function getScripts() {
+        $this->inlineAdminAssets('js');
+    }
+
+    /**
+     * Inline admin assets from module asset directories
+     *
+     * Searches the main Admin assets dir first (shared base styles like admin.css),
+     * then the current module's asset dir (module-specific styles).
+     * Files are matched by module name and endpoint name, same as the framework default.
+     */
+    private function inlineAdminAssets(string $type) {
+        if (!in_array($type, ['css', 'js'], true)) return;
+        $tag = $type === 'css' ? 'style' : 'script';
+
+        // Build filename match list (mirrors Response::loadAssetTypeFromDir)
+        $moduleName = $this->moduleName ?? Request::$module;
+        $endpointName = $this->activeEndpoint ?? Request::$endpoint;
+        $endpointNameOrig = $this->activeEndpointOrig ?? Request::$endpointOrig ?? '';
+
+        $matches = array_unique(array_filter([
+            'admin.' . $type,              // always load shared admin base
+            $moduleName . '.' . $type,
+            $endpointName . '.' . $type,
+            $endpointNameOrig . '.' . $type,
+        ]));
+
+        $loaded = [];
+        $adminDir = MODULE_PATH . 'Admin/assets/' . $type . '/';
+        $moduleDir = $this->moduleAssetDir . $type . '/';
+
+        // Search admin assets dir first, then module-specific dir
+        foreach (array_unique([$adminDir, $moduleDir]) as $dir) {
+            if (!is_dir($dir)) continue;
+            foreach (glob($dir . '*.' . $type) as $file) {
+                $filename = basename($file);
+                if (isset($loaded[$filename])) continue;
+                if (in_array($filename, $matches)) {
+                    echo "<{$tag}>/* {$filename} */\n";
+                    readfile($file);
+                    echo "\n</{$tag}>\n";
+                    $loaded[$filename] = true;
+                }
+            }
+        }
     }
 
     /**
@@ -206,16 +282,14 @@ abstract class AdminResponse extends Module {
         $adminClass = "Zero\\Module\\{$moduleClassName}\\Admin\\{$moduleClassName}Admin";
 
         if (!class_exists($adminClass)) {
-            new Error(404, "Admin interface not found for module: {$moduleClassName}");
-            return;
+            throw new HTTPError(404, "Admin interface not found for module: {$moduleClassName}");
         }
 
         $controller = new $adminClass();
 
         // Ensure method is a string and exists
         if (!is_string($method) || !method_exists($controller, $method)) {
-            new Error(404, "Admin method not found: " . (is_string($method) ? $method : 'invalid'));
-            return;
+            throw new HTTPError(404, "Admin method not found: " . (is_string($method) ? $method : 'invalid'));
         }
 
         return $controller->$method(...$params);

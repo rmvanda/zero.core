@@ -8,8 +8,6 @@ class Response
     public $title;  // TODO - this isn't quite hooked in correctly. 
 
     protected $status; 
-    private $message; // TODO DEPRECATED
-    private $body;   // TODO DEPRECATED
     protected $data; 
 
     protected $included = array(); 
@@ -51,15 +49,18 @@ class Response
     }
 
     protected function defineBasePaths(){
-        $class_info = new \ReflectionClass(get_class($this));
-        $dirname    = dirname($class_info->getFileName())."/"; 
+        //$class_info = new \ReflectionClass(get_class($this));
+        //$dirname    = dirname($class_info->getFileName())."/"; 
+        $dirname = MODULE_PATH.Request::$Module."/"; 
+
 
         foreach($this->paths as $path){
             $pathString = $path."Path"; 
             if(!$this->$pathString && is_dir($dirname.$path)){
-                if($path == "frame"){
-                    $_SESSION['framePath'] = $dirname.$path."/"; 
-                }
+// TODO - CLAUDE:
+// The purpose of putting the frame in the session was to allow the frame to persist
+// in the event of hitting things like error pages or "you need to log on" pages 
+// naturally, this implementation does not work and should be revisited. 
                 $this->$pathString = $dirname.$path."/";  
             } else {
                 // this is not valid for model, but whatever. FIXME later
@@ -74,13 +75,13 @@ class Response
         // At this point, we know there's no method to handle the request. 
         // So, we're going to see if there's a view file to use::
         // -- Maybe in the module's view folder? 
+        // TODO - CLAUDE - let's put this in a loop or some such. 
         if (file_exists($a = $view = MODULE_PATH .
                         ucfirst(Request::$module) . 
                         "/view/" . 
                         Request::$endpoint . 
                         ".php"
                     ) 
-        // 
         || file_exists($b = $view = MODULE_PATH .
                         ucfirst(Request::$module) . 
                         "/view/" . 
@@ -113,31 +114,68 @@ class Response
                         ".php"
                     )
        ){
+            // TODO- this solution isn't great, but since 
+            // "standalone" pages ultimately belong to the Index module, it means 
+            // so do their assets. Therefore, this allows those assets to be auto-loaded
+            if($e || $f){Request::$module = "index";}
             $this->build($view); 
+            
         } else {
-            /*
-            echo $a ."<br>"; 
-            echo $b ."<br>"; 
-            echo $c ."<br>"; 
-            echo $d ."<br>"; 
-            echo "==== index checks: ====<br>";
-            echo $e ."<br>"; 
-            echo $f ."<br>"; 
-            */
-            require_once MODULE_PATH."Index/Index.php";  // XXX I do not like this. 
-            $fallback = new \Zero\Module\Index(); 
-
-            if(method_exists($fallback, Request::$module)){
+            // TODO: 
+            // This whole fallback block is never used except in the case 
+            // of not having anything else to do. If you're here, that means 
+            // we're about to issue a 404, but we're checking to see if there is
+            // a fallback method in Index we can call, first. 
+            // This is good if you want some simple, short thing, or perhaps an 
+            // alias or some such, but is probably not the cleanest approach. 
+            // 
+            //require "/var/www/html/unisolu.com/zero/modules/Index/Index.php";
+            // TODO ^ investigate why this doesn't autoload... 
+            //$fallback = new \Zero\Module\Index(); 
+            //if(method_exists($fallback, Request::$module)){
                 // Note this means your args are discarded. But you probably don't 
                 // want to have something that deep in your Index module anyway.
-                $this->build($fallback -> {Request::$module}(Request::$endpoint)); 
-            } else {
-                new Error(404, "Failed to find a response to give for ".
-                    Request::$moduleOrig . 
-                     ( $func == "index" ? "" : "/".Request::$endpointOrig)
-                ) ;
-            }
+                //$this->build( // to build or not to build? TODO 
+                //$fallback -> {Request::$module}(Request::$endpoint); 
+                //); 
+            //} else {
+                //new Error(404); 
+                throw new HTTPError(404, $func, $args);
+                // TODO: surface Request::$moduleOrig path detail in renderError
+            //}
         }
+    }
+
+    /**
+     * Render an HTTPError using the existing Response instance.
+     * Called by Application::run() after catching an HTTPError, so that
+     * framePath and all other resolved paths from the original module are preserved.
+     *
+     * @param HTTPError $e
+     * @param string|null $err Optional detail string (e.g. the URL that wasn't found)
+     */
+    public function renderError(HTTPError $e)
+    {
+        $code    = $e->getCode();
+        $message = $e->getMessage();
+        $detail  = $e->detail;
+
+        header("HTTP/1.1 $code $message");
+        $this->title = "Error: $message";
+
+        // Use a custom error view if one exists in the already-resolved viewPath
+        $view = file_exists($v = $this->viewPath . "error" . $code . ".php")
+            ? $v
+            : "<h1>$code - $message</h1><hr>" . ($detail ? "<h4>$detail</h4><br>" : "");
+
+        $this->respond($view, [
+            "status"  => "error",
+            "message" => $message,
+            "code"    => $code,
+        ]);
+
+        Console::error("$code - $message" . ($detail ? " : $detail" : ""));
+        exit();
     }
 
     /**
@@ -173,20 +211,22 @@ class Response
         static::$built = true; 
         $this -> add("head");
         $this -> add("header");
-
         if(file_exists($view)){
             include $view ; 
         } else {
             echo $view; 
-            echo '<script>console.warn("Built bad view with text instead of file path.");</script>'; 
+            
+            Console::warn("Built view with text instead of file path."); 
+            /*
             Console::warn("Building bad view with text instead of file path:\n".
             "\tview: $view\n\n".
             "\tRequest::\$module: ".Request::$module."\n".
             "\tRequest::\$endpoint: ".Request::$endpoint."\n".
             "\n"
             ); 
+            */ 
         }
-        $this -> add("sideNav");  // TODO - still needed? 
+        $this -> add("sideNav");  // not necessary in all contexts. 
         $this -> add("footer");
     }
 
@@ -205,13 +245,20 @@ class Response
         Console::warn("Could not find $piece to add to response"); 
     }
 
+    /**
+     * Auxiliary file loader — no-op at Response level.
+     * Module overrides this with real functionality.
+     * Exists here so frame templates can call it safely on any Response instance.
+     */
+    public function getAuxiliary(string $file){}
+
     protected function getStylesheets()
     {
         $assetdir = WEB_ROOT . "/assets/" . ($this->assetUrlPath ?? Request::$module) . "/css/";
         if(is_dir($assetdir)){
             $this->loadAssetTypeFromDir("css", $assetdir);
         } else {
-            echo "<!-- ".$assetdir." not found, so not loading. -->";
+            Console::debug($assetdir." not found, so not loading.");
         }
     }
 
@@ -221,7 +268,7 @@ class Response
         if(is_dir($assetdir)){
             $this->loadAssetTypeFromDir("js", $assetdir);
         } else {
-            echo "<!-- ".$assetdir." not found, so not loading. -->";
+            Console::debug($assetdir." not found, so not loading.");
         }
     }
 
@@ -249,7 +296,7 @@ class Response
         if(is_dir($moduleComponentDir)){
             $this->getComponentsInDirectory($moduleComponentDir, $componentLabel);
         } else {
-            echo "<script>console.log('No component directory for " . $componentLabel . " module');</script>";
+            Console::debug("No component directory for " . $componentLabel . " module");
         }
     }
 
@@ -274,7 +321,7 @@ class Response
 
             $componentPath = $dir . $component;
             if(file_exists($componentPath)){
-                echo "<script>console.log('Loading $label component: $component');</script>\n";
+                Console::debug("Loading $label component: $component");
                 require_once $componentPath;
             }
         }
@@ -316,7 +363,6 @@ class Response
                 echo sprintf($html_asset, $pubdir . $asset);
             } else {
                 Console::debug("$asset doesn't match so not loaded");  
-                echo "<!-- $asset doesn't match so not loaded -->"; 
             }
         }
     }

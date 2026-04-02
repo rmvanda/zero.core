@@ -4,7 +4,6 @@ namespace Zero\Core\Attribute;
 
 use \Attribute;
 use \Zero\Core\Console;
-use \Zero\Core\Error;
 
 #[Attribute]
 class RequirePermission {
@@ -36,7 +35,7 @@ class RequirePermission {
     /**
      * Check if user has required permissions
      *
-     * @return bool|Error Returns true if approved, Error object if denied
+     * @return bool Returns true if approved, redirects if denied
      */
     public function handler() {
         // Check if user is logged in

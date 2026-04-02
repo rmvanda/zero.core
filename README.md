@@ -94,9 +94,12 @@ and what to do if the `method` called does not exist (throw 404 page, automatica
     it leaves off the header and the footer. 
     As long as your module extends this class and calls parent::__construct() - the magic will happen.
 
-- Error.php 
-    This displays error pages. new Error(404) will generate a 404 page and stop execution. 
-    Optionally takes a second parameter, which is a message to display. 
+- HTTPError.php 
+    Exception class for HTTP errors. throw new HTTPError(404) will bubble up to 
+    Application::run()'s try/catch and render an error page using the module's 
+    existing Response instance — preserving framePath and all resolved paths.
+    Optionally takes a second parameter (detail string) for diagnostic messages.
+    The legacy Error.php remains available but is deprecated in favor of HTTPError.
 
 That's it. This is the core of the zero framework. Application.min.php is an attempt to minimize the above into a single class file, but is currently incomplete. 
 

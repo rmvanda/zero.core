@@ -12,7 +12,6 @@ namespace Zero\Core;
 // and stopping execution ...? 
 // TODO: - absorb this into Response 
 
-
 class Error extends \Zero\Core\Module
 {
     public $message = array(				
@@ -79,7 +78,6 @@ class Error extends \Zero\Core\Module
 
         header("HTTP/1.1 $code " . ($this->message[$code] ?: "Unspecified"));
 
-
         if(!$err){
             $err = $this->message[$code];
         }
@@ -95,41 +93,13 @@ class Error extends \Zero\Core\Module
             $this->body = $detailedHTML; 
         }
 
-        /*
-        if(defined("DEVMODE") && DEVMODE == True){
-            xdebug_print_function_stack();
-        }
-        */
-
         $this->respond($this->body, [
             "status"  => "error",
-            "message" => $message[$code],
+            "message" => $message,
             "code"    => $code
         ]); 
 
-
-        /*
-        if(Request::$acceptsJSON){
-            $this->export([
-                "status"  => "error",
-                "message" => $this->message[$code],
-                "code"    => $code
-            ]);
-        } else {
-
-            // Append detailed HTML if provided
-            if($detailedHTML){
-                $this->body .= $detailedHTML;
-            }
-        }
-        */
-
         Console::error("$code - $message : $err");
-
-        //$this->build($this->body);
-
-        exit();
+        exit(); // not REALLY necessary but 
     }
-
-    public function __toString(){}
 }

@@ -192,12 +192,14 @@ class Application {
 
         \Zero\Core\PluginLoader::hook($this->plugins, 'beforeRun', $module, $endpoint, $args);
 
-        $this->checkForAttributes($Module,$endpoint);
         $moduleInstance = new $Module();
-        try { 
+        try {
+            $this->checkForAttributes($Module,$endpoint);
             $moduleInstance -> {$endpoint}(...$args);
+        } catch(HTTPError $e){
+            $moduleInstance->renderError($e);
         } catch(\ArgumentCountError $e){
-            new Error(400); 
+            $moduleInstance->renderError(new HTTPError(400));
         }
 
         \Zero\Core\PluginLoader::hook($this->plugins, 'afterRun', $module, $endpoint, $args);
