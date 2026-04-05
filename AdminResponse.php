@@ -287,6 +287,11 @@ abstract class AdminResponse extends Module {
 
         $controller = new $adminClass();
 
+        // Convert kebab-case to camelCase (e.g., create-workflow → createWorkflow)
+        if (is_string($method) && str_contains($method, '-')) {
+            $method = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $method))));
+        }
+
         // Ensure method is a string and exists
         if (!is_string($method) || !method_exists($controller, $method)) {
             throw new HTTPError(404, "Admin method not found: " . (is_string($method) ? $method : 'invalid'));
