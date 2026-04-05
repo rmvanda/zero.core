@@ -14,8 +14,8 @@ class Request
      * http://sub.domain.tld/module/endpoint/arg[0]/arg[1]/...argi[X]?query=string&etc
      * Parse it into useful bits so we can use them later, as needed.
      */
-    public static 
-        $uri, $url, 
+    public static
+        $uri,
         $protocol,
         $method,
         $sub, $subdomain, 
@@ -52,11 +52,7 @@ class Request
             }
         }
         
-        function p($msg){echo "====\n\n$msg\n\n=====";}
-
-
-        //self::$uri      = explode(".",self::$uri)[0]; 
-
+        //self::$uri      = explode(".",self::$uri)[0];
 
         $this->convertJSONtoPOST(); 
         self::$uriArray = explode("/", self::$uri); 
@@ -68,7 +64,7 @@ class Request
             self::$uriArray[] = "index"; 
         }
 
-        self::$protocol = $_SERVER['SERVER_PORT'] == 80 ? "http" : "https";
+        self::$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
 
         self::$sub      = self::$subdomain = implode(".", 
                 array_reverse(
@@ -79,7 +75,7 @@ class Request
 
         self::$domain   = $_SERVER['HTTP_HOST'];  // FIXME - Should be a better way... 
 
-        self::$tld      = array_slice(explode(".", self::$domain), -1); 
+        self::$tld      = array_slice(explode(".", self::$domain), -1)[0];
 
         self::$module   = strtolower(self::$uriArray[0]); // to normalize /BATSHIT/ReQuEsTs
         self::$endpoint = strtolower(self::$uriArray[1]); 
@@ -102,6 +98,8 @@ class Request
 
         self::$method   = $_SERVER['REQUEST_METHOD'];
 
+        self::$madeWithAJAX = ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest';
+
 	}
 
     public static function redirect($url){
@@ -112,26 +110,22 @@ class Request
 
     private function convertJSONtoPOST(){
 
-        if(!$_POST && 
+        if(!$_POST &&
            !empty($xdata = file_get_contents("php://input"))
         ){
             $_POST = json_decode($xdata, true);
-        } else if(!empty($jerr = json_last_error_msg())){
-        /* The above function will literally say "no error" as its error message >_> */
-            if (json_last_error() !== 0) 
+            /* json_last_error_msg() will literally say "no error" as its error message >_> */
+            if (json_last_error() !== 0)
             {
                 exit(json_encode(
                             array(
-                                "status"=>"error", 
+                                "status"=>"error",
                                 "code"=>json_last_error(),
-                                "msg"=>$jerr
+                                "msg"=>json_last_error_msg()
                                 )
                             )
                     );
-            }    
-        }
-        if(isset($xdata)){
-            unset($xdata); 
+            }
         }
     }
 
