@@ -16,6 +16,30 @@ The admin system provides a secure, scalable way for modules to expose administr
 
 ---
 
+## Module Admin Controller vs Admin Submodule
+
+There are two ways to create admin interfaces, and the decision rule is simple:
+
+> **If a public module exists for the feature, its admin interface MUST be a Module Admin Controller inside that module's `Admin/` directory.**
+>
+> **If no public module exists, it belongs as an Admin submodule under `modules/Admin/submodule/`.**
+
+This keeps domain logic co-located with its module and prevents the Admin module from becoming a dumping ground for unrelated controllers.
+
+| Feature | Public Module? | Correct Location |
+|---------|---------------|-----------------|
+| Link management | Yes (`Links`) | `modules/Links/Admin/LinksAdmin.php` |
+| ComfyUI generations | Yes (`Comfy`) | `modules/Comfy/Admin/ComfyAdmin.php` |
+| LLM thread viewer | Yes (`Llm`) | `modules/Llm/Admin/LlmAdmin.php` |
+| Billing config | No | `modules/Admin/submodule/Billing/` |
+| API key config | No | `modules/Admin/submodule/ApiConfig/` |
+| Firewall rules | No | `modules/Admin/submodule/Firewall/` |
+| Plugin management | No | `modules/Admin/submodule/Plugins/` |
+
+**Why this matters:** Admin submodules live in `Zero\Module\Admin` namespace and are routed via `Module::__call` fallthrough. Module Admin Controllers live in `Zero\Module\{Module}\Admin` namespace and are routed via `Admin::__call`'s class-existence check. When a module owns both its public and admin interfaces, its code stays together and is easier to maintain, move, or delete.
+
+---
+
 ## Architecture Components
 
 ### 1. Core Classes
@@ -65,7 +89,7 @@ Main admin hub. Extends `AdminResponse`.
 
 ### 2. Module Structure
 
-To add admin functionality to a module, create an `Admin/` subdirectory:
+To add admin functionality to a module that has a public interface, create an `Admin/` subdirectory inside that module (NOT as an Admin submodule):
 
 ```
 modules/YourModule/
