@@ -23,6 +23,11 @@ class Console {
     private static array $messages = [];
 
     /**
+     * Default log file path (override in tests or custom environments)
+     */
+    public static string $defaultLogFile = '/var/log/php-fpm/zero.log';
+
+    /**
      * Cached log threshold (resolved once from constants, then reused)
      */
     private static ?int $threshold = null;
@@ -114,7 +119,7 @@ class Console {
         $level = "[{$loglvlstring}]: ";
 
         if (!$logfile) {
-            $logfile = '/var/log/php-fpm/zero.log';
+            $logfile = self::$defaultLogFile;
         }
 
         file_put_contents($logfile, $date . $ip . $level . $caller . $message . "\n", FILE_APPEND);
