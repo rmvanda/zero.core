@@ -14,7 +14,7 @@ class RequireAuthLevel{
 
     public function handler(){
         if( session_status() == PHP_SESSION_NONE
-            || !$_SESSION['auth_level']
+            || !($_SESSION['auth_level'] ?? null)
             ||  $_SESSION['auth_level'] < $this->level
         ){
             $userLevel = $_SESSION['auth_level'] ?? 'none';
