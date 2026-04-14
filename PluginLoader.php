@@ -31,12 +31,12 @@ class PluginLoader {
         $cacheBase = ZERO_ROOT . 'storage/cache/plugin/';
         $plugins = [];
 
-        // Ensure Plugin base class is loaded
-        require_once ZERO_ROOT . 'plugin/Plugin.php';
-
         if (!is_dir($pluginDir)) {
             return [];
         }
+        // Ensure Plugin base class is loaded
+        require_once ZERO_ROOT . 'plugin/Plugin.php';
+
 
         $dirs = glob($pluginDir . '*', GLOB_ONLYDIR);
 
