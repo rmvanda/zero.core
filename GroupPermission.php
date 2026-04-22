@@ -11,19 +11,31 @@ class GroupPermission {
     private $permissionTable;
     private $entityTable;
     private $entityIdColumn;
+    private $entityPkColumn;
     private $entityName;
 
     /**
      * @param \PDO $db Database connection
-     * @param string $entityTable The main entity table (e.g., 'lists', 'notes')
-     * @param string $entityIdColumn The entity ID column name (e.g., 'list_id', 'note_id')
-     * @param string $permissionTable The permissions table (e.g., 'list_permissions', 'note_permissions')
-     * @param string $entityName Human-readable entity name for error messages (e.g., 'list', 'note')
+     * @param string $entityTable The main entity table (e.g., 'lists', 'notes', 'notebooks')
+     * @param string $entityIdColumn The FK column in the permission table that
+     *                               references the entity (e.g., 'list_id',
+     *                               'note_id', 'notebook_id')
+     * @param string $permissionTable The permissions table (e.g., 'list_permissions')
+     * @param string $entityName Human-readable entity name for error messages
+     * @param string|null $entityPkColumn The PK column of the entity table, if
+     *                                    it differs from $entityIdColumn. Notes
+     *                                    and Kanban use the same column name on
+     *                                    both sides (note_id/note_id), so this
+     *                                    defaults to $entityIdColumn. Notebook's
+     *                                    entity PK is 'id' while the FK is
+     *                                    'notebook_id', so it must be passed
+     *                                    explicitly.
      */
-    public function __construct($db, string $entityTable, string $entityIdColumn, string $permissionTable, string $entityName = 'item') {
+    public function __construct($db, string $entityTable, string $entityIdColumn, string $permissionTable, string $entityName = 'item', ?string $entityPkColumn = null) {
         $this->db = $db;
         $this->entityTable = $entityTable;
         $this->entityIdColumn = $entityIdColumn;
+        $this->entityPkColumn = $entityPkColumn ?? $entityIdColumn;
         $this->permissionTable = $permissionTable;
         $this->entityName = $entityName;
     }
@@ -147,8 +159,9 @@ class GroupPermission {
      */
     public function hasPermission(int $entityId, int $userId, string $permission = 'read'): bool {
         try {
-            // Owner has all permissions
-            $stmt = $this->db->prepare("SELECT user_id FROM {$this->entityTable} WHERE {$this->entityIdColumn} = ?");
+            // Owner has all permissions. Uses the entity table's PK (may
+            // differ from the FK column name used in the permission table).
+            $stmt = $this->db->prepare("SELECT user_id FROM {$this->entityTable} WHERE {$this->entityPkColumn} = ?");
             $stmt->execute([$entityId]);
             $entity = $stmt->fetch(\PDO::FETCH_ASSOC);
 
