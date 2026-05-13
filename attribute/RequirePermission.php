@@ -38,12 +38,12 @@ class RequirePermission {
      * @return bool Returns true if approved, redirects if denied
      */
     public function handler() {
-        // Check if user is logged in
-        if (session_status() == PHP_SESSION_NONE || !isset($_SESSION['user_id'])) {
-            Console::warn("RequirePermission attribute blocked request: user not logged in");
-            // Redirect to access request page with first permission
-            $this->redirectToAccessRequest($this->permissions[0]);
-        }
+        // RequirePermission implicitly requires login — a permission check is
+        // meaningless without an authenticated user. Delegate to RequireLogin
+        // so the login-redirect behavior has a single source of truth.
+        // If the user is anonymous, RequireLogin::handler() redirects and exits
+        // before we reach the permission check below.
+        (new RequireLogin())->handler();
 
         $userId = $_SESSION['user_id'];
 
@@ -69,8 +69,7 @@ class RequirePermission {
     private function hasPermission(int $userId, string $permission): bool {
         // Check session first (fastest)
         if (isset($_SESSION['user_settings'][$permission])) {
-            $value = $_SESSION['user_settings'][$permission];
-            return !empty($value) && $value !== '0';
+            return $this->isGranted($_SESSION['user_settings'][$permission]);
         }
 
         // Fall back to database query
@@ -83,11 +82,26 @@ class RequirePermission {
             $stmt->execute([$userId, $permission]);
             $result = $stmt->fetch();
 
-            // Permission exists and is truthy (1, true, "1", etc.)
-            return $result && !empty($result['setting_value']) && $result['setting_value'] !== '0';
+            return $result && $this->isGranted($result['setting_value']);
         } catch (\Exception $e) {
             Console::error("RequirePermission error checking permission '{$permission}': " . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Strict whitelist for "permission granted" values.
+     *
+     * A permission row counts as granted only when the stored value is
+     * literally '1', 1, or true. Anything else — '0', '', 'false', 'off',
+     * whitespace, arbitrary strings — denies. This avoids foot-guns where a
+     * permission accidentally stored as the string 'false' would have been
+     * treated as truthy under a loose check.
+     *
+     * @param mixed $value
+     * @return bool
+     */
+    private function isGranted($value): bool {
+        return in_array($value, ['1', 1, true], true);
     }
 }

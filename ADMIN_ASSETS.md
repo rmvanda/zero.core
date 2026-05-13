@@ -1,263 +1,106 @@
-# Admin Asset Management
+# Admin Asset Loading
 
-This document describes asset serving strategies for module admin interfaces.
+Admin CSS/JS is **always served inline** — never exposed as a public URL. This is enforced at the framework layer; there is no admin asset URL scheme.
 
-## Current Implementation: Inline Assets
+> For a proposed future dynamic-URL-served approach (deferred), see `ADMIN_ASSETS_PROPOSAL.md`.
 
-Admin assets (CSS/JS) are currently loaded inline via PHP includes for maximum security and simplicity.
+## Why inline?
 
-**How it works:**
-```php
-// In admin view:
-<?php $this->loadAdminStyles('links'); ?>
-<?php $this->loadAdminScripts('links'); ?>
-```
+- Assets never reachable at `/assets/{module}/...` → no information disclosure from `Admin/assets/` directories
+- No symlink management, no path-traversal surface, no routing
+- Guaranteed to load with the page
 
-**Pros:**
-- ✅ Maximum security - assets never exposed as URLs
-- ✅ Simple implementation - no routing required
-- ✅ No symlink management
-- ✅ Guaranteed to load with page
+Trade-off: no cross-page browser caching. Acceptable until admin interfaces grow large enough to matter.
 
-**Cons:**
-- ❌ No browser caching between pages
-- ❌ Larger initial page size
-- ❌ Not ideal for large asset files
+## Security enforcement (AdminResponse)
 
----
+`core/AdminResponse.php` guarantees admin assets stay inline:
 
-## Future Option: Dynamic Asset Serving
+1. **Constructor (lines 47–60)** — after `parent::__construct()` (which auto-creates `/assets/{module}` symlinks for regular modules), it **deletes** any symlink matching the admin controller's path and cleans up empty parent directories. Admin asset directories cannot be reached from the web root.
+2. **`getStylesheets()` / `getScripts()` overrides** — replace the default `<link>`/`<script src>` emission with inline `<style>`/`<script>` blocks via `readfile`.
 
-For better performance with larger admin interfaces, implement dynamic asset serving via controller endpoint.
+## How loading works
 
-### Implementation
+There are two mechanisms. Both inline. Choose based on whether you want the framework's filename convention.
 
-#### 1. Add asset serving method to Admin module
+### Auto mode (preferred): framework filename convention
 
-```php
-// In modules/Admin/Admin.php
+When an admin view is rendered through the normal frame, `AdminResponse::getStylesheets()` and `getScripts()` fire automatically. They delegate to `inlineAdminAssets($type)`, which looks for these filenames (matching the regular framework convention):
 
-/**
- * Serve admin assets dynamically with permission checks
- * URL: /admin/asset/{module}/{filename}
- *
- * @param array $args [module, filename]
- */
-public function asset($args = []) {
-    // Already protected by AdminResponse constructor permission check
+- `admin.{css|js}` — shared admin base (always loaded)
+- `{moduleName}.{css|js}` — module-wide
+- `{endpointName}.{css|js}` — endpoint-specific
+- `{endpointNameOrig}.{css|js}` — original (pre-kebab) endpoint name
 
-    $module = $args[0] ?? null;
-    $filepath = $args[1] ?? null;
+And searches these directories, in order:
 
-    if (!$module || !$filepath) {
-        http_response_code(400);
-        exit;
-    }
+1. `modules/Admin/assets/{css|js}/` — shared base styles/scripts
+2. `{current module}/Admin/assets/{css|js}/` — module-specific (via `$this->moduleAssetDir`)
 
-    // Security: Only allow alphanumeric module names
-    if (!preg_match('/^[a-zA-Z0-9]+$/', $module)) {
-        http_response_code(400);
-        exit;
-    }
-
-    // Security: Only allow safe filenames (prevent directory traversal)
-    $safeFilename = basename($filepath);
-    if ($safeFilename !== $filepath) {
-        http_response_code(400);
-        exit;
-    }
-
-    // Build asset path
-    $moduleClassName = ucfirst(strtolower($module));
-    $assetPath = MODULE_PATH . $moduleClassName . "/Admin/assets/" . $safeFilename;
-
-    // Validate file exists
-    if (!file_exists($assetPath) || !is_file($assetPath)) {
-        http_response_code(404);
-        exit;
-    }
-
-    // Determine content type
-    $ext = strtolower(pathinfo($safeFilename, PATHINFO_EXTENSION));
-    $contentType = match($ext) {
-        'css' => 'text/css',
-        'js' => 'application/javascript',
-        'png' => 'image/png',
-        'jpg', 'jpeg' => 'image/jpeg',
-        'svg' => 'image/svg+xml',
-        'woff' => 'font/woff',
-        'woff2' => 'font/woff2',
-        default => 'application/octet-stream'
-    };
-
-    // Send headers with caching
-    header("Content-Type: {$contentType}");
-    header("Cache-Control: public, max-age=86400"); // 24 hours
-    header("Last-Modified: " . gmdate('D, d M Y H:i:s', filemtime($assetPath)) . ' GMT');
-    header("Content-Length: " . filesize($assetPath));
-
-    // Support conditional requests
-    $lastModified = filemtime($assetPath);
-    $etag = md5_file($assetPath);
-    header("ETag: \"{$etag}\"");
-
-    if (isset($_SERVER['HTTP_IF_NONE_MATCH']) && $_SERVER['HTTP_IF_NONE_MATCH'] === "\"{$etag}\"") {
-        http_response_code(304); // Not Modified
-        exit;
-    }
-
-    // Stream file to browser
-    readfile($assetPath);
-    exit;
-}
-
-/**
- * Security helper: Validate asset path is within module's assets directory
- *
- * @param string $assetPath Full path to asset file
- * @param string $module Module name
- * @return bool True if path is safe
- */
-private function isInAssetsDir($assetPath, $module) {
-    $moduleClassName = ucfirst(strtolower($module));
-    $assetsDir = realpath(MODULE_PATH . $moduleClassName . "/Admin/assets");
-    $requestedFile = realpath($assetPath);
-
-    // Ensure both paths resolved and requested file is within assets dir
-    return $assetsDir !== false
-        && $requestedFile !== false
-        && str_starts_with($requestedFile, $assetsDir);
-}
-```
-
-#### 2. Update AdminResponse helper methods
-
-```php
-// In core/AdminResponse.php
-
-/**
- * Load admin assets via dynamic URLs
- *
- * @param string $moduleName Module name
- * @param string $type Asset type: 'css' or 'js'
- * @param string $filename Filename within assets directory
- */
-protected function loadDynamicAsset($moduleName, $type, $filename) {
-    $slug = strtolower($moduleName);
-    $url = "/admin/asset/{$slug}/{$filename}";
-
-    if ($type === 'css') {
-        echo "<link rel=\"stylesheet\" href=\"{$url}\">\n";
-    } elseif ($type === 'js') {
-        echo "<script src=\"{$url}\"></script>\n";
-    }
-}
-
-/**
- * Load all CSS assets dynamically
- */
-protected function loadAdminStylesDynamic($moduleName) {
-    $moduleClassName = ucfirst(strtolower($moduleName));
-    $assetsDir = MODULE_PATH . $moduleClassName . "/Admin/assets";
-
-    if (!is_dir($assetsDir)) {
-        return;
-    }
-
-    $cssFiles = glob($assetsDir . "/*.css");
-    foreach ($cssFiles as $cssFile) {
-        $filename = basename($cssFile);
-        $this->loadDynamicAsset($moduleName, 'css', $filename);
-    }
-}
-
-/**
- * Load all JS assets dynamically
- */
-protected function loadAdminScriptsDynamic($moduleName) {
-    $moduleClassName = ucfirst(strtolower($moduleName));
-    $assetsDir = MODULE_PATH . $moduleClassName . "/Admin/assets";
-
-    if (!is_dir($assetsDir)) {
-        return;
-    }
-
-    $jsFiles = glob($assetsDir . "/*.js");
-    foreach ($jsFiles as $jsFile) {
-        $filename = basename($jsFile);
-        $this->loadDynamicAsset($moduleName, 'js', $filename);
-    }
-}
-```
-
-#### 3. Usage in admin views
+Each matching file is emitted inside a single `<style>` or `<script>` block (with a filename comment for debuggability):
 
 ```html
-<!-- Instead of inline loading: -->
-<?php $this->loadAdminStylesDynamic('links'); ?>
-<?php $this->loadAdminScriptsDynamic('links'); ?>
-
-<!-- Or individual files: -->
-<link rel="stylesheet" href="/admin/asset/links/admin.css">
-<script src="/admin/asset/links/admin.js"></script>
+<style>/* admin.css */
+... file contents ...
+</style>
+<style>/* links.css */
+... file contents ...
+</style>
 ```
 
-### Apache Configuration (Optional)
+**Example:** request to `/admin/links/edit/5`, controller `LinksAdmin`:
+- `modules/Admin/assets/css/admin.css` → loaded (shared base)
+- `modules/Links/Admin/assets/css/links.css` → loaded (module match)
+- `modules/Links/Admin/assets/css/edit.css` → loaded (endpoint match)
 
-For even better performance, add rewrite rules to bypass PHP for cached assets:
+Files that don't match the convention are ignored.
 
-```apache
-# In .htaccess (if using Apache)
-<IfModule mod_rewrite.c>
-    # Cache admin assets in browser
-    <FilesMatch "\.(css|js|png|jpg|jpeg|svg|woff|woff2)$">
-        Header set Cache-Control "public, max-age=86400"
-    </FilesMatch>
-</IfModule>
+### Manual mode: explicit view calls
+
+For views that need to load everything in a module's admin assets dir (bypassing the filename convention):
+
+```php
+<?php $this->loadAdminStyles('links'); ?>   // globs & inlines ALL *.css in modules/Links/Admin/assets/
+<?php $this->loadAdminScripts('links'); ?>  // globs & inlines ALL *.js
+<?php $this->loadInlineAsset('links', 'css', 'admin.css'); ?>  // single file
 ```
 
-### Security Considerations
+| Method | Behavior |
+|--------|----------|
+| `loadInlineAsset($module, $type, $filename)` | Inline one specific file |
+| `loadAdminStyles($module)` | Inline every `*.css` in `modules/{Module}/Admin/assets/` |
+| `loadAdminScripts($module)` | Inline every `*.js` in `modules/{Module}/Admin/assets/` |
 
-1. **Permission Check**: Asset endpoint MUST verify `allow.admin` permission before serving
-2. **Path Traversal**: Use `basename()` and path validation to prevent `../../` attacks
-3. **File Type Validation**: Only serve expected file types (CSS, JS, images, fonts)
-4. **Module Validation**: Ensure module name is alphanumeric only
-5. **Real Path Checking**: Verify final path is within module's assets directory
+Missing files print an HTML comment in `DEVMODE` and silently no-op otherwise.
 
-### Performance Comparison
+**When to use which:** prefer auto mode and rely on naming conventions. Reach for manual mode only when an admin view needs assets that don't follow the `{module}/{endpoint}` naming pattern.
 
-| Method | Security | Speed | Caching | Complexity |
-|--------|----------|-------|---------|------------|
-| **Inline** (current) | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐ | ⭐ |
-| **Dynamic** (this doc) | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
-| **Symlinks** (not recommended) | ⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-
-### When to Migrate
-
-Consider switching from inline to dynamic serving when:
-- Admin interfaces have >50KB of CSS/JS
-- Multiple admin pages share the same assets
-- Browser caching would provide significant UX improvement
-- Performance profiling shows asset loading is a bottleneck
-
----
-
-## Component Assets
-
-For ShadowComponent-based admin components, follow the same pattern:
+## File layout
 
 ```
+modules/Admin/
+└── assets/
+    ├── css/
+    │   ├── admin.css              # shared base — auto-loaded on every admin page
+    │   └── admin-tables.css       # will NOT auto-load unless named for a module/endpoint
+    └── js/
+        └── admin.js
+
 modules/Links/Admin/
-├── assets/
-│   ├── links-admin.css
-│   ├── links-admin.js
-│   └── components/
-│       └── link-manager.html  (ShadowComponent)
+└── assets/
+    ├── css/
+    │   ├── links.css              # auto-loaded for all /admin/links/* endpoints
+    │   └── edit.css               # auto-loaded only on /admin/links/edit/*
+    └── js/
+        └── links.js
 ```
 
-Load components with:
+## Component assets
+
+ShadowComponents used inside admin views follow the same inline-only rule. Since ShadowComponent HTML files are self-contained (styles + script inside the `<template>`), they can be `require`d directly:
+
 ```php
 <?php require_once MODULE_PATH . 'Links/Admin/assets/components/link-manager.html'; ?>
 ```
 
-ShadowComponents with inline styles/scripts remain self-contained and secure.
+The `<template>` + `<script>` block registers the custom element without exposing anything as a URL.

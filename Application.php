@@ -215,15 +215,38 @@ class Application {
             $methodAttributes = $reflection->getMethod($endpoint)->getAttributes();
         }
 
-        // Record for DevToolbar — scope-tagged so the tab can distinguish class vs method attributes
+        // Method-level attributes override class-level attributes of the same type.
+        // If a method declares any attribute of type X, class-level attributes of
+        // type X are skipped for this endpoint (replace semantics).
+        $methodNames = array_flip(array_map(
+            fn($a) => $a->getName(),
+            $methodAttributes
+        ));
+
+        $effectiveClass = array_filter(
+            $classAttributes,
+            fn($a) => !isset($methodNames[$a->getName()])
+        );
+
+        // Record for DevToolbar — scope-tagged so the tab can distinguish class vs method attributes.
+        // `overridden` marks class-level attrs shadowed by a same-type method-level attr.
         foreach ($classAttributes as $attr) {
-            self::$attributeLog[] = ['name' => $attr->getName(), 'scope' => 'class', 'target' => $Module];
+            self::$attributeLog[] = [
+                'name'       => $attr->getName(),
+                'scope'      => 'class',
+                'target'     => $Module,
+                'overridden' => isset($methodNames[$attr->getName()]),
+            ];
         }
         foreach ($methodAttributes as $attr) {
-            self::$attributeLog[] = ['name' => $attr->getName(), 'scope' => 'method', 'target' => $Module . '::' . $endpoint];
+            self::$attributeLog[] = [
+                'name'   => $attr->getName(),
+                'scope'  => 'method',
+                'target' => $Module . '::' . $endpoint,
+            ];
         }
 
-        $attributes = array_merge($classAttributes, $methodAttributes);
+        $attributes = array_merge($effectiveClass, $methodAttributes);
 
         $this->handleAttributes($attributes);
 
