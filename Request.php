@@ -54,7 +54,7 @@ class Request
         
         //self::$uri      = explode(".",self::$uri)[0];
 
-        $this->convertJSONtoPOST(); 
+        $this->convertJSONtoPOST();
         self::$uriArray = explode("/", self::$uri); 
 
         self::$uri      = "/".self::$uri; 
@@ -110,6 +110,15 @@ class Request
 
     private function convertJSONtoPOST(){
 
+        // Only auto-decode bodies that declare themselves as JSON. Raw binary
+        // uploads (image/jpeg, application/octet-stream, …) must pass through
+        // untouched so endpoints can read php://input themselves — decoding
+        // them as JSON throws JSON_ERROR_UTF8 on perfectly valid bytes.
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '';
+        if (stripos($contentType, "application/json") === false) {
+            return;
+        }
+
         if(!$_POST &&
            !empty($xdata = file_get_contents("php://input"))
         ){
@@ -117,11 +126,15 @@ class Request
             /* json_last_error_msg() will literally say "no error" as its error message >_> */
             if (json_last_error() !== 0)
             {
+                // A malformed JSON body is a client error — respond 400, not the
+                // implicit 200 that exit() alone would send.
+                http_response_code(400);
+                header("Content-Type: application/json");
                 exit(json_encode(
                             array(
                                 "status"=>"error",
-                                "code"=>json_last_error(),
-                                "msg"=>json_last_error_msg()
+                                "code"=>400,
+                                "msg"=>"Malformed JSON body: ".json_last_error_msg()
                                 )
                             )
                     );
