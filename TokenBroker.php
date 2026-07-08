@@ -39,28 +39,33 @@ class TokenBroker
             return $row['access_token']; // non-expiring / no refresh (e.g. GitHub)
         }
 
-        if (self::$adapterResolver) {
-            $adapter = (self::$adapterResolver)($provider);
-        } else {
-            // Auth is a single-segment module class (namespace Zero\Module; class
-            // Auth, at modules/Auth/Auth.php). The router loads it via isModule(),
-            // NOT the class autoloader — so from core we require it explicitly
-            // before the static call. FQCN is \Zero\Module\Auth (not ...\Auth\Auth).
-            require_once __DIR__ . '/../modules/Auth/Auth.php';
-            $adapter = \Zero\Module\Auth::adapterForProvider($provider);
-        }
+        try {
+            if (self::$adapterResolver) {
+                $adapter = (self::$adapterResolver)($provider);
+            } else {
+                // Auth is a single-segment module class (namespace Zero\Module; class
+                // Auth, at modules/Auth/Auth.php). The router loads it via isModule(),
+                // NOT the class autoloader — so from core we require it explicitly
+                // before the static call. FQCN is \Zero\Module\Auth (not ...\Auth\Auth).
+                require_once __DIR__ . '/../modules/Auth/Auth.php';
+                $adapter = \Zero\Module\Auth::adapterForProvider($provider);
+            }
 
-        if ($adapter === null || !method_exists($adapter, 'refresh')) {
-            return $row['access_token'];
-        }
+            if ($adapter === null || !method_exists($adapter, 'refresh')) {
+                return $row['access_token'];
+            }
 
-        $new = $adapter->refresh($row);
-        if ($new === null || empty($new['access_token'])) {
-            return null; // refresh failed -> re-auth needed
-        }
+            $new = $adapter->refresh($row);
+            if ($new === null || empty($new['access_token'])) {
+                return null; // refresh failed -> re-auth needed
+            }
 
-        OAuthToken::store($userId, $provider, $new);
-        return $new['access_token'];
+            OAuthToken::store($userId, $provider, $new);
+            return $new['access_token'];
+        } catch (\Throwable $e) {
+            \Zero\Core\Console::error("TokenBroker refresh failed for {$provider}: " . $e->getMessage());
+            return null;
+        }
     }
 
     /** Providers the user has connected. */
