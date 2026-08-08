@@ -3,8 +3,10 @@
 namespace Zero\Core\Attribute;
 
 use \Attribute;
+use \Zero\Core\Cidr;
 use \Zero\Core\Console;
 use \Zero\Core\HTTPError;
+use \Zero\Core\Request;
 
 #[Attribute]
 class RestrictIP {
@@ -34,6 +36,17 @@ class RestrictIP {
      * @throws HTTPError 403 if the client IP does not match any allowed entry.
      */
     public function handler(): bool {
+        // Fail closed when the client IP cannot be established with confidence.
+        // This is an AUTHORISATION decision, so it must refuse rather than
+        // guess: the false case is a trusted proxy forwarding only a
+        // client-supplied X-Forwarded-For chain, which is fine for rate-limit
+        // attribution and not fine for deciding who gets in. See
+        // Request::clientIpIsVerified().
+        if (!Request::clientIpIsVerified()) {
+            Console::warn("RestrictIP denied: client IP could not be verified");
+            throw new HTTPError(403, "Access denied");
+        }
+
         $clientIp = $this->clientIp();
 
         foreach ($this->allowed as $entry) {
@@ -49,102 +62,32 @@ class RestrictIP {
     /**
      * Resolve the client IP.
      *
-     * Mirrors the precedence used by Application::banmotherfuckers(): behind
-     * Cloudflare, CF-Connecting-IP is the true, Cloudflare-verified client IP
-     * (REMOTE_ADDR is only Cloudflare's edge address). X-Forwarded-For is a
-     * spoofable chain, so we take only its first hop as a fallback, and finally
-     * fall back to REMOTE_ADDR for direct (non-proxied) requests.
+     * Delegates to the shared resolver, which believes CF-Connecting-IP only
+     * when the peer is a verified Cloudflare edge and otherwise returns
+     * REMOTE_ADDR. That matters most here: this class makes an authorisation
+     * decision, and before the trust gate existed the allow-list could be
+     * satisfied by a forged header from anyone able to reach the origin
+     * directly.
      *
      * @return string
      */
     private function clientIp(): string {
-        // Delegates to the shared resolver. The inline ?? chain that used to
-        // live here had a dead branch — explode(',', '')[0] is '' rather than
-        // null, so REMOTE_ADDR was never reached and a direct-to-origin request
-        // resolved to ''. That failed closed here (an empty string matches no
-        // allow-list entry, so access was denied), but it was still wrong, and
-        // the same bug in Application::banmotherfuckers() failed OPEN.
-        return \Zero\Core\Request::clientIp();
+        return Request::clientIp();
     }
 
     /**
      * Does $ip match a single allow-list entry (exact IP or CIDR range)?
+     *
+     * Delegates to Zero\Core\Cidr, which is where this logic now lives — it
+     * gained a second consumer in Request::clientIp(), which uses it to decide
+     * whether a peer is entitled to set forwarding headers. One matcher, so an
+     * authorisation check and a trust check cannot drift apart.
      *
      * @param string $ip    The client IP.
      * @param string $entry An allow-list entry — plain IP or CIDR.
      * @return bool
      */
     private function matches(string $ip, string $entry): bool {
-        return str_contains($entry, '/')
-            ? $this->inCidr($ip, $entry)
-            : $this->sameIp($ip, $entry);
-    }
-
-    /**
-     * Exact IP comparison via binary normalization, so equivalent textual
-     * forms (e.g. '::1' vs '0:0:0:0:0:0:0:1') compare equal.
-     *
-     * @param string $ip
-     * @param string $candidate
-     * @return bool
-     */
-    private function sameIp(string $ip, string $candidate): bool {
-        $a = @inet_pton($ip);
-        $b = @inet_pton($candidate);
-
-        return $a !== false && $b !== false && $a === $b;
-    }
-
-    /**
-     * Is $ip inside the CIDR range $cidr? Handles both IPv4 and IPv6 and
-     * refuses to match across address families.
-     *
-     * @param string $ip
-     * @param string $cidr e.g. '10.0.0.0/8' or '2001:db8::/32'
-     * @return bool
-     */
-    private function inCidr(string $ip, string $cidr): bool {
-        [$subnet, $bits] = explode('/', $cidr, 2);
-
-        $ipBin     = @inet_pton($ip);
-        $subnetBin = @inet_pton($subnet);
-
-        // Malformed input, or IP and subnet are different families (4 vs 16 bytes).
-        if ($ipBin === false || $subnetBin === false || strlen($ipBin) !== strlen($subnetBin)) {
-            return false;
-        }
-
-        if (!ctype_digit((string)$bits)) {
-            return false;
-        }
-
-        $bits    = (int)$bits;
-        $maxBits = strlen($ipBin) * 8; // 32 for IPv4, 128 for IPv6
-        if ($bits < 0 || $bits > $maxBits) {
-            return false;
-        }
-
-        // A /0 matches everything of the same family.
-        if ($bits === 0) {
-            return true;
-        }
-
-        // Compare the whole bytes covered by the prefix.
-        $wholeBytes = intdiv($bits, 8);
-        if ($wholeBytes > 0 && substr($ipBin, 0, $wholeBytes) !== substr($subnetBin, 0, $wholeBytes)) {
-            return false;
-        }
-
-        // Compare the remaining partial byte, if any, under a bit mask.
-        $remainderBits = $bits % 8;
-        if ($remainderBits === 0) {
-            return true;
-        }
-
-        $mask    = 0xff << (8 - $remainderBits) & 0xff;
-        $ipByte  = ord($ipBin[$wholeBytes]);
-        $netByte = ord($subnetBin[$wholeBytes]);
-
-        return ($ipByte & $mask) === ($netByte & $mask);
+        return Cidr::matches($ip, $entry);
     }
 }

@@ -118,13 +118,28 @@ class Request
      * and AuthToken::issue() all delegate here, so the write and read sides of
      * the auth throttle cannot drift apart again.
      *
-     * NOTE: CF-Connecting-IP is only trustworthy when the request genuinely
-     * arrived via Cloudflare. This does not verify that, matching the existing
-     * behaviour elsewhere in the codebase — so treat the result as best-effort
-     * attribution, never as an authorisation input.
+     * Forwarding headers are believed ONLY when the peer is a Cloudflare edge
+     * (TrustedProxy::isCloudflare()). They are ordinary request headers, so a
+     * client connecting straight to the origin — which accepts *:443 with no
+     * edge restriction, and whose address is published in this domain's own SPF
+     * record — could otherwise claim to be any address it liked and be
+     * rate-limited, banned, or IP-authorised as that address instead of its own.
+     *
+     * When the peer is not trusted, the peer IS the client, so REMOTE_ADDR is
+     * returned. That fallback is always factually true; it is never a forgery.
+     *
+     * See clientIpIsVerified() before using the result for authorisation.
      */
     public static function clientIp(): string
     {
+        $peer = trim($_SERVER['REMOTE_ADDR'] ?? '');
+
+        // A direct connection cannot delegate identity. REMOTE_ADDR is settled
+        // by the TCP handshake and is the only thing here an attacker cannot choose.
+        if (!TrustedProxy::isCloudflare($peer)) {
+            return $peer;
+        }
+
         // Deliberately not a ?? chain. explode(',', '')[0] returns '' rather
         // than null, so any `?? $_SERVER['REMOTE_ADDR']` after it is dead code
         // and a direct-to-origin request resolves to ''. Both older call sites
@@ -141,7 +156,35 @@ class Request
             return $xff;
         }
 
-        return trim($_SERVER['REMOTE_ADDR'] ?? '');
+        return $peer;
+    }
+
+    /**
+     * Is clientIp()'s answer trustworthy enough to make an access decision on?
+     *
+     * True in two cases, both of which an attacker cannot forge:
+     *   - the peer is not a trusted proxy, so REMOTE_ADDR is the client and is
+     *     settled by the TCP handshake;
+     *   - the peer is a Cloudflare edge AND set CF-Connecting-IP, which
+     *     Cloudflare controls and overwrites.
+     *
+     * False when the peer is trusted but only X-Forwarded-For is present. That
+     * is a client-supplied chain rather than something the proxy vouches for,
+     * so it is fine for rate-limit attribution and NOT fine for authorisation.
+     */
+    public static function clientIpIsVerified(): bool
+    {
+        $peer = trim($_SERVER['REMOTE_ADDR'] ?? '');
+
+        if ($peer === '') {
+            return false;
+        }
+
+        if (!TrustedProxy::isCloudflare($peer)) {
+            return true;
+        }
+
+        return trim($_SERVER['HTTP_CF_CONNECTING_IP'] ?? '') !== '';
     }
 
     private function convertJSONtoPOST(){
