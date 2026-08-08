@@ -108,6 +108,39 @@ class Request
         exit();
     }
 
+    /**
+     * The client IP, as opposed to the peer address.
+     *
+     * Behind Cloudflare, REMOTE_ADDR is only the POP's egress address, so
+     * anything that rate-limits or bans on REMOTE_ADDR is really acting on
+     * every visitor through that POP at once. Mirrors the precedence already
+     * used by Application::banmotherfuckers() and RestrictIP::clientIp().
+     *
+     * NOTE: CF-Connecting-IP is only trustworthy when the request genuinely
+     * arrived via Cloudflare. This does not verify that, matching the existing
+     * behaviour elsewhere in the codebase — so treat the result as best-effort
+     * attribution, never as an authorisation input.
+     */
+    public static function clientIp(): string
+    {
+        // Deliberately not a ?? chain. explode(',', '')[0] returns '' rather
+        // than null, so any `?? $_SERVER['REMOTE_ADDR']` after it is dead code
+        // and a direct-to-origin request resolves to ''. That dead fallback is
+        // present in Application::banmotherfuckers() and RestrictIP::clientIp();
+        // this does not reproduce it.
+        $cf = trim($_SERVER['HTTP_CF_CONNECTING_IP'] ?? '');
+        if ($cf !== '') {
+            return $cf;
+        }
+
+        $xff = trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '')[0]);
+        if ($xff !== '') {
+            return $xff;
+        }
+
+        return trim($_SERVER['REMOTE_ADDR'] ?? '');
+    }
+
     private function convertJSONtoPOST(){
 
         // Only auto-decode bodies that declare themselves as JSON. Raw binary
