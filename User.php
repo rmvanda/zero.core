@@ -144,7 +144,10 @@ class User
                 $_SESSION['user_settings'][$setting['setting_key']] = $setting['setting_value'];
             }
             $_SESSION['auth_level'] = (int) ($_SESSION['user_settings']['auth.level'] ?? 0);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            // \Throwable, not \Exception: Database::getConnection() throws \Error
+            // on a misconfiguration, which \Exception does not catch — and the
+            // comment above says a failure here must not break a sign-in.
             error_log("User::establish failed to load settings: " . $e->getMessage());
             $_SESSION['user_settings'] = [];
             $_SESSION['auth_level']    = 0;
