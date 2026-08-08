@@ -322,6 +322,36 @@ public function updateSettings($args) {
 
 ---
 
+## Refactors (existing attributes)
+
+### AllowWithToken — stop hand-building the login session
+**Status:** Planned — circle back after the manual-registration work
+**Location:** `core/attribute/AllowWithToken.php:100-126`
+
+`AllowWithToken` constructs a full login session by hand, under a comment claiming parity with
+`Auth::complete()`. It has already drifted:
+
+- does not set `$_SESSION['created_at']`
+- does not set `$_SESSION['login_provider']`
+- never calls `session_regenerate_id()` — so API-token auth carries the same session-fixation
+  gap that OAuth login has
+
+This makes it a second, divergent writer of the session contract documented in
+`modules/Auth/CLAUDE.md`.
+
+**Fix:** the manual-registration project extracts session construction into a single helper.
+Because that helper has three callers — `Auth::complete()`, the magic-link consumer, and this
+attribute — it belongs on `Zero\Core\User` (which already owns session *reads*) rather than as
+a private method on the Auth module. Once it exists, replace lines 100-126 with one call.
+
+**Do not do this in isolation** — it is only worth touching once the shared helper lands, or
+the divergence just moves.
+
+**Found:** while tracing `user_view` consumers for the `Zero\Model` migration
+(`docs/superpowers/specs/2026-08-07-zero-model-user-migration-design.md` §12).
+
+---
+
 ## Notes
 
 - All attributes should follow the existing pattern:
