@@ -105,6 +105,12 @@ class AllowWithToken {
 
             Console::info("AllowWithToken: authenticated user {$user->id} via API token");
 
+        } catch (HTTPError $e) {
+            // Deliberate 401s (invalid token, expired token, missing owner) are
+            // client errors and must reach the client as such. HTTPError extends
+            // \Exception, so without this they were swallowed by the catch below
+            // and re-thrown as 500 "Authentication error".
+            throw $e;
         } catch (\Exception $e) {
             error_log("AllowWithToken error: " . $e->getMessage());
             throw new HTTPError(500, "Authentication error");
