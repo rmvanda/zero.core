@@ -146,10 +146,14 @@ class Application {
     public function banmotherfuckers(){
         // CF-Connecting-IP is the true client IP behind Cloudflare (single, reliable)
         // X-Forwarded-For can be a chain; grab the first entry as fallback
-        $ip = $_SERVER['HTTP_CF_CONNECTING_IP']
-            ?? explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '')[0]
-            ?? $_SERVER['REMOTE_ADDR'];
-        $ip = trim($ip);
+        //
+        // This used to inline that precedence as a ?? chain, which had a dead
+        // branch: explode(',', '')[0] returns '' rather than null, so
+        // `?? $_SERVER['REMOTE_ADDR']` was never reached and a direct-to-origin
+        // request resolved to ''. The bans below then called CloudFlare::block('')
+        // — an empty rule that matches nothing — so a scanner probing for .php
+        // straight at the origin was never actually banned, repeatably.
+        $ip = Request::clientIp();
 
         if(str_contains($_SERVER['REQUEST_URI'], ".php")){
             CloudFlare::block($ip, "trying to call some .php file. ({$_SERVER['REQUEST_URI']})");

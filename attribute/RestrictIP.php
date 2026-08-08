@@ -58,12 +58,13 @@ class RestrictIP {
      * @return string
      */
     private function clientIp(): string {
-        $ip = $_SERVER['HTTP_CF_CONNECTING_IP']
-            ?? explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '')[0]
-            ?? $_SERVER['REMOTE_ADDR']
-            ?? '';
-
-        return trim($ip);
+        // Delegates to the shared resolver. The inline ?? chain that used to
+        // live here had a dead branch — explode(',', '')[0] is '' rather than
+        // null, so REMOTE_ADDR was never reached and a direct-to-origin request
+        // resolved to ''. That failed closed here (an empty string matches no
+        // allow-list entry, so access was denied), but it was still wrong, and
+        // the same bug in Application::banmotherfuckers() failed OPEN.
+        return \Zero\Core\Request::clientIp();
     }
 
     /**
