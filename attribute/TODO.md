@@ -325,7 +325,7 @@ public function updateSettings($args) {
 ## Refactors (existing attributes)
 
 ### AllowWithToken — stop hand-building the login session
-**Status:** Planned — circle back after the manual-registration work
+**Status:** ✅ **DONE** — converted onto `Zero\Core\User::establish()` (2026-08-08)
 **Location:** `core/attribute/AllowWithToken.php:100-126`
 
 `AllowWithToken` constructs a full login session by hand, under a comment claiming parity with

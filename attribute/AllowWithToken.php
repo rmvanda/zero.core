@@ -87,47 +87,23 @@ class AllowWithToken {
             $update = $db->prepare("UPDATE api_tokens SET last_used_at = NOW() WHERE id = ?");
             $update->execute([$tokenRow['id']]);
 
-            // Load the user
-            $userStmt = $db->prepare("SELECT * FROM user_view WHERE id = ?");
-            $userStmt->execute([$tokenRow['user_id']]);
-            $user = $userStmt->fetch();
+            // Load the user and build the session through the shared helper, so
+            // API-token auth produces a session identical to an interactive
+            // login. This block used to duplicate Auth::complete() by hand and
+            // had drifted: no created_at, no login_provider, no session rotation.
+            $user = \Zero\Model\User::find((int) $tokenRow['user_id']);
 
             if (!$user) {
                 Console::warn("AllowWithToken: user not found for token");
                 throw new HTTPError(401, "Token owner not found");
             }
 
-            // Populate session — same keys as Auth::complete()
-            $_SESSION['user'] = [
-                'full_name' => $user['name'],
-                'email'     => $user['email'],
-                'verified'  => $user['verified'],
-                'pic'       => $user['pic'],
-                'id'        => $user['id'],
-            ];
-            $_SESSION['user_id']  = $user['id'];
-            $_SESSION['name']     = $user['name'];
-            $_SESSION['email']    = $user['email'];
-            $_SESSION['verified'] = $user['verified'];
-            $_SESSION['pic']      = $user['pic'];
-
-            // Load user settings/permissions
-            $settingsStmt = $db->prepare(
-                "SELECT setting_key, setting_value FROM user_settings WHERE user_id = ?"
-            );
-            $settingsStmt->execute([$user['id']]);
-            $settings = $settingsStmt->fetchAll();
-
-            $_SESSION['user_settings'] = [];
-            foreach ($settings as $setting) {
-                $_SESSION['user_settings'][$setting['setting_key']] = $setting['setting_value'];
-            }
-            $_SESSION['auth_level'] = $_SESSION['user_settings']['auth.level'] ?? 0;
+            \Zero\Core\User::establish($user);
 
             // Flag so downstream code can distinguish token-based auth
             $_SESSION['_api_token_auth'] = true;
 
-            Console::info("AllowWithToken: authenticated user {$user['id']} via API token");
+            Console::info("AllowWithToken: authenticated user {$user->id} via API token");
 
         } catch (\Exception $e) {
             error_log("AllowWithToken error: " . $e->getMessage());

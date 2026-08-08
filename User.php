@@ -95,6 +95,69 @@ class User
     }
 
     /**
+     * Build the login session. THE single writer of the session contract
+     * documented in modules/Auth/CLAUDE.md.
+     *
+     * Three callers: Auth::complete() (OAuth), the magic-link token consumer,
+     * and core/attribute/AllowWithToken.php (API tokens). Before this existed,
+     * complete() and AllowWithToken each built the session by hand and had
+     * already drifted apart — AllowWithToken set neither created_at nor
+     * login_provider and never rotated the session id.
+     *
+     * @param \Zero\Model\User $user     The account being signed in.
+     * @param array|null       $identity Normalized provider identity, when the
+     *                                   caller has one richer than the stored
+     *                                   row (OAuth). Null builds it from the row.
+     */
+    public static function establish(\Zero\Model\User $user, ?array $identity = null): void
+    {
+        // Rotate at the privilege boundary. Application::__construct() only
+        // rotates on a timer, which leaves a session-fixation window at exactly
+        // the moment it matters. Guarded because CLI/test contexts have no session.
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
+
+        $_SESSION['user'] = $identity ?? [
+            'full_name' => $user->name,
+            'email'     => $user->email,
+            'verified'  => $user->verified,
+            'pic'       => $user->pic,
+            'id'        => $user->id,
+        ];
+
+        $_SESSION['user_id']  = $user->id;
+        $_SESSION['name']     = $user->name;
+        $_SESSION['email']    = $user->email;
+        $_SESSION['verified'] = $user->verified;
+        $_SESSION['pic']      = $user->pic;
+
+        // Permissions/settings. A failure here must not break a sign-in.
+        try {
+            $stmt = Database::getConnection()->prepare(
+                "SELECT setting_key, setting_value FROM user_settings WHERE user_id = ?"
+            );
+            $stmt->execute([$user->id]);
+
+            $_SESSION['user_settings'] = [];
+            foreach ($stmt->fetchAll() as $setting) {
+                $_SESSION['user_settings'][$setting['setting_key']] = $setting['setting_value'];
+            }
+            $_SESSION['auth_level'] = (int) ($_SESSION['user_settings']['auth.level'] ?? 0);
+        } catch (\Exception $e) {
+            error_log("User::establish failed to load settings: " . $e->getMessage());
+            $_SESSION['user_settings'] = [];
+            $_SESSION['auth_level']    = 0;
+        }
+
+        $_SESSION['created_at'] = time();
+
+        // Non-expiring "probably a returning user" hint. NOT authentication —
+        // it holds a plaintext id and must never be trusted as proof of identity.
+        setcookie('unisolu_user_id', (string) $user->id, 2147483647, '/', '', true, true);
+    }
+
+    /**
      * Logout user by clearing session
      *
      * @return void
