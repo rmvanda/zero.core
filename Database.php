@@ -107,6 +107,86 @@ class Database {
     }
 
     /**
+     * Build a PDO DSN string for the requested driver.
+     *
+     * Deliberately pure — it opens nothing and touches no state — so DSN
+     * construction can be unit tested without a live database.
+     *
+     * Recognised keys:
+     *   driver  PDO driver name; 'sqltype' is accepted as a legacy alias
+     *   host    Server hostname (ignored by sqlite)
+     *   port    Omitted when blank so the driver applies its own default
+     *   name    Database name, or the file path for sqlite
+     *   charset Client encoding; applied per-driver, see below
+     *
+     * @param array $conn_info Connection settings
+     * @return string PDO DSN
+     */
+    public static function buildDsn(array $conn_info): string {
+        $driver  = strtolower($conn_info['driver'] ?? $conn_info['sqltype'] ?? 'mysql');
+        $host    = $conn_info['host'] ?? 'localhost';
+        $name    = $conn_info['name'] ?? '';
+        // Treat blank as absent: an empty DB_PORT= in the ini means
+        // "let the driver pick" (3306 for mysql, 5432 for pgsql), which
+        // is more correct than us hard-coding a default here.
+        $port    = ($conn_info['port']    ?? '') !== '' ? $conn_info['port']    : null;
+        $charset = ($conn_info['charset'] ?? '') !== '' ? $conn_info['charset'] : null;
+
+        // sqlite has no host, port or credentials — just a file path (or :memory:)
+        if ($driver === 'sqlite') {
+            return "sqlite:$name";
+        }
+
+        $parts = ["host=$host"];
+        if ($port !== null) {
+            $parts[] = "port=$port";
+        }
+        $parts[] = "dbname=$name";
+
+        if ($driver === 'mysql') {
+            // MySQL takes the charset directly in the DSN. The utf8mb4 default
+            // matches the collation the existing schema was created with.
+            $parts[] = "charset=" . ($charset ?? 'utf8mb4');
+        } elseif ($driver === 'pgsql' && $charset !== null) {
+            // Postgres has no charset DSN parameter — the client encoding is
+            // passed through as a libpq startup option instead.
+            $parts[] = "options='--client_encoding=$charset'";
+        }
+        // Any other driver falls through to the generic host/port/dbname form,
+        // so adding one is a config change rather than a code change.
+
+        return $driver . ":" . implode(";", $parts);
+    }
+
+    /**
+     * Open a standalone connection without touching the singleton.
+     *
+     * self::$connection is a singleton and, in practice, is already holding the
+     * primary MySQL connection long before module code runs — the login and
+     * permission attributes reach for it first. Anything needing a *second*
+     * database (a different driver, host, or credentials) goes through here
+     * instead, and owns the returned handle itself.
+     *
+     * @param array $conn_info Connection settings, as accepted by buildDsn()
+     * @return \PDO A fresh connection, unrelated to self::$connection
+     */
+    public static function connect(array $conn_info): \PDO {
+        // Null-safe because sqlite takes neither user nor password
+        $pdo = new \PDO(
+            self::buildDsn($conn_info),
+            $conn_info['user'] ?? null,
+            $conn_info['pass'] ?? null,
+            self::$pdoOpts
+        );
+
+        if (self::$trackingEnabled) {
+            $pdo->setAttribute(\PDO::ATTR_STATEMENT_CLASS, [TrackedStatement::class, []]);
+        }
+
+        return $pdo;
+    }
+
+    /**
      * Initialize database connection explicitly
      * Useful when you want to set up connection with specific parameters
      *
@@ -119,15 +199,7 @@ class Database {
         }
 
         if (is_array($conn_info)) {
-            $user = $conn_info['user'];
-            $host = $conn_info['host'] ?? 'localhost';
-            $pass = $conn_info['pass'];
-            $name = $conn_info['name'];
-            $charset = $conn_info['charset'] ?? 'utf8mb4';
-            $sqltype = $conn_info['sqltype'] ?? 'mysql';
-
-            $dsn = "$sqltype:host=$host;dbname=$name;charset=$charset";
-            self::$connection = new \PDO($dsn, $user, $pass, self::$pdoOpts);
+            self::$connection = self::connect($conn_info);
         } elseif ($conn_info instanceof \PDO) {
             self::$connection = $conn_info;
         }
@@ -149,7 +221,16 @@ class Database {
         if (!isset(self::$connection)) {
             // Lazy initialization using constants from database.ini
             try {
-                $dsn = "mysql:host=" . HOST . ";dbname=" . NAME . ";charset=utf8mb4";
+                // DB_DRIVER/DB_PORT/DB_CHARSET are optional additions to
+                // database.ini — with none of them set this yields exactly the
+                // mysql DSN this method has always built.
+                $dsn = self::buildDsn([
+                    'driver'  => defined('DB_DRIVER')  ? DB_DRIVER  : 'mysql',
+                    'host'    => HOST,
+                    'port'    => defined('DB_PORT')    ? DB_PORT    : null,
+                    'name'    => NAME,
+                    'charset' => defined('DB_CHARSET') ? DB_CHARSET : null,
+                ]);
                 self::$connection = new \PDO($dsn, USER, PASS, self::$pdoOpts);
                 if (self::$trackingEnabled) {
                     self::$connection->setAttribute(\PDO::ATTR_STATEMENT_CLASS, [TrackedStatement::class, []]);
