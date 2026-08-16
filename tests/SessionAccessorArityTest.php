@@ -29,6 +29,12 @@ use Zero\Core\User;
  * given time — including after sub-project B removes getName()/getEmail()
  * entirely, and including accessors this bug report never named (getId(),
  * getAll(), logout(), getAllPermissions() are zero-parameter too).
+ *
+ * Out of scope: aliased imports. The regex matches literal `User::` — a call
+ * site importing the class under another name (e.g.
+ * `use \Zero\Core\User as SessionUser;` then `SessionUser::getId($x)`) is
+ * invisible to it. This is not exhaustive over every possible spelling of a
+ * call site, only over the literal `User::` one.
  */
 class SessionAccessorArityTest extends ZeroTestCase
 {

@@ -106,6 +106,11 @@ class User extends Model
      * `?static`. Checking the type on read rebuilds instead of reusing
      * whenever the memoized instance is not of the class actually being
      * asked for.
+     *
+     * `save()` is safe, as described above — `delete()` is NOT. It is
+     * inherited from Model and compiles fine on the returned instance, but
+     * calling it here issues `DELETE FROM users WHERE id = <session user>`
+     * while leaving the session itself intact, silently orphaning it.
      */
     public static function current(): ?static
     {

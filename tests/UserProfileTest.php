@@ -19,8 +19,12 @@ class UserProfileTest extends ZeroTestCase
     {
         parent::setUp();
         $this->connectTestDatabase();
-        Crypto::$keyOverride = str_repeat('b', 64);
+        // Set last: tearDown() does not run when setUp() throws, so if
+        // forgetProfile() (a DB call) threw before this line, $keyOverride
+        // would be left set for every later test in the run and silently
+        // break Crypto::decrypt() there.
         $this->user()->forgetProfile();
+        Crypto::$keyOverride = str_repeat('b', 64);
     }
 
     protected function tearDown(): void
@@ -120,7 +124,13 @@ class UserProfileTest extends ZeroTestCase
         )->execute([self::U, 'phone']);
 
         // A corrupted phone number must not 500 the profile page.
-        $this->assertNull($this->user()->profile()['phone']);
+        $p = $this->user()->profile();
+        // Without this, the assertion below would pass vacuously if profile()
+        // returned [] entirely: an undefined array key also evaluates to
+        // null (plus a Warning), which looks identical to a real decrypt
+        // failure yielding null.
+        $this->assertArrayHasKey('phone', $p);
+        $this->assertNull($p['phone']);
     }
 
     public function testForgetRemovesEverythingForTheUser(): void

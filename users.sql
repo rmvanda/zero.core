@@ -1,4 +1,4 @@
--- Zero\Model\User backing table.
+-- Zero\Core\User backing table.
 -- Replaces the EAV `user` entity type (entity.type = 4). See
 -- docs/superpowers/specs/2026-08-07-zero-model-user-migration-design.md
 --
@@ -11,7 +11,7 @@ CREATE TABLE users (
     -- folding made gross@x.com and groß@x.com the SAME address, so whoever
     -- registered one silently blocked the other from ever signing up. Byte-exact
     -- comparison ends that. The cost is that case must be normalised in code
-    -- instead — Zero\Model\User::normalizeEmail() does it on create(), and
+    -- instead — Zero\Core\User::normalizeEmail() does it on create(), and
     -- findByEmail() does it on lookup. A raw findBy('email', …) will MISS on a
     -- case difference, silently.
     email      VARCHAR(254)  COLLATE utf8mb4_bin NOT NULL,

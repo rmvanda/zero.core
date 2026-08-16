@@ -4,7 +4,7 @@
 -- The column projection is deliberately IDENTICAL to the old EAV view —
 -- created_at/updated_at are excluded. core/attribute/AllowWithToken.php does
 -- `SELECT * FROM user_view`, so adding columns here would change what that
--- sees. Read the new columns from Zero\Model\User or from `users` directly.
+-- sees. Read the new columns from Zero\Core\User or from `users` directly.
 --
 -- CREATE OR REPLACE rather than DROP + CREATE: no window where the view is absent.
 --

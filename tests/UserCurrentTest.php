@@ -78,7 +78,7 @@ class UserCurrentTest extends ZeroTestCase
         }
     }
 
-    public function testCurrentIsMemoizedAndDoesNotQuery(): void
+    public function testCurrentReturnsTheSameInstanceWithinARequest(): void
     {
         User::establish(User::find($this->userId));
         $this->assertSame(User::current(), User::current(),
