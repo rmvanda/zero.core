@@ -121,6 +121,12 @@ class UserPermissionTest extends ZeroTestCase
             'auth.level is a level, not a grant — a strict can() check would deny it.');
     }
 
+    public function testAuthLevelDefaultsToZeroWithNoRow(): void
+    {
+        $this->assertSame(0, User::find($this->userId)->authLevel(),
+            'No auth.level row must read as level 0, not null or a fatal.');
+    }
+
     public function testSetSettingRecordsTheActor(): void
     {
         $actor = 424242;

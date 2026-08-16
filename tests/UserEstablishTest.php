@@ -97,8 +97,15 @@ class UserEstablishTest extends ZeroTestCase
      * testLoadsUserSettingsAndAuthLevel() and testAuthLevelDefaultsToZeroWithNoSettings()
      * were deleted here: establish() no longer caches user_settings/auth_level
      * into the session — that cache was the staleness source read-through
-     * permissions exist to close. Coverage is superseded by
-     * core/tests/UserPermissionTest.php::testEstablishNoLongerCachesSettingsInTheSession()
-     * and ::testAuthLevelIsAnIntegerNotABoolean().
+     * permissions exist to close.
+     *
+     * testLoadsUserSettingsAndAuthLevel()'s "auth.level casts to int" coverage
+     * is superseded by core/tests/UserPermissionTest.php::testAuthLevelIsAnIntegerNotABoolean().
+     * testAuthLevelDefaultsToZeroWithNoSettings()'s "no row defaults to 0"
+     * coverage is superseded by
+     * core/tests/UserPermissionTest.php::testAuthLevelDefaultsToZeroWithNoRow().
+     * Neither test's "and it lands in the session" half survives — that
+     * behaviour no longer exists — but testEstablishNoLongerCachesSettingsInTheSession()
+     * in the same file asserts the session key is gone.
      */
 }
