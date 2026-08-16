@@ -2,6 +2,11 @@
 
 This document tracks planned attributes for the Zero Framework's attribute system.
 
+One proposal has its own file rather than a section here, because the reasoning
+is longer than the entry would be: `TODO_BRANCH_ON_LOGIN.md` — an attribute that
+names a setup callback for endpoints that are public but behave differently when
+signed in. Deferred, with the trigger condition and the build sketch written down.
+
 ## High Priority
 
 ### RequireJSON
