@@ -110,20 +110,24 @@ class UserCurrentTest extends ZeroTestCase
     }
 
     /*
-     * Sessions built before establish() existed (or by any other hand-rolled
-     * path) may carry only $_SESSION['user'], with none of the flat keys
-     * establish() itself always writes alongside it. currentId() and
-     * current() must still recognise those sessions as logged in — see the
-     * rationale on currentId()'s docblock.
+     * currentId() reads $_SESSION['user_id'] and nothing else.
+     *
+     * It used to fall back to $_SESSION['user']['id'] for sessions built
+     * before establish() existed. That key holds the raw provider identity,
+     * whose 'id' is the PROVIDER's user id — a foreign number in the same
+     * shape as a local users.id — so the fallback could answer with an id
+     * that belongs to no local account. These two tests previously asserted
+     * the fallback worked; they now pin that it is gone.
      */
 
-    public function testCurrentIdFallsBackToUserArrayWhenFlatKeyIsAbsent(): void
+    public function testCurrentIdIgnoresTheUserArrayWhenFlatKeyIsAbsent(): void
     {
         $_SESSION = ['user' => ['id' => $this->userId]];
-        $this->assertSame($this->userId, User::currentId());
+        $this->assertNull(User::currentId(),
+            "currentId() must not read \$_SESSION['user']['id'] — it holds the provider's id");
     }
 
-    public function testCurrentFallsBackToUserArrayWhenFlatKeysAreAbsent(): void
+    public function testCurrentIsNullWhenOnlyTheUserArrayIsPresent(): void
     {
         $_SESSION = ['user' => [
             'id'        => $this->userId,
@@ -132,13 +136,18 @@ class UserCurrentTest extends ZeroTestCase
             'pic'       => 'https://x/y.jpg',
         ]];
 
-        $u = User::current();
+        $this->assertNull(User::current(),
+            'a session with no user_id is not a logged-in session');
+    }
 
-        $this->assertNotNull($u, "a session carrying only \$_SESSION['user'] must still yield a current user");
-        $this->assertSame($this->userId, (int) $u->id);
-        $this->assertSame('Array-Only Probe', $u->name, "current() must read the array's full_name key, not name");
-        $this->assertSame(self::E, $u->email);
-        $this->assertSame('https://x/y.jpg', $u->pic);
+    public function testCurrentIdIgnoresAForeignProviderIdInTheUserArray(): void
+    {
+        // The concrete failure the fallback allowed: Auth::complete() wrote
+        // $_SESSION['user'] before enforceVerifiedEmail() could throw, so a
+        // REFUSED sign-in left this shape behind. 12345678 is a plausible
+        // GitHub id and passes every filter_var check currentId() applies.
+        $_SESSION = ['user' => ['id' => 12345678, 'email' => 'attacker@example.invalid']];
+        $this->assertNull(User::currentId());
     }
 
     /*
@@ -172,8 +181,8 @@ class UserCurrentTest extends ZeroTestCase
 
     public function testCurrentIdRejectsBadUserArrayId(): void
     {
-        // The $_SESSION['user']['id'] fallback path must be validated too,
-        // not just the flat key.
+        // Retained from when $_SESSION['user']['id'] was a fallback path.
+        // It is no longer read at all, so this now pins the stronger property.
         $_SESSION = ['user' => ['id' => 'xyz']];
         $this->assertNull(User::currentId());
     }

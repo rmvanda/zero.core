@@ -81,7 +81,13 @@ class UserEstablishTest extends ZeroTestCase
         ]);
 
         $this->assertSame('Provider Name', $_SESSION['user']['full_name']);
-        $this->assertSame('provider-123', $_SESSION['user']['id']);
+
+        // ...but the id is OURS, not the provider's. Every adapter's format()
+        // puts the provider's user id under 'id'; leaving it there made the key
+        // mean a local users.id on one branch of establish() and a foreign one
+        // on the other. This assertion previously expected 'provider-123'.
+        $this->assertSame($this->row->id, $_SESSION['user']['id'],
+            "establish() must overwrite the provider's id with the local one");
     }
 
     public function testWithoutIdentityTheUserKeyIsBuiltFromTheRow(): void

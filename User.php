@@ -143,12 +143,22 @@ class User extends Model
      * Kept separate from current() because 107 call sites want only the id or
      * a logged-in check, and none of them should pay for object construction.
      *
-     * Falls back to $_SESSION['user']['id'] for sessions built before
-     * establish() existed: its own docblock records that complete() and
-     * AllowWithToken used to build the session by hand and had already
-     * drifted apart from each other. establish() itself always writes both
-     * shapes, so this fallback matters only for sessions already sitting in
-     * PHP's session store from before establish() unified them.
+     * Reads $_SESSION['user_id'] and NOTHING ELSE. There used to be a fallback
+     * to $_SESSION['user']['id'], for sessions built before establish()
+     * existed. It was a liability rather than a convenience: $_SESSION['user']
+     * holds the raw provider identity, and every adapter's format() puts the
+     * PROVIDER's user id under 'id' — a foreign number in the same shape as a
+     * local users.id. Auth::complete() wrote that array before its
+     * verified-email gate could throw, so a refused sign-in left a session
+     * whose currentId() answered with a provider-scoped id. That is the same
+     * bug class as the Notes bypass recorded in
+     * core/attribute/AUTH_GATE_CONSISTENCY.md, and the filter_var hardening
+     * below could not catch it: a GitHub or GitLab id is a perfectly valid
+     * positive integer.
+     *
+     * establish() is the single session writer and always sets user_id, so
+     * dropping the fallback costs only a one-time re-login for any session
+     * still in PHP's store from before it landed. Do NOT restore it.
      *
      * Validated with filter_var(), never a bare (int) cast: the cast
      * silently turns 'abc' into 0, and 0 is not "nobody" — user_settings
@@ -164,7 +174,7 @@ class User extends Model
      */
     public static function currentId(): ?int
     {
-        $id = $_SESSION['user_id'] ?? $_SESSION['user']['id'] ?? null;
+        $id = $_SESSION['user_id'] ?? null;
         if ($id === null) {
             return null;
         }
@@ -208,6 +218,19 @@ class User extends Model
             'pic'       => $user->pic,
             'id'        => $user->id,
         ];
+
+        // OUR id, never the provider's. A supplied $identity comes from an
+        // adapter's format(), and all five put the provider's user id under
+        // 'id' — a GitHub or GitLab integer, a Discord snowflake. Left alone,
+        // the two branches of the assignment above disagree about what 'id'
+        // means: a local users.id when built from the row, a foreign one when
+        // the caller passed an identity. Overwriting here makes the key mean
+        // one thing.
+        //
+        // Set at the writer rather than stripped in the adapters: GoogleAdapter
+        // reads $this->user['id'] itself, for normalizeGoogleToken(), before it
+        // ever returns the identity.
+        $_SESSION['user']['id'] = $user->id;
 
         $_SESSION['user_id']  = $user->id;
         $_SESSION['name']     = $user->name;
