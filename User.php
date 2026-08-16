@@ -199,26 +199,11 @@ class User extends Model
         $_SESSION['verified'] = $user->verified;
         $_SESSION['pic']      = $user->pic;
 
-        // Permissions/settings. A failure here must not break a sign-in.
-        try {
-            $stmt = Database::getConnection()->prepare(
-                "SELECT setting_key, setting_value FROM user_settings WHERE user_id = ?"
-            );
-            $stmt->execute([$user->id]);
-
-            $_SESSION['user_settings'] = [];
-            foreach ($stmt->fetchAll() as $setting) {
-                $_SESSION['user_settings'][$setting['setting_key']] = $setting['setting_value'];
-            }
-            $_SESSION['auth_level'] = (int) ($_SESSION['user_settings']['auth.level'] ?? 0);
-        } catch (\Throwable $e) {
-            // \Throwable, not \Exception: Database::getConnection() throws \Error
-            // on a misconfiguration, which \Exception does not catch — and the
-            // comment above says a failure here must not break a sign-in.
-            error_log("User::establish failed to load settings: " . $e->getMessage());
-            $_SESSION['user_settings'] = [];
-            $_SESSION['auth_level']    = 0;
-        }
+        // Permissions/settings are no longer cached into the session here —
+        // User::can()/authLevel() read through to the database, memoized per
+        // instance, so a permission revoked mid-session denies on the very
+        // next request instead of waiting for logout. See
+        // core/attribute/RequirePermission.php and RequireAuthLevel.php.
 
         $_SESSION['created_at'] = time();
 
@@ -265,8 +250,15 @@ class User extends Model
         return $value === '1' || $value === 1 || $value === true;
     }
 
-    /** All of this user's settings, keyed by setting_key. Memoized. */
-    private function settings(): array
+    /**
+     * All of this user's settings, keyed by setting_key. Memoized.
+     *
+     * Public (not just used internally by can()/authLevel()): callers that
+     * need the whole map — the profile view splitting allow.* permissions
+     * from other config — read it here rather than the session cache that
+     * used to carry it.
+     */
+    public function settings(): array
     {
         if ($this->settings !== null) {
             return $this->settings;
@@ -319,7 +311,10 @@ class User extends Model
             )->execute([$this->id, $key, $value, $actorId ?? $this->id]);
             $this->settings = null;
             return $ok;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            // \Throwable, not \Exception: Database::getConnection() throws \Error
+            // on a misconfiguration, same reasoning as settings() above — a
+            // write failure must report false, not propagate.
             error_log("User::setSetting() failed: " . $e->getMessage());
             return false;
         }
@@ -334,7 +329,7 @@ class User extends Model
      *
      * Deliberately kept rather than replaced by can() at the call sites: this
      * framework serves the live site from the working tree, so deleting a
-     * method with 14 live callers is an immediate outage.
+     * method with 12 live callers is an immediate outage.
      */
     public static function hasPermission(string $permission): bool
     {

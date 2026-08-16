@@ -44,7 +44,7 @@ class UserEstablishTest extends ZeroTestCase
     {
         SessionUser::establish($this->row);
 
-        foreach (['user_id','email','verified','name','pic','user','user_settings','auth_level','created_at'] as $key) {
+        foreach (['user_id','email','verified','name','pic','user','created_at'] as $key) {
             $this->assertArrayHasKey($key, $_SESSION, "missing \$_SESSION['$key']");
         }
         $this->assertSame($this->row->id, $_SESSION['user_id']);
@@ -93,21 +93,12 @@ class UserEstablishTest extends ZeroTestCase
         $this->assertSame($this->row->id, $_SESSION['user']['id']);
     }
 
-    public function testLoadsUserSettingsAndAuthLevel(): void
-    {
-        Database::getConnection()->prepare(
-            "INSERT INTO user_settings (user_id, setting_key, setting_value, updated_by) VALUES (?, ?, ?, ?)"
-        )->execute([$this->row->id, 'auth.level', '3', $this->row->id]);
-
-        SessionUser::establish($this->row);
-
-        $this->assertSame('3', $_SESSION['user_settings']['auth.level']);
-        $this->assertSame(3, $_SESSION['auth_level']);
-    }
-
-    public function testAuthLevelDefaultsToZeroWithNoSettings(): void
-    {
-        SessionUser::establish($this->row);
-        $this->assertSame(0, $_SESSION['auth_level']);
-    }
+    /*
+     * testLoadsUserSettingsAndAuthLevel() and testAuthLevelDefaultsToZeroWithNoSettings()
+     * were deleted here: establish() no longer caches user_settings/auth_level
+     * into the session — that cache was the staleness source read-through
+     * permissions exist to close. Coverage is superseded by
+     * core/tests/UserPermissionTest.php::testEstablishNoLongerCachesSettingsInTheSession()
+     * and ::testAuthLevelIsAnIntegerNotABoolean().
+     */
 }

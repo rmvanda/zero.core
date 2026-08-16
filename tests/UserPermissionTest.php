@@ -149,4 +149,15 @@ class UserPermissionTest extends ZeroTestCase
         $this->assertFalse(User::hasPermission('allow.zerotest'),
             'No session means no grant — never a fatal.');
     }
+
+    public function testEstablishNoLongerCachesSettingsInTheSession(): void
+    {
+        $this->set('allow.zerotest', '1');
+        User::establish(User::find($this->userId));
+
+        $this->assertArrayNotHasKey('user_settings', $_SESSION,
+            'The session cache is the staleness source and must be gone.');
+        $this->assertTrue(User::hasPermission('allow.zerotest'),
+            'and permissions must still work without it.');
+    }
 }

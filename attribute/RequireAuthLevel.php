@@ -13,12 +13,16 @@ class RequireAuthLevel{
     public function __construct(public $level = 9){}
 
     public function handler(){
+        // Reads through User::current()->authLevel() (database, memoized per
+        // instance) rather than a session cache, so a revoked/raised auth
+        // level takes effect on the very next request.
+        $userLevel = \Zero\Core\User::current()?->authLevel() ?? 0;
+
         if( session_status() == PHP_SESSION_NONE
-            || !($_SESSION['auth_level'] ?? null)
-            ||  $_SESSION['auth_level'] < $this->level
+            || !$userLevel
+            ||  $userLevel < $this->level
         ){
-            $userLevel = $_SESSION['auth_level'] ?? 'none';
-            Console::warn("RequireAuthLevel attribute blocked request: required level {$this->level}, user level: {$userLevel}");
+            Console::warn("RequireAuthLevel attribute blocked request: required level {$this->level}, user level: " . ($userLevel ?: 'none'));
             throw new HTTPError(401, "Authentication required");
         }
         return $this->approved = true;

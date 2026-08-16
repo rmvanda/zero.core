@@ -5,6 +5,8 @@ namespace Zero\Tests\Core\Attribute;
 use Zero\Tests\Core\ZeroTestCase;
 use Zero\Core\Attribute\RequireAuthLevel;
 use Zero\Core\HTTPError;
+use Zero\Core\User;
+use Zero\Core\Database;
 
 class RequireAuthLevelTest extends ZeroTestCase
 {
@@ -18,15 +20,42 @@ class RequireAuthLevelTest extends ZeroTestCase
         // that matters: the auth_level comparison.
     }
 
+    /**
+     * handler() now reads auth level through User::current()->authLevel(),
+     * which memoizes into User::$current for the rest of the process. Each
+     * test below builds a different mock/session for user_id 1 — without
+     * clearing the memo, a later test would answer from an earlier test's
+     * cached instance instead of its own mock. Same convention as
+     * core/tests/UserTest.php.
+     */
+    protected function tearDown(): void
+    {
+        $prop = new \ReflectionProperty(User::class, 'current');
+        $prop->setAccessible(true);
+        $prop->setValue(null, null);
+
+        parent::tearDown();
+    }
+
+    /** Logs a session in and mocks the DB to answer auth.level = $level. */
+    private function loginWithAuthLevel(int $level): void
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            @session_start();
+        }
+        $this->loginUser();
+
+        $pdo = $this->createMockPdo(
+            fetchAllReturn: [['setting_key' => 'auth.level', 'setting_value' => (string) $level]]
+        );
+        Database::init($pdo);
+    }
+
     /* ── Sufficient auth level ── */
 
     public function testPassesWhenAuthLevelMeetsRequirement(): void
     {
-        // Simulate active session by starting one
-        if (session_status() === PHP_SESSION_NONE) {
-            @session_start();
-        }
-        $_SESSION['auth_level'] = 9;
+        $this->loginWithAuthLevel(9);
 
         $attr = new RequireAuthLevel(5);
         $this->assertTrue($attr->handler());
@@ -34,10 +63,7 @@ class RequireAuthLevelTest extends ZeroTestCase
 
     public function testPassesWhenAuthLevelEqualsRequirement(): void
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            @session_start();
-        }
-        $_SESSION['auth_level'] = 5;
+        $this->loginWithAuthLevel(5);
 
         $attr = new RequireAuthLevel(5);
         $this->assertTrue($attr->handler());
@@ -47,10 +73,7 @@ class RequireAuthLevelTest extends ZeroTestCase
 
     public function testThrows401WhenAuthLevelTooLow(): void
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            @session_start();
-        }
-        $_SESSION['auth_level'] = 1;
+        $this->loginWithAuthLevel(1);
 
         $attr = new RequireAuthLevel(5);
 
@@ -64,7 +87,7 @@ class RequireAuthLevelTest extends ZeroTestCase
         if (session_status() === PHP_SESSION_NONE) {
             @session_start();
         }
-        unset($_SESSION['auth_level']);
+        $this->logoutUser();
 
         $attr = new RequireAuthLevel(1);
 
