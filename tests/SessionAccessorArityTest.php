@@ -34,10 +34,17 @@ class SessionAccessorArityTest extends ZeroTestCase
 {
     /**
      * Directories scanned for offending call sites, relative to the repo
-     * root. app/ is included because views and frame templates call into
-     * User:: directly; vendor/ and node_modules/ are never scanned.
+     * root — the same set the Step 6 grep this guard replaces covered:
+     * modules, core, app, aux, lib, entity, plugin, swoole. lib/ is
+     * first-party wrappers (Api, CloudFlare, ComfyUI, Http, Mail, Ollama,
+     * Push), not vendored code — real vendor/node_modules/ trees are never
+     * scanned regardless (see the skip list in findOffendingCallSites()).
+     *
+     * Not every directory here exists in every checkout — swoole/ in
+     * particular is tracked by no repository — so findOffendingCallSites()
+     * skips a missing directory silently rather than failing the test.
      */
-    private const SCAN_DIRS = ['modules', 'core', 'app'];
+    private const SCAN_DIRS = ['modules', 'core', 'app', 'aux', 'lib', 'entity', 'plugin', 'swoole'];
 
     public function testNoCallSitePassesAnArgumentToAZeroParameterSessionAccessor(): void
     {
@@ -86,7 +93,7 @@ class SessionAccessorArityTest extends ZeroTestCase
     }
 
     /**
-     * Scan modules/, core/, app/ for `User::<name>(` calls where the
+     * Scan every directory in SCAN_DIRS for `User::<name>(` calls where the
      * parenthesised text is anything other than optional whitespace.
      *
      * @param string[] $methodNames
