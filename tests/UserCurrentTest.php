@@ -85,26 +85,6 @@ class UserCurrentTest extends ZeroTestCase
             'current() must return the same memoized instance within a request.');
     }
 
-    public function testCurrentMemoDoesNotLeakAcrossLateStaticBindingSubclasses(): void
-    {
-        User::establish(User::find($this->userId));
-
-        $core = \Zero\Core\User::current();
-        $this->assertInstanceOf(\Zero\Core\User::class, $core);
-
-        // Zero\Model\User is a deprecated shim subclass (removed in Task 5).
-        // $current is ONE storage slot shared by every subclass — private
-        // static properties are bound to the declaring class, not to
-        // static:: — so calling through the subclass right after the parent
-        // must not hand back the parent's memoized instance: current()'s
-        // return type is ?static, and a Zero\Core\User does not satisfy
-        // ?Zero\Model\User. Before the instanceof-static fix, this line
-        // threw a TypeError rather than failing an assertion.
-        $model = \Zero\Model\User::current();
-        $this->assertInstanceOf(\Zero\Model\User::class, $model,
-            'current() must rebuild rather than reuse a memoized instance of the wrong subclass');
-    }
-
     public function testSaveOnASessionHydratedUserWritesOnlyTheChangedColumn(): void
     {
         User::establish(User::find($this->userId));

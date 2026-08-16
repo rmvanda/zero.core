@@ -103,12 +103,9 @@ class User extends Model
      * Checked with `instanceof static`, not `!== null`: $current is ONE
      * storage slot shared by every subclass — private static properties are
      * bound to the declaring class, not to static:: — but the return type is
-     * `?static`. Zero\Model\User extends this class as a deprecated shim, so
-     * `Zero\Core\User::current()` followed by `Zero\Model\User::current()`
-     * would otherwise hand back a Zero\Core\User instance where a
-     * `?Zero\Model\User` is required: a TypeError, not a quiet wrong answer.
-     * Checking the type on read rebuilds instead of reusing whenever the
-     * memoized instance is not of the class actually being asked for.
+     * `?static`. Checking the type on read rebuilds instead of reusing
+     * whenever the memoized instance is not of the class actually being
+     * asked for.
      */
     public static function current(): ?static
     {

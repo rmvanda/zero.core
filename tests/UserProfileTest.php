@@ -129,45 +129,4 @@ class UserProfileTest extends ZeroTestCase
         $this->user()->forgetProfile();
         $this->assertSame([], $this->user()->profile());
     }
-
-    /**
-     * Zero\Model\UserProfile is now a deprecated shim: store()/get()/forget()
-     * each route through User::find($userId)?->..., which needs a real
-     * `users` row — unlike the fixture above, which uses a synthetic id
-     * (self::U) precisely because profile()/storeProfile()/forgetProfile()
-     * only ever touch `user_profile` directly. Pins that the shim actually
-     * reaches the same storage, not a parallel or no-op path. The shim's own
-     * no-op-on-missing-row behaviour (when $userId matches no `users` row)
-     * is intentionally NOT exercised here — see its class docblock.
-     */
-    public function testDeprecatedModelShimDelegatesToTheCoreImplementation(): void
-    {
-        $u = User::create([
-            'name' => 'Shim Probe', 'email' => 'zerotest-shim@example.invalid', 'verified' => 1,
-        ]);
-
-        try {
-            \Zero\Model\UserProfile::store($u->id, ['full_name' => 'Shimmed Name'], self::DEFS);
-
-            $this->assertSame(
-                'Shimmed Name',
-                \Zero\Model\UserProfile::get($u->id)['full_name'],
-                "the shim's store()/get() must round-trip"
-            );
-            $this->assertSame(
-                'Shimmed Name',
-                User::find($u->id)->profile()['full_name'],
-                "the shim must land in the same storage Zero\\Core\\User::profile() reads, not a parallel copy"
-            );
-
-            \Zero\Model\UserProfile::forget($u->id);
-            $this->assertSame(
-                [],
-                \Zero\Model\UserProfile::get($u->id),
-                "the shim's forget() must delegate too"
-            );
-        } finally {
-            Database::getConnection()->prepare("DELETE FROM users WHERE id = ?")->execute([$u->id]);
-        }
-    }
 }

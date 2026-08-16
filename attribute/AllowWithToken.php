@@ -91,7 +91,7 @@ class AllowWithToken {
             // API-token auth produces a session identical to an interactive
             // login. This block used to duplicate Auth::complete() by hand and
             // had drifted: no created_at, no login_provider, no session rotation.
-            $user = \Zero\Model\User::find((int) $tokenRow['user_id']);
+            $user = \Zero\Core\User::find((int) $tokenRow['user_id']);
 
             if (!$user) {
                 Console::warn("AllowWithToken: user not found for token");

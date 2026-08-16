@@ -4,7 +4,7 @@ namespace Zero\Tests\Core;
 use Zero\Tests\Core\ZeroTestCase;
 
 use Zero\Core\Database;
-use Zero\Model\User;
+use Zero\Core\User;
 
 /**
  * Exercises the Zero\Core\Model base class through its first concrete

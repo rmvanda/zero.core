@@ -3,7 +3,7 @@ namespace Zero\Tests\Core;
 
 use Zero\Core\Database;
 use Zero\Core\User as SessionUser;   // session reader
-use Zero\Model\User as UserRow;      // the row
+use Zero\Core\User as UserRow;       // the row
 
 /**
  * Zero\Core\User::establish() is the single writer of the login session. All
