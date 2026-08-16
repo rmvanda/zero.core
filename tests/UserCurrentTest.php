@@ -1,6 +1,7 @@
 <?php
 namespace Zero\Tests\Core;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use Zero\Core\User;
 use Zero\Core\Database;
 
@@ -138,5 +139,63 @@ class UserCurrentTest extends ZeroTestCase
         $this->assertSame('Array-Only Probe', $u->name, "current() must read the array's full_name key, not name");
         $this->assertSame(self::E, $u->email);
         $this->assertSame('https://x/y.jpg', $u->pic);
+    }
+
+    /*
+     * Hardening: currentId() must reject anything that is not a positive
+     * integer rather than silently coercing it. A bare (int) cast turns
+     * 'abc' into 0, and 0 is not "nobody" — user_settings uses user_id = 0
+     * as a deliberate registry of available setting keys (see
+     * modules/Admin/USER_SETTINGS_POLISH.md). A User built on id 0 would
+     * read that registry through can()/authLevel() as if it were a real
+     * user's permissions. Rejecting outright degrades to "not logged in",
+     * the safe direction.
+     */
+
+    public static function badFlatSessionValues(): array
+    {
+        return [
+            "non-numeric string 'abc'" => ['abc'],
+            "numeric-zero string '0'"  => ['0'],
+            'int 0'                    => [0],
+            'negative int -5'          => [-5],
+            'array (attacker shape)'   => [['unexpected' => 'shape']],
+        ];
+    }
+
+    #[DataProvider('badFlatSessionValues')]
+    public function testCurrentIdRejectsBadFlatSessionValues($bad): void
+    {
+        $_SESSION = ['user_id' => $bad];
+        $this->assertNull(User::currentId());
+    }
+
+    public function testCurrentIdRejectsBadUserArrayId(): void
+    {
+        // The $_SESSION['user']['id'] fallback path must be validated too,
+        // not just the flat key.
+        $_SESSION = ['user' => ['id' => 'xyz']];
+        $this->assertNull(User::currentId());
+    }
+
+    public function testCurrentIdResolvesValidFlatKey(): void
+    {
+        $_SESSION = ['user_id' => $this->userId];
+        $this->assertSame($this->userId, User::currentId());
+    }
+
+    public function testCurrentIdResolvesValidFlatKeyGivenAsNumericString(): void
+    {
+        // PHP sessions can round-trip ids as strings depending on how they
+        // were written; filter_var must still accept a clean numeric string.
+        $_SESSION = ['user_id' => (string) $this->userId];
+        $this->assertSame($this->userId, User::currentId());
+    }
+
+    public function testCurrentReturnsNullWhenSessionIdIsRejected(): void
+    {
+        $_SESSION = ['user_id' => 'abc'];
+        $this->assertNull(User::current(),
+            'current() must not build an instance from an id currentId() rejected.');
     }
 }

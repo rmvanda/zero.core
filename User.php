@@ -149,11 +149,27 @@ class User extends Model
      * drifted apart from each other. establish() itself always writes both
      * shapes, so this fallback matters only for sessions already sitting in
      * PHP's session store from before establish() unified them.
+     *
+     * Validated with filter_var(), never a bare (int) cast: the cast
+     * silently turns 'abc' into 0, and 0 is not "nobody" — user_settings
+     * uses user_id = 0 as a deliberate registry of available setting keys
+     * (see modules/Admin/USER_SETTINGS_POLISH.md; production holds 8 such
+     * rows). A User instance built on id 0 would have can() read that
+     * registry as if it were a real user's permissions, and setSetting()
+     * would write into it. filter_var also rejects arrays outright, which
+     * matters because $_SESSION is attacker-influenced in shape as well as
+     * value. Rejecting anything that is not a clean positive integer
+     * degrades to "not logged in" — the safe direction — rather than
+     * coercing to a usable-looking id. Do NOT simplify this back to (int).
      */
     public static function currentId(): ?int
     {
         $id = $_SESSION['user_id'] ?? $_SESSION['user']['id'] ?? null;
-        return $id === null ? null : (int) $id;
+        if ($id === null) {
+            return null;
+        }
+        $id = filter_var($id, FILTER_VALIDATE_INT);
+        return ($id !== false && $id > 0) ? $id : null;
     }
 
     /**
@@ -234,6 +250,25 @@ class User extends Model
     private ?array $settings = null;
 
     /**
+     * Guards settings()/setSetting() — the only two methods that touch
+     * user_settings by id — against a non-positive $this->id.
+     *
+     * currentId() rejects a bad session id before a User is ever built from
+     * it, but tests (and anything else constructing a User directly, e.g.
+     * `new User(['id' => 999000077], true)` in UserProfileTest) bypass that
+     * path entirely. id 0 in particular is not "no such user" here — it is
+     * the deliberate registry of available setting keys (see
+     * modules/Admin/USER_SETTINGS_POLISH.md); reading or writing through it
+     * would treat that registry as a real user's permissions. Negative ids
+     * are simply meaningless. One helper rather than a duplicated
+     * conditional in each method.
+     */
+    private function hasUsableId(): bool
+    {
+        return $this->id > 0;
+    }
+
+    /**
      * Does this user hold $key?
      *
      * Reads through to the database, memoized per instance. That is one query
@@ -262,6 +297,11 @@ class User extends Model
     {
         if ($this->settings !== null) {
             return $this->settings;
+        }
+        if (!$this->hasUsableId()) {
+            // id 0 is the user_settings key registry, not a user; a negative
+            // id is meaningless. Neither gets a query — see hasUsableId().
+            return $this->settings = [];
         }
         try {
             $stmt = Database::getConnection()->prepare(
@@ -300,6 +340,11 @@ class User extends Model
      */
     public function setSetting(string $key, $value, ?int $actorId = null): bool
     {
+        if (!$this->hasUsableId()) {
+            // Refuse rather than write into the id-0 key registry (or under
+            // a meaningless negative id) — see hasUsableId().
+            return false;
+        }
         try {
             $ok = Database::getConnection()->prepare(
                 "INSERT INTO user_settings (user_id, setting_key, setting_value, updated_by)

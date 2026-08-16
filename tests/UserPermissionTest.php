@@ -216,4 +216,80 @@ class UserPermissionTest extends ZeroTestCase
         $this->assertFalse($user->can('allow.zerotest'),
             'setSetting() must drop the memo — a stale memo would still read the pre-write value here.');
     }
+
+    /*
+     * Hardening guards: settings() and setSetting() are the only two methods
+     * that touch user_settings by id, and tests legitimately construct a
+     * User directly (bypassing currentId()'s validation), so each guards
+     * itself against a non-positive id rather than issuing the query.
+     */
+
+    /**
+     * Proves the guard is a short-circuit, not merely "the query happened to
+     * fail". A PDO that must never be called: if the guard were missing (or
+     * were an `if ($id == 0)` that missed -5), prepare() would be invoked and
+     * the mock's expectation would fail the test.
+     */
+    public function testSettingsGuardsNonPositiveIdWithoutQuerying(): void
+    {
+        $real = Database::$connection;
+        $mockPdo = $this->createMock(\PDO::class);
+        $mockPdo->expects($this->never())->method('prepare');
+        Database::$connection = $mockPdo;
+
+        try {
+            $this->assertSame([], (new User(['id' => 0], true))->settings(),
+                'id 0 must read no settings — it is the setting-keys registry, not a user.');
+            $this->assertSame([], (new User(['id' => -5], true))->settings(),
+                'negative ids are meaningless and must also read no settings.');
+        } finally {
+            Database::$connection = $real;
+        }
+    }
+
+    /** Same proof as above, for the writer. */
+    public function testSetSettingGuardsNonPositiveIdWithoutQuerying(): void
+    {
+        $real = Database::$connection;
+        $mockPdo = $this->createMock(\PDO::class);
+        $mockPdo->expects($this->never())->method('prepare');
+        Database::$connection = $mockPdo;
+
+        try {
+            $this->assertFalse((new User(['id' => 0], true))->setSetting('zerotest.guard', '1'),
+                'a write against id 0 must be refused, not silently accepted.');
+            $this->assertFalse((new User(['id' => -5], true))->setSetting('zerotest.guard', '1'),
+                'negative ids must also be refused.');
+        } finally {
+            Database::$connection = $real;
+        }
+    }
+
+    /**
+     * The concrete harm this whole change prevents: production holds 8 real
+     * rows at user_id = 0 (modules/Admin/USER_SETTINGS_POLISH.md — a
+     * deliberate registry of available setting keys, not a user's grants).
+     * Before the guard, a User built on id 0 would read that registry
+     * through settings()/can() as if it were permissions. This test reads
+     * the real rows to prove they exist, then proves settings() returns
+     * none of them — read-only throughout, per the standing rule that
+     * proving the registry is unreadable must never write or delete it.
+     */
+    public function testZeroIdCannotReadTheSettingsRegistry(): void
+    {
+        $this->connectTestDatabase();
+
+        $stmt = Database::getConnection()->prepare(
+            "SELECT COUNT(*) FROM user_settings WHERE user_id = 0"
+        );
+        $stmt->execute();
+        $this->assertGreaterThan(0, (int) $stmt->fetchColumn(),
+            'sanity check: the user_id=0 registry must have rows for this test to prove anything.');
+
+        $zero = new User(['id' => 0], true);
+        $this->assertSame([], $zero->settings(),
+            'user_id=0 is the setting-keys registry, not a real user\'s permissions — settings() must never read it.');
+        $this->assertFalse($zero->can('allow.admin'),
+            'can() must not grant admin merely because the registry happens to carry an allow.admin row.');
+    }
 }
