@@ -114,7 +114,26 @@ class Application {
                 }
             }
         }
-        // TODO - maybe this goes somewhere else. 
+        /*
+         * Application timezone.
+         *
+         * PHP's date.timezone is set to UTC in php.ini while MySQL runs on
+         * SYSTEM, so date() and NOW() disagreed by the UTC offset. Any row
+         * written in the evening got a PHP-derived date one day AHEAD of its
+         * own MySQL created_at — a receipt dated after the moment it was
+         * recorded. Receipt dates in particular fall back to the upload date,
+         * so this quietly mis-dated real data every night.
+         *
+         * Defining TIMEZONE in app/config aligns PHP with the database and the
+         * host. Unset, nothing changes and PHP keeps whatever php.ini gave it.
+         */
+        if (defined('TIMEZONE') && TIMEZONE !== '') {
+            if (!date_default_timezone_set(TIMEZONE)) {
+                Console::warn('Invalid TIMEZONE constant: ' . TIMEZONE);
+            }
+        }
+
+        // TODO - maybe this goes somewhere else.
         if(str_contains($_SERVER['REMOTE_ADDR'], DEV_SUBNET)){
             define("DEVMODE", true); 
             ini_set("xdebug.var_display_max_children", '-1');
