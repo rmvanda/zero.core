@@ -34,39 +34,15 @@ class UserTest extends ZeroTestCase
         $this->assertFalse(User::isLoggedIn());
     }
 
-    /* ── getName() ── */
-
-    public function testGetNameFromSession(): void
-    {
-        $this->loginUser(['name' => 'John Doe']);
-        $this->assertSame('John Doe', User::getName());
-    }
-
-    public function testGetNameFallsBackToUserArray(): void
-    {
-        $_SESSION['user'] = ['full_name' => 'Jane Doe'];
-        $this->assertSame('Jane Doe', User::getName());
-    }
-
-    public function testGetNameReturnsNullWhenNoSession(): void
-    {
-        $this->logoutUser();
-        $this->assertNull(User::getName());
-    }
-
-    /* ── getEmail() ── */
-
-    public function testGetEmail(): void
-    {
-        $this->loginUser(['email' => 'user@example.com']);
-        $this->assertSame('user@example.com', User::getEmail());
-    }
-
-    public function testGetEmailReturnsNullWhenNoSession(): void
-    {
-        $this->logoutUser();
-        $this->assertNull(User::getEmail());
-    }
+    /*
+     * getName(), getEmail(), getPicture(), isVerified(), getAll() and the
+     * $_SESSION['user'] fallback on getId() were deleted in the User/Model
+     * consolidation (Zero\Core\User now extends Zero\Core\Model): they were
+     * the record-field statics that made `getName($someoneElseId)` silently
+     * discard its argument and answer for the session user instead. Their
+     * coverage is superseded by core/tests/UserCurrentTest.php, which
+     * exercises the same session-projection data through current().
+     */
 
     /* ── getId() ── */
 
@@ -76,70 +52,10 @@ class UserTest extends ZeroTestCase
         $this->assertSame(42, User::getId());
     }
 
-    public function testGetIdFallsBackToUserArray(): void
-    {
-        $_SESSION['user'] = ['id' => 99];
-        $this->assertSame(99, User::getId());
-    }
-
     public function testGetIdReturnsNullWhenNoSession(): void
     {
         $this->logoutUser();
         $this->assertNull(User::getId());
-    }
-
-    /* ── getAuthLevel() ── */
-
-    public function testGetAuthLevel(): void
-    {
-        $this->loginUser(['auth_level' => 5]);
-        $this->assertSame(5, User::getAuthLevel());
-    }
-
-    public function testGetAuthLevelDefaultsToZero(): void
-    {
-        $this->logoutUser();
-        $this->assertSame(0, User::getAuthLevel());
-    }
-
-    /* ── isVerified() ── */
-
-    public function testIsVerified(): void
-    {
-        $this->loginUser(['verified' => true]);
-        $this->assertTrue(User::isVerified());
-    }
-
-    public function testIsNotVerified(): void
-    {
-        $this->loginUser(['verified' => false]);
-        $this->assertFalse(User::isVerified());
-    }
-
-    /* ── getPicture() ── */
-
-    public function testGetPicture(): void
-    {
-        $this->loginUser(['pic' => '/img/avatar.png']);
-        $this->assertSame('/img/avatar.png', User::getPicture());
-    }
-
-    /* ── getAll() ── */
-
-    public function testGetAll(): void
-    {
-        $this->loginUser();
-        $all = User::getAll();
-
-        $this->assertIsArray($all);
-        $this->assertArrayHasKey('id', $all);
-        $this->assertArrayHasKey('email', $all);
-    }
-
-    public function testGetAllReturnsEmptyWhenNoSession(): void
-    {
-        $this->logoutUser();
-        $this->assertSame([], User::getAll());
     }
 
     /* ── hasPermission() ── */

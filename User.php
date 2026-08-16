@@ -10,8 +10,62 @@ namespace Zero\Core;
  *
  * @author James Pope
  */
-class User
+class User extends Model
 {
+    protected static string $table = 'users';
+
+    /** id/created_at/updated_at are owned by the DDL and deliberately absent. */
+    protected static array $columns = ['name', 'email', 'verified', 'pic'];
+
+    /**
+     * Canonical form of an address, for both storage and lookup.
+     *
+     * `users.email` is `utf8mb4_bin`, so the database compares it byte-exactly.
+     * That is deliberate: under the previous `utf8mb4_unicode_ci` collation,
+     * Unicode folding made `gross@x.com` and `groß@x.com` the SAME address, so
+     * whoever registered one silently blocked the other from ever signing up.
+     *
+     * The cost of byte-exactness is that case must be normalised in code
+     * instead — hence this. Every provider treats the local part
+     * case-insensitively in practice, whatever RFC 5321 says.
+     */
+    public static function normalizeEmail(?string $email): string
+    {
+        return mb_strtolower(trim((string) $email), 'UTF-8');
+    }
+
+    /**
+     * Find an account by address, normalising first.
+     *
+     * ALWAYS use this rather than `findBy('email', …)`. With a byte-exact
+     * collation a raw lookup for `Foo@x.com` will not match a stored
+     * `foo@x.com`, and the miss is silent — it reads as "no such account",
+     * which on a sign-in path means a working address quietly stops working.
+     */
+    public static function findByEmail(?string $email): ?static
+    {
+        $normalized = self::normalizeEmail($email);
+
+        return $normalized === '' ? null : static::findBy('email', $normalized);
+    }
+
+    /**
+     * Normalises the address before insert, so the stored form always matches
+     * what findByEmail() will look for. The column owns its own canonical form
+     * rather than trusting each call site to remember.
+     *
+     * NOTE: an email changed via property-set + save() bypasses this. Nothing
+     * does that today; if something ever needs to, normalise at that call site.
+     */
+    public static function create(array $data): static
+    {
+        if (array_key_exists('email', $data)) {
+            $data['email'] = self::normalizeEmail($data['email']);
+        }
+
+        return parent::create($data);
+    }
+
     /**
      * Check if user is logged in and verified
      *
@@ -24,74 +78,45 @@ class User
                $_SESSION['verified'];
     }
 
+    /** Memoized per request. Null between requests and after logout(). */
+    private static ?self $current = null;
+
     /**
-     * Get user's full name
+     * The user making this request, hydrated from $_SESSION — never a query.
      *
-     * @return string|null
+     * Safe to mutate and save(): Model::save() writes only columns explicitly
+     * set since load, so a session-built instance cannot clobber the row with
+     * a stale value. The session projection is exactly static::$columns plus
+     * the pk, so every mapped column is present and no accessor can return
+     * null merely because it "wasn't loaded".
      */
-    public static function getName(): ?string
+    public static function current(): ?static
     {
-        return $_SESSION['name'] ?? $_SESSION['user']['full_name'] ?? null;
+        if (self::$current !== null) {
+            return self::$current;
+        }
+        $id = self::currentId();
+        if ($id === null) {
+            return null;
+        }
+        return self::$current = new static([
+            'id'       => $id,
+            'name'     => $_SESSION['name']     ?? null,
+            'email'    => $_SESSION['email']    ?? null,
+            'verified' => $_SESSION['verified'] ?? 0,
+            'pic'      => $_SESSION['pic']      ?? null,
+        ], true);
     }
 
     /**
-     * Get user's profile picture URL
+     * The current user's id, without building an object.
      *
-     * @return string|null
+     * Kept separate from current() because 107 call sites want only the id or
+     * a logged-in check, and none of them should pay for object construction.
      */
-    public static function getPicture(): ?string
+    public static function currentId(): ?int
     {
-        return $_SESSION['pic'] ?? $_SESSION['user']['pic'] ?? null;
-    }
-
-    /**
-     * Get user's email
-     *
-     * @return string|null
-     */
-    public static function getEmail(): ?string
-    {
-        return $_SESSION['email'] ?? $_SESSION['user']['email'] ?? null;
-    }
-
-    /**
-     * Get user's ID
-     *
-     * @return mixed
-     */
-    public static function getId()
-    {
-        return $_SESSION['user_id'] ?? $_SESSION['user']['id'] ?? null;
-    }
-
-    /**
-     * Get user's auth level
-     *
-     * @return int
-     */
-    public static function getAuthLevel(): int
-    {
-        return $_SESSION['auth_level'] ?? 0;
-    }
-
-    /**
-     * Check if user is verified
-     *
-     * @return bool
-     */
-    public static function isVerified(): bool
-    {
-        return isset($_SESSION['verified']) && $_SESSION['verified'];
-    }
-
-    /**
-     * Get all user session data
-     *
-     * @return array
-     */
-    public static function getAll(): array
-    {
-        return $_SESSION['user'] ?? [];
+        return isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
     }
 
     /**
@@ -104,13 +129,18 @@ class User
      * already drifted apart — AllowWithToken set neither created_at nor
      * login_provider and never rotated the session id.
      *
-     * @param \Zero\Model\User $user     The account being signed in.
+     * @param self             $user     The account being signed in.
      * @param array|null       $identity Normalized provider identity, when the
      *                                   caller has one richer than the stored
      *                                   row (OAuth). Null builds it from the row.
      */
-    public static function establish(\Zero\Model\User $user, ?array $identity = null): void
+    public static function establish(self $user, ?array $identity = null): void
     {
+        // Clear the per-request memo so a sign-in following an earlier
+        // current() call in the same request does not keep returning the
+        // previous user.
+        self::$current = null;
+
         // Rotate at the privilege boundary. Application::__construct() only
         // rotates on a timer, which leaves a session-fixation window at exactly
         // the moment it matters. Guarded because CLI/test contexts have no session.
@@ -167,8 +197,15 @@ class User
      */
     public static function logout(): void
     {
+        self::$current = null;
         session_unset();
         session_destroy();
+    }
+
+    /** @deprecated Use currentId(). Retained so this task does not touch 68 call sites. */
+    public static function getId()
+    {
+        return self::currentId();
     }
 
     /**
@@ -294,5 +331,64 @@ class User
             error_log("User::setPermission error: " . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Upsert the supplied values. Keys absent from $fieldDefs are silently
+     * dropped — a field that is not configured is not storable.
+     *
+     * @param array $values    field_key => plaintext value
+     * @param array $fieldDefs from RegistrationFields::all(); each has 'key' and 'sensitive'
+     */
+    public function storeProfile(array $values, array $fieldDefs): void
+    {
+        $sensitive = [];
+        foreach ($fieldDefs as $def) {
+            $sensitive[$def['key']] = !empty($def['sensitive']);
+        }
+
+        $stmt = Database::getConnection()->prepare(
+            "INSERT INTO user_profile (user_id, field_key, value, encrypted)
+             VALUES (?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE value = VALUES(value), encrypted = VALUES(encrypted)"
+        );
+
+        foreach ($values as $key => $value) {
+            if (!array_key_exists($key, $sensitive)) {
+                continue;   // not a configured field
+            }
+            $encrypt = $sensitive[$key] && $value !== null && $value !== '';
+            $stmt->execute([
+                $this->id,
+                $key,
+                $encrypt ? Crypto::encrypt((string) $value) : $value,
+                $encrypt ? 1 : 0,
+            ]);
+        }
+    }
+
+    /** All stored fields for a user, decrypted, keyed by field_key. */
+    public function profile(): array
+    {
+        $stmt = Database::getConnection()->prepare(
+            "SELECT field_key, value, encrypted FROM user_profile WHERE user_id = ?"
+        );
+        $stmt->execute([$this->id]);
+
+        $out = [];
+        foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+            // Trust the stored flag, never guess. A decrypt failure yields null
+            // rather than throwing — a corrupt field must not break the page.
+            $out[$row['field_key']] = ((int) $row['encrypted'] === 1 && $row['value'] !== null)
+                ? Crypto::decrypt($row['value'])
+                : $row['value'];
+        }
+        return $out;
+    }
+
+    /** Remove every stored field for a user. Called when an account is deleted. */
+    public function forgetProfile(): void
+    {
+        Database::getConnection()->prepare("DELETE FROM user_profile WHERE user_id = ?")->execute([$this->id]);
     }
 }
