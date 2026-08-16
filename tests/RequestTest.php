@@ -3,6 +3,7 @@
 namespace Zero\Tests\Core;
 
 use Zero\Core\Request;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 class RequestTest extends ZeroTestCase
 {
@@ -216,6 +217,58 @@ class RequestTest extends ZeroTestCase
     {
         $this->parseRequest('/page/view', 'GET', 'unisolu.com', true, false, 'text/html');
         $this->assertFalse(Request::$acceptsJSON);
+    }
+
+    /*
+     * Parameters and the +json suffix.
+     *
+     * Detection used to compare the raw slash-segment exactly, so
+     * "application/json;q=0.9" read as "json;q=0.9" and missed. That is not
+     * cosmetic: #[RequireLogin] and #[RequirePermission] branch on this flag
+     * to decide between a 401/403 and a 302, so a client sending a quality
+     * value was handed the login page's HTML and a parse error instead of a
+     * status it could act on. An entry with no slash at all raised an
+     * undefined-key warning into the page.
+     */
+
+    public static function jsonAcceptHeaders(): array
+    {
+        return [
+            'quality value'          => ['application/json;q=0.9'],
+            'quality value, spaced'  => ['application/json; q=0.9'],
+            'charset parameter'      => ['application/json; charset=utf-8'],
+            'jquery default'         => ['application/json, text/javascript, */*; q=0.01'],
+            'wildcard then json'     => ['*/*, application/json;q=0.8'],
+            'api+json suffix'        => ['application/vnd.api+json'],
+            'problem+json suffix'    => ['application/problem+json'],
+            'uppercase'              => ['APPLICATION/JSON'],
+        ];
+    }
+
+    #[DataProvider('jsonAcceptHeaders')]
+    public function testAcceptsJsonWithParametersAndSuffixes(string $accept): void
+    {
+        $this->parseRequest('/api/data', 'GET', 'unisolu.com', true, false, $accept);
+        $this->assertTrue(Request::$acceptsJSON, "should detect JSON in: {$accept}");
+    }
+
+    public static function nonJsonAcceptHeaders(): array
+    {
+        return [
+            'html with quality'  => ['text/html;q=0.9'],
+            'no slash at all'    => ['json'],
+            'bare wildcard'      => ['*'],
+            'empty entry'        => ['text/html,,text/plain'],
+            'javascript'         => ['text/javascript'],
+            'jsonp-ish subtype'  => ['application/jsonrequest'],
+        ];
+    }
+
+    #[DataProvider('nonJsonAcceptHeaders')]
+    public function testDoesNotFalselyDetectJson(string $accept): void
+    {
+        $this->parseRequest('/page/view', 'GET', 'unisolu.com', true, false, $accept);
+        $this->assertFalse(Request::$acceptsJSON, "should NOT detect JSON in: {$accept}");
     }
 
     /* ── URI array structure ── */

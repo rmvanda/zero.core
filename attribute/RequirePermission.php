@@ -4,6 +4,8 @@ namespace Zero\Core\Attribute;
 
 use \Attribute;
 use \Zero\Core\Console;
+use \Zero\Core\HTTPError;
+use \Zero\Core\Request;
 
 #[Attribute]
 class RequirePermission {
@@ -12,12 +14,33 @@ class RequirePermission {
     public $permissions;
 
     /**
-     * Redirect to access request page with permission parameter
+     * Deny a request that is missing a permission.
+     *
+     * JSON callers get a real 403 rather than a 302, for the same reason
+     * RequireLogin returns a 401: an XHR follows a redirect transparently and
+     * hands its caller the access-request page's HTML, which the caller then
+     * fails to parse as JSON — the failure surfaces as a parse error rather
+     * than "you do not have access". HTTPError bubbles to Application::run()
+     * and renders through the live module, so the 403 comes back in whatever
+     * shape that module already speaks.
+     *
+     * Without this the two halves of handler() disagreed. An ANONYMOUS JSON
+     * caller already got a 401, because handler() opens by delegating to
+     * RequireLogin — but a logged-in, under-privileged one got the 302. Same
+     * request shape, two contracts, depending only on which half denied.
+     *
+     * Naming the permission in the detail is not a leak: the caller is
+     * authenticated, and the redirect URL this replaces carried the same key
+     * as ?p=.
      *
      * @param string $permission The permission key being requested
-     * @return void
+     * @return void Never actually returns: redirects and exits, or throws.
      */
-    private function redirectToAccessRequest(string $permission): void {
+    private function deny(string $permission): void {
+        if (Request::$acceptsJSON) {
+            throw new HTTPError(403, "Permission required: {$permission}");
+        }
+
         $url = '/access-request/permission?p=' . urlencode($permission);
         header('Location: ' . $url);
         exit;
@@ -56,8 +79,7 @@ class RequirePermission {
         foreach ($this->permissions as $permission) {
             if (!\Zero\Core\User::hasPermission($permission)) {
                 Console::warn("RequirePermission attribute blocked request: user {$userId} missing permission '{$permission}'");
-                // Redirect to access request page with the missing permission
-                $this->redirectToAccessRequest($permission);
+                $this->deny($permission);
             }
         }
 

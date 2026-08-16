@@ -43,11 +43,27 @@ class Request
         self::$accepts  = $_SERVER['HTTP_ACCEPT'] ?? null; 
         self::$acceptsJSON = false; 
         if(self::$accepts){
-            $step = explode(",", self::$accepts); 
-            foreach($step as $accept){
-                $type = explode("/", $accept)[1]; 
-                if($type == "json"){
-                    self::$acceptsJSON = true;   
+            foreach(explode(",", self::$accepts) as $accept){
+                // Strip parameters before comparing. "application/json;q=0.9"
+                // is still JSON, and the old exact match against the raw
+                // segment read it as "json;q=0.9" and said no — so a client
+                // sending a quality value got a 302 into the login page's HTML
+                // instead of the 401 that #[RequireLogin] now returns.
+                $mime  = strtolower(trim(explode(";", $accept)[0]));
+                $slash = strpos($mime, "/");
+
+                // An entry with no slash ("json", "*") has no subtype. Reading
+                // [1] on it raised an undefined-key warning into the page.
+                if($slash === false){
+                    continue;
+                }
+                $subtype = substr($mime, $slash + 1);
+
+                // "json" itself, plus the +json structured-syntax suffix that
+                // carries application/vnd.api+json and application/problem+json.
+                if($subtype === "json" || str_ends_with($subtype, "+json")){
+                    self::$acceptsJSON = true;
+                    break;
                 }
             }
         }
