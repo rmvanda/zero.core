@@ -12,23 +12,19 @@ class AuditLog {
 
     private string $eventType;
     private bool $includeParams;
-    private bool $requireAuth;
 
     /**
      * AuditLog constructor
      *
      * @param string $eventType The event type/category to log (e.g., 'admin_action', 'user_data_access')
      * @param bool $includeParams Whether to include request parameters in the log (default: false)
-     * @param bool $requireAuth Whether to only log if user is authenticated (default: false)
      */
     public function __construct(
         string $eventType,
-        bool $includeParams = false,
-        bool $requireAuth = false
+        bool $includeParams = false
     ) {
         $this->eventType = $eventType;
         $this->includeParams = $includeParams;
-        $this->requireAuth = $requireAuth;
     }
 
     /**
@@ -37,12 +33,6 @@ class AuditLog {
      * @return bool Always returns true (logging should not block execution)
      */
     public function handler(): bool {
-        // Skip logging if requireAuth is true and user is not authenticated
-        if ($this->requireAuth && (!isset($_SESSION['user_id']) || empty($_SESSION['user_id']))) {
-            Console::debug("AuditLog skipped: requireAuth=true but user not authenticated");
-            return true;
-        }
-
         // Build endpoint identifier
         $endpoint = Request::$module . '/' . Request::$endpoint;
 
@@ -50,7 +40,7 @@ class AuditLog {
         $detail = "Endpoint: {$endpoint}";
 
         // Add user info if available
-        if (isset($_SESSION['user_id'])) {
+        if (\Zero\Core\User::currentId() !== null) {
             $detail .= " | User ID: " . \Zero\Core\User::currentId();
         }
 
