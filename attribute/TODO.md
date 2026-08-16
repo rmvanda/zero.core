@@ -379,6 +379,95 @@ silently fails every gated endpoint.
 
 ---
 
+### RequireAuthLevel — shelved, not retired
+**Status:** Shelved 2026-08-16. Existing call sites stay; do not add new ones.
+**Location:** `core/attribute/RequireAuthLevel.php`
+**Documentation:** `docs/attributes/RequireAuthLevel.md` (full reasoning + un-shelving condition)
+
+`RequireAuthLevel` was meant as the **blanket** alternative to `RequirePermission`'s **granular**
+grants. It has not earned that role:
+
+- The install has exactly one populated `auth.level` (user 1, value `1`), and every
+  `#[RequireAuthLevel]` in the tree asks for level `1`. There is no second tier, so it collapses
+  into "is this user special" — which `allow.admin` answers more precisely.
+- Every module gating on it also carries `#[RequirePermission]`, **except** `modules/Sitemap` and
+  `modules/Test`. Dropping it from the rest would change nothing about who gets in.
+- It is the **only** auth gate that does not open with `(new RequireLogin())->handler();` the way
+  `RequirePermission.php:46` does, so it alone does not enforce a verified email. Latent rather
+  than live: neither bare-use module carries `#[AllowWithToken]`, and no module anywhere pairs the
+  two attributes.
+
+**Un-shelve when** there is a real need for tiers that named `allow.*` grants cannot express —
+more than one populated `auth.level` with a meaningful "level 5 implies level 3" ordering. If that
+happens, add the `RequireLogin` delegation first so all three gates share one definition.
+
+**Also:** `modules/Sqrlcam/Sqrlcam.php:5` imports `RequireAuthLevel` and never applies it. Dead
+`use`, safe to drop.
+
+---
+
+### Verified-email invariant — enforce it where it is written, not just where it is read
+**Status:** Open
+**Priority:** Medium
+**Found:** tracing whether `users.verified` can go 1 → 0 (2026-08-16)
+
+Two invariants currently hold **by coincidence of data**, exactly like the one
+`AUTH_GATE_CONSISTENCY.md` documents:
+
+**1. "No unverified user has permissions."** True — all 27 `allow.*` rows in `user_settings`
+belong to verified accounts — but nothing enforces it. `User::setSetting()` (`core/User.php:341`)
+has no `verified` check, and neither grant path does (`modules/Admin/Admin.php:310`,
+`modules/AccessRequest/AccessRequest.php:269`). **Fix:** the check belongs in `setSetting()` —
+one place, both callers covered. This matters more than the `RequireLogin`/`RequireVerified`
+question, because it is what actually makes `RequirePermission` the reliable gate.
+
+**2. "`verified` never goes 1 → 0."** True in PHP: the only two writes are
+`Auth.php:264` and `Auth.php:741`, both `= 1`, both guarded on `!== 1`, and `Model::save()`
+writes only dirty columns so nothing can clobber it as a side effect. Admin displays the flag but
+has no toggle. Outside PHP, three vectors remain:
+
+- **`user_view` is updatable.** `information_schema.VIEWS.IS_UPDATABLE = YES` — it is a bare
+  single-table projection left over from the EAV cutover, so `UPDATE user_view SET verified = 0`
+  writes through to `users`. Nothing does this today; the surface just is not obvious from a file
+  named like a read-only compatibility view.
+- **`core/user_view_eav_rollback.sql`** reverts the 9 rows to the 2026-08-08 snapshot. Already
+  self-documented there; currently moot only because no row has been touched since cutover.
+- Manual SQL, or a restore from a pre-verification backup.
+
+**Do NOT split `RequireVerified` out of `RequireLogin` to address this.** `RequirePermission`
+delegates to `RequireLogin` for its whole login check; splitting the predicate hands it two things
+to compose and re-opens the drift that `AUTH_GATE_CONSISTENCY.md` closed. Revisit only if a
+concrete endpoint needs "logged in, unverified is fine" — none does.
+
+---
+
+### Stale comment: Google adapter normalization
+**Status:** Open
+**Priority:** Trivial
+**Location:** `modules/Auth/Auth.php:255-260`
+
+The comment inside `findOrCreateUser()` says Google `format()` "passes Google's value straight
+through with no normalization (`$user['verified_email'] ?: $user['email_verified']`)".
+`GoogleAdapter.php:96` has since been changed to `filter_var(… ?? … ?? false, FILTER_VALIDATE_BOOLEAN)`.
+The unnormalized adapter is now **Keycloak** (`KeycloakAdapter.php:258`, raw
+`$claims['email_verified']`), which is what the `filter_var` in that block actually guards. The
+code is right; the comment names the wrong provider.
+
+For reference, how each adapter derives `verified` — no provider emits a uniform claim:
+
+| Adapter | Source | Normalization |
+|---|---|---|
+| GitHub | second call to `/user/emails`, entry with `primary && verified` | `=== true` |
+| GitLab | `!empty($raw['confirmed_at'])` from `/api/v4/user` | truthiness |
+| Discord | `$raw['verified']` | `=== true` |
+| Google | `verified_email ?? email_verified` | `filter_var(…, BOOLEAN)` |
+| Keycloak | `$claims['email_verified']` | none — raw passthrough |
+
+`Auth::enforceVerifiedEmail()` applies `FILTER_VALIDATE_BOOLEAN` at the boundary, which is what
+catches Keycloak's unnormalized value.
+
+---
+
 ## Notes
 
 - All attributes should follow the existing pattern:

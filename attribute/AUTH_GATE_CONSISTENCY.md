@@ -260,6 +260,25 @@ Roughly in order of value.
 6. **Resolve the TODO in `RequireLogin::handler()`**: whether `verified` should be configurable
    per endpoint. Nothing needs it yet.
 
+## The third gate: `RequireAuthLevel`
+
+This document unified `#[RequireLogin]` and `User::isLoggedIn()`, and `RequirePermission` is
+already covered because `RequirePermission::handler():46` opens by delegating to
+`(new RequireLogin())->handler()` — one predicate, three attributes.
+
+**`RequireAuthLevel` is the exception, and it is now shelved** (2026-08-16). It does not
+delegate: it checks `session_status()` then `User::current()?->authLevel()`, which reads
+`user_settings['auth.level']` and never touches `users.verified`. So it is the one gate an
+unverified session can still pass.
+
+Latent, not live. Only `modules/Sitemap` and `modules/Test` gate on it alone; everywhere else it
+sits beside `#[RequirePermission]`, which enforces the real check. No module pairs it with
+`#[AllowWithToken]`, which is the only producer of an unverified session.
+
+Full reasoning, the usage inventory, and the condition for un-shelving it are in
+`docs/attributes/RequireAuthLevel.md`. **Do not add new bare `#[RequireAuthLevel]` gates** — use
+`#[RequirePermission]`.
+
 ## Reproducing the audit
 
 ```bash
