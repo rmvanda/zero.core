@@ -352,6 +352,28 @@ the divergence just moves.
 
 ---
 
+### AllowWithToken — refuse an unverified token owner
+**Status:** Open
+**Priority:** Low (no longer a bypass, but still wrong)
+**Location:** `core/attribute/AllowWithToken.php:94-101`
+
+`AllowWithToken` calls `User::establish($user)` for whoever owns the token, without checking
+`$user->verified`. That produces a session with a `user_id` for an account that has never
+verified its email.
+
+Until 2026-08-16 that session passed `#[RequireLogin]`, which tested `isset($_SESSION['user_id'])`
+— see `core/attribute/AUTH_GATE_CONSISTENCY.md`. `RequireLogin` now delegates to
+`User::isLoggedIn()`, so the session is refused at the gate and the bypass is closed.
+
+What remains is the smaller wrong: establishing a session that nothing downstream will honour.
+Better to fail the request at the token check with a clear 401 than to hand back a session that
+silently fails every gated endpoint.
+
+**Fix:** after loading `$user`, deny with `HTTPError(401, "Token owner not verified")` when
+`!$user->verified`, before `establish()`.
+
+---
+
 ## Notes
 
 - All attributes should follow the existing pattern:

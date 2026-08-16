@@ -24,6 +24,13 @@ use Zero\Core\User;
  * given instead of letting it disappear into a real HTTP response. That is
  * the "observable effect instead of a return value" this suite needed to
  * pin the behaviour change without duplicating isLoggedIn()'s logic here.
+ *
+ * The probe also carries the two later additions to the attribute: the
+ * optional #[RequireLogin('/some/path')] redirect override (which only the
+ * out-of-process probe can observe, since the choice of target is consumed
+ * by the same header()+exit()), and the JSON denial path — which throws
+ * HTTPError(401) rather than exiting, and so would be testable in-process,
+ * but is kept here so every denial case reads the same way.
  */
 class RequireLoginTest extends ZeroTestCase
 {
@@ -43,8 +50,11 @@ class RequireLoginTest extends ZeroTestCase
      * shape (null = no session at all) and returns its single line of
      * stdout, trimmed. See fixtures/require_login_probe.php for the output
      * contract.
+     *
+     * @param string|null $redirect    Passed to the RequireLogin constructor.
+     * @param bool        $acceptsJSON Sets Request::$acceptsJSON in the child.
      */
-    private function probe(?array $session): string
+    private function probe(?array $session, ?string $redirect = null, bool $acceptsJSON = false): string
     {
         $arg = $session === null ? 'null' : json_encode($session);
 
@@ -55,7 +65,7 @@ class RequireLoginTest extends ZeroTestCase
         ];
 
         $process = proc_open(
-            [PHP_BINARY, self::PROBE, $arg],
+            [PHP_BINARY, self::PROBE, $arg, $redirect ?? 'null', $acceptsJSON ? 'json' : 'html'],
             $descriptors,
             $pipes,
             dirname(__DIR__, 3) // zero root, for consistency with a real request's cwd
@@ -131,6 +141,93 @@ class RequireLoginTest extends ZeroTestCase
                 'verified' => 1,
             ],
         ]));
+    }
+
+    /* ── Optional redirect override ── */
+
+    /**
+     * #[RequireLogin('/some/path')] sends anonymous visitors there instead of
+     * the login page — for modules that would rather explain what the visitor
+     * is signing in for.
+     */
+    public function testUsesTheSuppliedRedirectInsteadOfTheLoginPage(): void
+    {
+        $this->assertSame(
+            'HEADER:Location: /ttrpg/welcome',
+            $this->probe(null, '/ttrpg/welcome')
+        );
+    }
+
+    /**
+     * A redirect target that is not site-relative is ignored and the default
+     * login page used. The value comes from source rather than from the
+     * request, so this is a typo guard — but a stray absolute URL would still
+     * be an open redirect, and falling back is the harmless failure.
+     */
+    public function testIgnoresANonRelativeRedirectAndFallsBackToLogin(): void
+    {
+        $this->assertSame(
+            'HEADER:Location: /user/login?r=y',
+            $this->probe(null, 'https://evil.example/harvest')
+        );
+    }
+
+    /** The override changes only WHERE a denial goes, never WHETHER it denies. */
+    public function testRedirectOverrideDoesNotAdmitAnUnverifiedSession(): void
+    {
+        $this->assertSame(
+            'HEADER:Location: /ttrpg/welcome',
+            $this->probe([
+                'user_id'  => 1,
+                'email'    => 'a@example.invalid',
+                'verified' => 0,
+            ], '/ttrpg/welcome')
+        );
+    }
+
+    /** A redirect target on an approved request is simply never consulted. */
+    public function testRedirectOverrideIsIrrelevantWhenAdmitted(): void
+    {
+        $this->assertSame('APPROVED', $this->probe([
+            'user_id'  => 1,
+            'email'    => 'a@example.invalid',
+            'verified' => 1,
+        ], '/ttrpg/welcome'));
+    }
+
+    /* ── JSON callers get a status code, not a login page ── */
+
+    /**
+     * An XHR follows a 302 transparently and hands its caller the login page's
+     * HTML, which then fails to parse as JSON — the failure surfaces as a
+     * parse error rather than "you are not logged in". So a JSON request is
+     * denied with HTTPError(401) and no Location header at all.
+     */
+    public function testDeniesJsonRequestWithA401RatherThanARedirect(): void
+    {
+        $this->assertSame(
+            'HTTPERROR:401:Authentication required',
+            $this->probe(null, null, acceptsJSON: true)
+        );
+    }
+
+    /** The 401 wins over a custom redirect: JSON callers never want a page. */
+    public function testJsonDenialIgnoresTheRedirectOverride(): void
+    {
+        $this->assertSame(
+            'HTTPERROR:401:Authentication required',
+            $this->probe(null, '/ttrpg/welcome', acceptsJSON: true)
+        );
+    }
+
+    /** A JSON request from a signed-in visitor is admitted like any other. */
+    public function testAdmitsJsonRequestFromAVerifiedSession(): void
+    {
+        $this->assertSame('APPROVED', $this->probe([
+            'user_id'  => 1,
+            'email'    => 'a@example.invalid',
+            'verified' => 1,
+        ], null, acceptsJSON: true));
     }
 
     /* ── In-process sanity check of the same predicate handler() now uses ── */
