@@ -51,7 +51,7 @@ class AuditLog {
 
         // Add user info if available
         if (isset($_SESSION['user_id'])) {
-            $detail .= " | User ID: {$_SESSION['user_id']}";
+            $detail .= " | User ID: " . \Zero\Core\User::currentId();
         }
 
         // Add username if available
