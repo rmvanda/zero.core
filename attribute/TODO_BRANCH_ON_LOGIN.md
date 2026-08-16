@@ -1,9 +1,10 @@
 # `#[BranchOnLogin]` — an attribute that names a setup callback
 
-**Status:** Deferred 2026-08-16, deliberately. Nothing in the tree justifies it yet.
+**Status:** Deferred 2026-08-16, deliberately, after counting Paste, TheButton
+and Ttrpg specifically — see "Why it is deferred" below for the numbers.
 **Trigger:** build it when a single class has ~4+ endpoints sharing the same
-login-derived setup. Until then a private method call in the body is smaller,
-clearer and needs no framework change.
+login-derived setup **and** something needs to opt out per endpoint. Without
+that last clause the constructor already does the job for free.
 **Related:** `core/attribute/AUTH_GATE_CONSISTENCY.md`, `docs/attributes/RequireLogin.md`
 
 ## The idea
@@ -102,19 +103,40 @@ public function create() {
 }
 ```
 
-And the motivating case does not support the abstraction. Measured 2026-08-16:
+The three modules that look most repetitive — Paste, TheButton, Ttrpg — were
+counted properly on 2026-08-16, because "surely those need it" is the obvious
+objection. They are repetitive. Almost none of it is login-*branching*:
 
-- The authorship preamble appears in **exactly one** endpoint, `Paste::create()`.
-  Paste's other `$_SESSION['user_id']` reads answer different questions:
-  `$this->isLoggedIn` for the view (`:79`, `:437`), `$this->isOwner` (`:182`),
-  and four actual gates (`:293`, `:333`, `:386`, `:445`).
-- Nothing else in the tree has the shape either. From the audit inventory in
-  `AUTH_GATE_CONSISTENCY.md`: Notes' three branches each load something
-  different; Hexmap's two are two lines apiece; TheButton's two are one-liners
-  already sitting inside private helpers.
+| Pattern | Sites | A login branch? |
+|---|---|---|
+| Resolve → compare `user_id` → reject | Paste ×3, TheButton ×6 | No — that is `#[RequireOwnership]` |
+| `$userId = User::getId();` at method top | Ttrpg ×13, TheButton ×6 | No — inside `#[RequireLogin]`, login is guaranteed |
+| `pageTitle` / `activeSection` preamble | Ttrpg ×8 | No — per-endpoint constants |
+| **Actual login-state branch** | **Paste ×4, TheButton ×3, Ttrpg ×1** | Yes |
 
-So today the attribute would move eight lines out of one method into another and
-add a declaration — a net increase, for zero duplication removed.
+And of those eight real branch sites, the attribute can address two:
+
+- **Paste ×4.** `index()` and `fork()` set the identical one-liner
+  `$this->isLoggedIn = …`; `create()` computes something different
+  (authorship); `show()` needs `$paste`, so it cannot run before the method
+  anyway. **Since resolved by hoisting the flag into Paste's constructor** —
+  which also fixed a bug where `create()`'s error path rendered the signed-out
+  form, and cost one line instead of an attribute plus a callback.
+- **TheButton ×3.** `status()` is one branch. The other two —
+  `handlePress()`, `handleView()` — are private helpers reached through
+  `__call()`, and attributes cannot be attached to a `__call`-dispatched
+  endpoint at all. Structurally out of reach.
+- **Ttrpg ×1.** `index()`.
+
+So the addressable set is two identical one-liners, in a class whose
+constructor already solves it better. The class-level form of the attribute
+buys exactly one thing a constructor line does not — per-endpoint opt-out —
+and none of these three classes wants one.
+
+Ttrpg's 13 `$userId = User::getId();` lines deserve a specific note, since they
+look like the strongest case: they assign a **local**, which a callback cannot
+set. Converting them would mean rewriting every downstream use as
+`$this->userId` first — at which point the constructor does it again for free.
 
 ## What to build when the trigger fires
 

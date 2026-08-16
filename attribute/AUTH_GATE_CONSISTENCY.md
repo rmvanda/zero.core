@@ -139,8 +139,9 @@ ordinary OAuth attempt with an unverified provider email left a session that pas
 gates with a provider-controlled id. Fixed by gating on `isLoggedIn()` instead (`ff39479`), and
 `currentId()` was separately hardened to reject non-positive and non-integer values (`6f4d5f9`).
 
-**`modules/Paste/Paste.php` is the same shape and has not been examined**: no attribute, 8
-hand-rolled checks. It should be the first file anyone looks at.
+**`modules/Paste/Paste.php` was the same shape** — no attribute, 8 hand-rolled checks — and was
+examined next for exactly that reason. **No bypass.** All four of its gates (`edit`, `update`,
+`delete`, `mine`) were correct, just written by hand; see "Paste, examined in full" below.
 
 ## What was done
 
@@ -199,6 +200,44 @@ endpoint. `Application::checkForAttributes()` resolves against the URL endpoint 
 nothing can override them per URL. **A class whose `__call()` serves anonymous traffic must not
 carry a class-level `RequireLogin`.**
 
+### Paste, examined in full
+
+The file this audit called highest-risk, on the grounds that it matched `Notes.php` exactly: no
+attribute, 8 hand-rolled checks. **No bypass.** All four gates — `edit`, `update`, `delete`,
+`mine` — were correct; they were simply written by hand. They are now `#[RequireLogin]`, and
+every `$_SESSION['user_id']` read went to `User::currentId()` / `User::isLoggedIn()`. The only
+`$_SESSION` left in the file is `paste_verified`, which is per-paste password state, not identity.
+
+Three unrelated bugs surfaced while reading it, all fixed:
+
+**`create()`'s error path rendered the signed-out form to a signed-in user.** `index.php` reads
+`$this->isLoggedIn`; `index()` and `fork()` set it, but `create()` set only a *local* `$isLoggedIn`
+and then re-rendered `index.php` on failure. Fixed by hoisting the assignment into the
+constructor, which is also where it belonged — one line for the class instead of one per endpoint.
+
+**`update()` and `delete()` rendered blank pages on every rejection.** Both used
+`$this->error(…); return;`, and `Response::error()` does nothing at all unless the request carried
+`Accept: application/json` — but `edit.php` and `show.php` post plain HTML forms. Wrong id, absent
+paste, wrong owner, immutable paste: all eight paths returned an empty 200. Now `HTTPError`.
+
+**Error pages loaded the wrong module's assets.** Ten call sites used `new \Zero\Core\Error(…)`,
+which `CLAUDE.md` already deprecates in favour of `HTTPError`. The concrete cost:
+`Module::__construct()` derives asset paths from `get_class($this)`, so an `Error` instance
+computed `substr('Zero\Core\Error', strlen('Zero\Module\'))` → `'rror'`, and Paste's own CSS/JS
+never loaded on its own error pages. Verified after the conversion:
+
+```
+$ curl -s https://unisolu.com/paste/nope-not-here | grep -o 'assets/paste/[^"]*'
+assets/paste/css/paste.css
+assets/paste/js/paste.js
+```
+
+Also worth recording, because it is the next attribute worth building: `edit`/`update`/`delete`
+each repeat the same resolve → compare `user_id` → reject preamble, and `modules/TheButton` has
+six more of the same shape. That is nine endpoints across two modules waiting on
+`#[RequireOwnership]` (see `TODO.md`), which is a much better fit than anything in
+`TODO_BRANCH_ON_LOGIN.md`.
+
 ## What to do next
 
 Roughly in order of value.
@@ -210,8 +249,9 @@ Roughly in order of value.
    class-level attribute would make those unreachable for anonymous visitors. Method-level
    attributes override class-level ones of the same type (`core/Application.php:243-252`), so
    mixed cases are expressible — but only for endpoints that have a real method.
-3. **Audit `modules/Paste/Paste.php` specifically**, as the closest match to the module that
-   already had a bypass. Still open. `AccessRequest`, `Auth` and `Thingiverse` follow.
+3. ~~**Audit `modules/Paste/Paste.php` specifically**, as the closest match to the module that
+   already had a bypass.~~ **Done** — no bypass; see "Paste, examined in full" above.
+   `AccessRequest` (6 checks), `Auth` (3) and `Thingiverse` (1) are what remain.
 4. ~~**Decide what `#[RequireLogin]` should mean** and write it down.~~ **Done** — it means
    `User::isLoggedIn()`: a fully established session for a verified account. Written down in
    `docs/attributes/RequireLogin.md` and `docs/ATTRIBUTES.md`.
