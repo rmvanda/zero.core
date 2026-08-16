@@ -45,7 +45,11 @@ class RequirePermission {
         // before we reach the permission check below.
         (new RequireLogin())->handler();
 
-        $userId = $_SESSION['user_id'];
+        // Used only for the log message below. User::currentId() is the same
+        // value with the $_SESSION['user']['id'] fallback, so this doesn't
+        // raise an undefined-key warning on a legacy session that never got
+        // the flat $_SESSION['user_id'] key.
+        $userId = \Zero\Core\User::currentId();
 
         // Check each required permission
         foreach ($this->permissions as $permission) {

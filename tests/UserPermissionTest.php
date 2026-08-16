@@ -166,4 +166,54 @@ class UserPermissionTest extends ZeroTestCase
         $this->assertTrue(User::hasPermission('allow.zerotest'),
             'and permissions must still work without it.');
     }
+
+    /**
+     * The \Throwable catch in settings() (core/User.php) is the single most
+     * security-relevant line in the permission system: it is what makes a
+     * database failure DENY rather than grant or fatal. Swap in a PDO whose
+     * prepare() throws, bypassing Database's singleton guard directly via the
+     * public static property, and restore the real connection afterward so
+     * tearDown()'s cleanup() (which needs a working DB) still runs.
+     */
+    public function testDatabaseFailureDeniesRatherThanGrantsOrFatals(): void
+    {
+        $real = Database::$connection;
+
+        $throwingPdo = $this->createStub(\PDO::class);
+        $throwingPdo->method('prepare')->willThrowException(new \PDOException('DB down'));
+        Database::$connection = $throwingPdo;
+
+        try {
+            $user = new User(['id' => $this->userId], true);
+            $this->assertFalse($user->can('allow.zerotest'),
+                'A lookup failure must deny, never grant.');
+
+            $user2 = new User(['id' => $this->userId], true);
+            $this->assertSame(0, $user2->authLevel(),
+                'A lookup failure must read as level 0, not fatal or leak an old value.');
+        } finally {
+            Database::$connection = $real;
+        }
+    }
+
+    /**
+     * setSetting()'s docblock (core/User.php:299) promises it drops the memo
+     * so a read later in the same request sees the write. Nothing checked
+     * that promise before this test — testRevocationTakesEffectWithoutReLogin()
+     * above covers the DB actually changing, but goes through a fresh
+     * User::find() instance each time, which would pass even if the memo
+     * were never dropped. This test reuses the SAME instance across the
+     * write, so it would fail if setSetting() stopped clearing $this->settings.
+     */
+    public function testSetSettingDropsTheMemo(): void
+    {
+        $this->set('allow.zerotest', '1');
+        $user = User::find($this->userId);
+        $this->assertTrue($user->can('allow.zerotest'), 'sanity check: memoizes settings()');
+
+        $user->setSetting('allow.zerotest', '0');
+
+        $this->assertFalse($user->can('allow.zerotest'),
+            'setSetting() must drop the memo — a stale memo would still read the pre-write value here.');
+    }
 }

@@ -28,7 +28,8 @@ use Zero\Core\User;
  * keeps covering whatever zero-parameter public statics exist on User at any
  * given time — including after sub-project B removes getName()/getEmail()
  * entirely, and including accessors this bug report never named (getId(),
- * getAll(), logout(), getAllPermissions() are zero-parameter too).
+ * current(), currentId(), logout() are zero-parameter too — getAllPermissions()
+ * was too, but sub-project C removed it for having zero callers).
  *
  * Out of scope: aliased imports. The regex matches literal `User::` — a call
  * site importing the class under another name (e.g.

@@ -117,7 +117,6 @@ abstract class ZeroTestCase extends TestCase
             'name'       => 'Test User',
             'email'      => 'test@example.com',
             'verified'   => true,
-            'auth_level' => 1,
             'pic'        => '/img/default.png',
         ];
 
@@ -127,7 +126,6 @@ abstract class ZeroTestCase extends TestCase
         $_SESSION['name']       = $data['name'];
         $_SESSION['email']      = $data['email'];
         $_SESSION['verified']   = $data['verified'];
-        $_SESSION['auth_level'] = $data['auth_level'];
         $_SESSION['pic']        = $data['pic'];
         $_SESSION['user'] = [
             'id'        => $data['user_id'],
