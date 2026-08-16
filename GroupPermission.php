@@ -345,7 +345,7 @@ class GroupPermission {
                 FROM {$this->permissionTable} p
                 JOIN `group` g ON p.group_id = g.group_id
                 JOIN group_member gm ON g.group_id = gm.group_id
-                JOIN user_view u ON gm.user_id = u.id
+                JOIN users u ON gm.user_id = u.id
                 WHERE p.{$this->entityIdColumn} = ?
                 ORDER BY u.name ASC
             ");
