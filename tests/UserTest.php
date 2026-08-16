@@ -7,6 +7,22 @@ use Zero\Core\Database;
 
 class UserTest extends ZeroTestCase
 {
+    protected function tearDown(): void
+    {
+        // hasPermission() now delegates to current()?->can(), and current()
+        // memoizes into a private static for the rest of the process. The
+        // hasPermission() tests below build different sessions/mocks per
+        // test but reuse user_id 1 — without clearing the memo, a later
+        // test would silently answer from an earlier test's cached instance
+        // instead of its own mock. Same convention as
+        // core/tests/UserCurrentTest.php::resetCurrentMemo().
+        $prop = new \ReflectionProperty(User::class, 'current');
+        $prop->setAccessible(true);
+        $prop->setValue(null, null);
+
+        parent::tearDown();
+    }
+
     /* ── isLoggedIn() ── */
 
     public function testIsLoggedInWhenSessionPopulated(): void
@@ -70,8 +86,11 @@ class UserTest extends ZeroTestCase
     {
         $this->loginUser(['user_id' => 1]);
 
+        // hasPermission() now delegates to current()->can(), which reads
+        // through settings() — one bulk fetchAll() of every setting_key for
+        // the user, not a single-key fetch(). Mock shape follows suit.
         $pdo = $this->createMockPdo(
-            fetchReturn: ['setting_value' => '1']
+            fetchAllReturn: [['setting_key' => 'allow.admin', 'setting_value' => '1']]
         );
         Database::init($pdo);
 
@@ -82,7 +101,7 @@ class UserTest extends ZeroTestCase
     {
         $this->loginUser(['user_id' => 1]);
 
-        $pdo = $this->createMockPdo(fetchReturn: false);
+        $pdo = $this->createMockPdo(fetchAllReturn: []);
         Database::init($pdo);
 
         $this->assertFalse(User::hasPermission('nonexistent'));
@@ -93,73 +112,18 @@ class UserTest extends ZeroTestCase
         $this->loginUser(['user_id' => 1]);
 
         $pdo = $this->createMockPdo(
-            fetchReturn: ['setting_value' => '0']
+            fetchAllReturn: [['setting_key' => 'disabled.perm', 'setting_value' => '0']]
         );
         Database::init($pdo);
 
         $this->assertFalse(User::hasPermission('disabled.perm'));
     }
 
-    /* ── getPermission() ── */
-
-    public function testGetPermissionReturnsValue(): void
-    {
-        $this->loginUser(['user_id' => 1]);
-
-        $pdo = $this->createMockPdo(
-            fetchReturn: ['setting_value' => 'dark']
-        );
-        Database::init($pdo);
-
-        $this->assertSame('dark', User::getPermission('theme'));
-    }
-
-    public function testGetPermissionReturnsNullWhenNotLoggedIn(): void
-    {
-        $this->logoutUser();
-        $this->assertNull(User::getPermission('anything'));
-    }
-
-    /* ── getAllPermissions() ── */
-
-    public function testGetAllPermissions(): void
-    {
-        $this->loginUser(['user_id' => 1]);
-
-        $pdo = $this->createMockPdo(
-            fetchAllReturn: [
-                ['setting_key' => 'allow.admin', 'setting_value' => '1'],
-                ['setting_key' => 'theme', 'setting_value' => 'dark'],
-            ]
-        );
-        Database::init($pdo);
-
-        $perms = User::getAllPermissions();
-        $this->assertSame('1', $perms['allow.admin']);
-        $this->assertSame('dark', $perms['theme']);
-    }
-
-    public function testGetAllPermissionsReturnsEmptyWhenNotLoggedIn(): void
-    {
-        $this->logoutUser();
-        $this->assertSame([], User::getAllPermissions());
-    }
-
-    /* ── setPermission() ── */
-
-    public function testSetPermissionReturnsTrueOnSuccess(): void
-    {
-        $this->loginUser(['user_id' => 1]);
-
-        $pdo = $this->createMockPdo(executeReturn: true);
-        Database::init($pdo);
-
-        $this->assertTrue(User::setPermission('theme', 'dark'));
-    }
-
-    public function testSetPermissionReturnsFalseWhenNotLoggedIn(): void
-    {
-        $this->logoutUser();
-        $this->assertFalse(User::setPermission('theme', 'dark'));
-    }
+    /*
+     * getPermission(), getAllPermissions() and setPermission() were deleted
+     * in the permission consolidation (Zero\Core\User::can()/authLevel()/
+     * setSetting() replace them): all three had zero production callers and
+     * were kept alive only by the tests that stood here. Their coverage is
+     * superseded by core/tests/UserPermissionTest.php.
+     */
 }

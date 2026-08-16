@@ -245,129 +245,100 @@ class User extends Model
         return self::currentId();
     }
 
+    /** Settings for this user, loaded once per instance. */
+    private ?array $settings = null;
+
     /**
-     * Check if user has a specific permission
+     * Does this user hold $key?
      *
-     * @param string $permission Permission key to check
-     * @return bool True if user has permission and it's enabled
+     * Reads through to the database, memoized per instance. That is one query
+     * per user per request — which is what buys mid-session revocation: a
+     * permission removed in the DB denies on the very next request, with no
+     * re-login, no TTL to tune and no flush API to build.
+     *
+     * Grant is a strict whitelist: '1', 1 and true. Everything else denies.
+     * The looser check this replaces treated 'false', 'off' and 'no' as grants.
      */
-    public static function hasPermission(string $permission): bool
+    public function can(string $key): bool
     {
-        $userId = self::getId();
-        if (!$userId) {
-            return false;
-        }
-
-        try {
-            $db = Database::getConnection();
-
-            $stmt = $db->prepare(
-                "SELECT setting_value FROM user_settings WHERE user_id = ? AND setting_key = ?"
-            );
-            $stmt->execute([$userId, $permission]);
-            $result = $stmt->fetch();
-
-            // Permission exists and is truthy (1, true, "1", etc.)
-            return $result && !empty($result['setting_value']) && $result['setting_value'] !== '0';
-        } catch (\Exception $e) {
-            error_log("User::hasPermission error: " . $e->getMessage());
-            return false;
-        }
+        $value = $this->settings()[$key] ?? null;
+        return $value === '1' || $value === 1 || $value === true;
     }
 
-    /**
-     * Get a specific permission value
-     *
-     * @param string $permission Permission key
-     * @return mixed Permission value or null if not found
-     */
-    public static function getPermission(string $permission)
+    /** All of this user's settings, keyed by setting_key. Memoized. */
+    private function settings(): array
     {
-        $userId = self::getId();
-        if (!$userId) {
-            return null;
+        if ($this->settings !== null) {
+            return $this->settings;
         }
-
         try {
-            $db = Database::getConnection();
-
-            $stmt = $db->prepare(
-                "SELECT setting_value FROM user_settings WHERE user_id = ? AND setting_key = ?"
-            );
-            $stmt->execute([$userId, $permission]);
-            $result = $stmt->fetch();
-
-            return $result ? $result['setting_value'] : null;
-        } catch (\Exception $e) {
-            error_log("User::getPermission error: " . $e->getMessage());
-            return null;
-        }
-    }
-
-    /**
-     * Get all permissions for the current user
-     *
-     * @return array Associative array of permission => value
-     */
-    public static function getAllPermissions(): array
-    {
-        $userId = self::getId();
-        if (!$userId) {
-            return [];
-        }
-
-        try {
-            $db = Database::getConnection();
-
-            $stmt = $db->prepare(
+            $stmt = Database::getConnection()->prepare(
                 "SELECT setting_key, setting_value FROM user_settings WHERE user_id = ?"
             );
-            $stmt->execute([$userId]);
-            $results = $stmt->fetchAll();
-
-            $permissions = [];
-            foreach ($results as $row) {
-                $permissions[$row['setting_key']] = $row['setting_value'];
+            $stmt->execute([$this->id]);
+            $out = [];
+            foreach ($stmt->fetchAll() as $row) {
+                $out[$row['setting_key']] = $row['setting_value'];
             }
-
-            return $permissions;
-        } catch (\Exception $e) {
-            error_log("User::getAllPermissions error: " . $e->getMessage());
-            return [];
+            return $this->settings = $out;
+        } catch (\Throwable $e) {
+            // \Throwable, not \Exception: Database::getConnection() throws \Error
+            // on a misconfiguration. A lookup failure must deny, never grant.
+            error_log("User::settings() failed: " . $e->getMessage());
+            return $this->settings = [];
         }
     }
 
     /**
-     * Set a permission for the current user
+     * auth.level as an integer.
      *
-     * @param string $permission Permission key
-     * @param mixed $value Permission value
-     * @return bool Success status
+     * It shares user_settings with the booleans but is a LEVEL, so it must not
+     * go through can(): under the strict whitelist a future auth.level of 2
+     * would read as denied.
      */
-    public static function setPermission(string $permission, $value): bool
+    public function authLevel(): int
     {
-        $userId = self::getId();
-        if (!$userId) {
-            return false;
-        }
+        return (int) ($this->settings()['auth.level'] ?? 0);
+    }
 
+    /**
+     * Set one setting. $actorId records who did it; null means self-service.
+     *
+     * Drops the memo so a read later in the same request sees the write.
+     */
+    public function setSetting(string $key, $value, ?int $actorId = null): bool
+    {
         try {
-            $db = Database::getConnection();
-
-            $stmt = $db->prepare(
+            $ok = Database::getConnection()->prepare(
                 "INSERT INTO user_settings (user_id, setting_key, setting_value, updated_by)
                  VALUES (?, ?, ?, ?)
                  ON DUPLICATE KEY UPDATE
                  setting_value = VALUES(setting_value),
-                 updated_by = VALUES(updated_by),
-                 updated_on = CURRENT_TIMESTAMP"
-            );
-
-            return $stmt->execute([$userId, $permission, $value, $userId]);
+                 updated_by    = VALUES(updated_by),
+                 updated_on    = CURRENT_TIMESTAMP"
+            )->execute([$this->id, $key, $value, $actorId ?? $this->id]);
+            $this->settings = null;
+            return $ok;
         } catch (\Exception $e) {
-            error_log("User::setPermission error: " . $e->getMessage());
+            error_log("User::setSetting() failed: " . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Does the CURRENT user hold $key?
+     *
+     * A current-request question, so it stays static per the class rule. It is
+     * the only permission static that survives; getPermission(),
+     * getAllPermissions() and setPermission() had zero callers and are gone.
+     *
+     * Deliberately kept rather than replaced by can() at the call sites: this
+     * framework serves the live site from the working tree, so deleting a
+     * method with 14 live callers is an immediate outage.
+     */
+    public static function hasPermission(string $permission): bool
+    {
+        return static::current()?->can($permission) ?? false;
     }
 
     /*
