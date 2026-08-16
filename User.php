@@ -99,12 +99,19 @@ class User extends Model
         if ($id === null) {
             return null;
         }
+        // name/email/pic fall back to the $_SESSION['user'] array — see the
+        // rationale on currentId() below. Note the array's key is full_name,
+        // not name (establish() builds it that way when no $identity is
+        // passed). verified deliberately has NO array fallback: the old
+        // isVerified() never had one either, and isLoggedIn() gates on the
+        // flat $_SESSION['verified'] alone, so adding one here would be a
+        // behaviour change, not a restoration.
         return self::$current = new static([
             'id'       => $id,
-            'name'     => $_SESSION['name']     ?? null,
-            'email'    => $_SESSION['email']    ?? null,
+            'name'     => $_SESSION['name']  ?? $_SESSION['user']['full_name'] ?? null,
+            'email'    => $_SESSION['email'] ?? $_SESSION['user']['email']     ?? null,
             'verified' => $_SESSION['verified'] ?? 0,
-            'pic'      => $_SESSION['pic']      ?? null,
+            'pic'      => $_SESSION['pic']   ?? $_SESSION['user']['pic']       ?? null,
         ], true);
     }
 
@@ -113,10 +120,18 @@ class User extends Model
      *
      * Kept separate from current() because 107 call sites want only the id or
      * a logged-in check, and none of them should pay for object construction.
+     *
+     * Falls back to $_SESSION['user']['id'] for sessions built before
+     * establish() existed: its own docblock records that complete() and
+     * AllowWithToken used to build the session by hand and had already
+     * drifted apart from each other. establish() itself always writes both
+     * shapes, so this fallback matters only for sessions already sitting in
+     * PHP's session store from before establish() unified them.
      */
     public static function currentId(): ?int
     {
-        return isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
+        $id = $_SESSION['user_id'] ?? $_SESSION['user']['id'] ?? null;
+        return $id === null ? null : (int) $id;
     }
 
     /**

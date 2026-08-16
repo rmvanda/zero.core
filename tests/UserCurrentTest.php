@@ -29,6 +29,21 @@ class UserCurrentTest extends ZeroTestCase
         Database::getConnection()
             ->prepare("DELETE FROM users WHERE email = ?")->execute([self::E]);
         $_SESSION = [];
+        $this->resetCurrentMemo();
+    }
+
+    /**
+     * The fallback tests below set $_SESSION directly rather than going
+     * through establish() (which clears the memo itself), so without this a
+     * User::current() memoized by an earlier test could leak into one of
+     * them depending on execution order. Reflection, not a public reset
+     * method, because nothing outside tests should ever need to clear it.
+     */
+    private function resetCurrentMemo(): void
+    {
+        $prop = new \ReflectionProperty(User::class, 'current');
+        $prop->setAccessible(true);
+        $prop->setValue(null, null);
     }
 
     public function testCurrentIsNullWithNoSession(): void
@@ -82,5 +97,37 @@ class UserCurrentTest extends ZeroTestCase
         $this->assertSame('Renamed Probe', $fresh->name);
         $this->assertSame(self::E, $fresh->email, 'email must not have been rewritten');
         $this->assertSame(1, (int) $fresh->verified, 'verified must not have been rewritten');
+    }
+
+    /*
+     * Sessions built before establish() existed (or by any other hand-rolled
+     * path) may carry only $_SESSION['user'], with none of the flat keys
+     * establish() itself always writes alongside it. currentId() and
+     * current() must still recognise those sessions as logged in — see the
+     * rationale on currentId()'s docblock.
+     */
+
+    public function testCurrentIdFallsBackToUserArrayWhenFlatKeyIsAbsent(): void
+    {
+        $_SESSION = ['user' => ['id' => $this->userId]];
+        $this->assertSame($this->userId, User::currentId());
+    }
+
+    public function testCurrentFallsBackToUserArrayWhenFlatKeysAreAbsent(): void
+    {
+        $_SESSION = ['user' => [
+            'id'        => $this->userId,
+            'full_name' => 'Array-Only Probe',
+            'email'     => self::E,
+            'pic'       => 'https://x/y.jpg',
+        ]];
+
+        $u = User::current();
+
+        $this->assertNotNull($u, "a session carrying only \$_SESSION['user'] must still yield a current user");
+        $this->assertSame($this->userId, (int) $u->id);
+        $this->assertSame('Array-Only Probe', $u->name, "current() must read the array's full_name key, not name");
+        $this->assertSame(self::E, $u->email);
+        $this->assertSame('https://x/y.jpg', $u->pic);
     }
 }
