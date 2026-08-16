@@ -285,17 +285,32 @@ abstract class AdminResponse extends Module {
             throw new HTTPError(404, "Admin interface not found for module: {$moduleClassName}");
         }
 
-        $controller = new $adminClass();
-
         // Convert kebab-case to camelCase (e.g., create-workflow → createWorkflow)
         if (is_string($method) && str_contains($method, '-')) {
             $method = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $method))));
         }
 
-        // Ensure method is a string and exists
-        if (!is_string($method) || !method_exists($controller, $method)) {
+        // Ensure method is a string and exists. Checked against the class name
+        // rather than an instance so the 404 — and the gate below — both settle
+        // before anything is constructed.
+        if (!is_string($method) || !method_exists($adminClass, $method)) {
             throw new HTTPError(404, "Admin method not found: " . (is_string($method) ? $method : 'invalid'));
         }
+
+        // This is the third dispatcher, alongside Application::run() and
+        // Module::__call(), and it needs its own gate for the same reason: it
+        // calls a controller method directly, so attributes declared on a
+        // module-admin controller never ran. /admin/* is still covered by
+        // Admin's own class-level #[RequirePermission('allow.admin')], which
+        // Application::run() resolves — but the per-controller attributes were
+        // dead, so a controller could not require anything FINER than the
+        // blanket admin permission.
+        //
+        // Before construction, so the gate precedes the controller's own
+        // constructor work.
+        Application::checkAttributes($adminClass, $method);
+
+        $controller = new $adminClass();
 
         return $controller->$method(...$params);
     }

@@ -136,9 +136,8 @@ class Module extends Response {
 
             // Class name mirrors namespace: Zero\Module\Ttrpg + \Characters, etc.
             $subClass = get_class($this) . '\\' . $submoduleName;
-            $submodule = new $subClass();
 
-            // $args is whatever was passed to the missing method 
+            // $args is whatever was passed to the missing method
             $subArgs = $args;
 
             // Shift first arg as the new endpoint, default to index
@@ -148,6 +147,27 @@ class Module extends Response {
             if (strpos($subEndpoint, '-') !== false) {
                 $subEndpoint = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $subEndpoint))));
             }
+
+            // Gate the submodule the same way Application::run() gates a
+            // top-level module. Without this, every attribute declared inside
+            // modules/{X}/submodule/ was dead: Application resolves attributes
+            // once, against the top-level class and the URL's SECOND segment,
+            // and this method then called the submodule's method directly.
+            //
+            // Deliberately BEFORE construction. A gate that runs after the
+            // constructor has already opened connections, loaded models and
+            // created asset symlinks is not a gate on the work, only on the
+            // response — and Hexmap's constructor, for one, loads its model.
+            //
+            // The endpoint is resolved above rather than below for the same
+            // reason: the check needs the method name to reach method-level
+            // attributes, which are exactly the ones that were dead.
+            //
+            // Naturally recursive. A submodule extends Module, so its own
+            // __call() runs this again for the next level down.
+            Application::checkAttributes($subClass, $subEndpoint);
+
+            $submodule = new $subClass();
 
             // Store active endpoint on submodule for asset loading
             $submodule->activeEndpoint = $subEndpoint;

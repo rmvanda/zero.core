@@ -217,7 +217,7 @@ class Application {
 
         $moduleInstance = new $Module();
         try {
-            $this->checkForAttributes($Module,$endpoint);
+            self::checkAttributes($Module,$endpoint);
             $moduleInstance -> {$endpoint}(...$args);
         } catch(HTTPError $e){
             $moduleInstance->renderError($e);
@@ -228,14 +228,59 @@ class Application {
         \Zero\Core\PluginLoader::hook($this->plugins, 'afterRun', $module, $endpoint, $args);
     }
 
-    private function checkForAttributes($Module,$endpoint) : void {
+    /**
+     * Run every attribute that gates $class::$endpoint.
+     *
+     * Public and static because Application::run() is NOT the only dispatcher.
+     * Module::__call() resolves submodules and calls their methods directly, and
+     * Admin::routeToModuleAdmin() does the same for module-admin controllers —
+     * so every attribute declared inside modules/{X}/submodule/ was dead until
+     * those two call this as well. Measured before the fix: an anonymous
+     * GET /ttrpg/hexmap/dm returned 200 with #[RequireAuthLevel(1)] on the
+     * method, and GET /ttrpg/hexmap/save returned 400 rather than 405 with
+     * #[AllowedMethods('POST')] on it.
+     *
+     * Each dispatch level checks its OWN (class, endpoint) pair, so the gates
+     * are additive down the nesting chain and nothing is evaluated twice:
+     * /ttrpg/hexmap/save runs (Ttrpg, 'hexmap') here — Ttrpg's class attributes,
+     * since Ttrpg has no hexmap() method — and then (Ttrpg\Hexmap, 'save') from
+     * Module::__call(). Class-level attributes are not inherited by PHP
+     * reflection, and a submodule extends Module rather than its parent module,
+     * so the first level's attributes cannot re-fire at the second.
+     *
+     * @param string $class    Fully-qualified class that will serve the request.
+     * @param string $endpoint Method name resolved from the URL segment.
+     */
+    public static function checkAttributes(string $class, string $endpoint) : void {
 
-        $reflection = new \ReflectionClass($Module);
+        $reflection = new \ReflectionClass($class);
+        $Module     = $class;
 
         $classAttributes  = $reflection->getAttributes();
         $methodAttributes = [];
+        $methodScope      = 'method';
         if($reflection->hasMethod($endpoint)){
             $methodAttributes = $reflection->getMethod($endpoint)->getAttributes();
+        } elseif($reflection->hasMethod('__call')){
+            // Virtual endpoint. The URL segment is data — a paste slug, a short
+            // link, a button name, an image path — not a method, so it has no
+            // ReflectionMethod of its own and can carry no attributes. Reading
+            // __call()'s attributes lets a class gate everything it dispatches
+            // dynamically, which was previously impossible: only class-level
+            // attributes applied, and nothing could be said per virtual route.
+            //
+            // Additive only. A class-level gate still applies when __call()
+            // declares nothing, so this cannot express "class gated, __call
+            // deliberately public" — that case is served by dropping the
+            // class-level attribute and gating each real method instead, which
+            // is what modules/TheButton already does.
+            //
+            // Also fires when $endpoint resolves to a SUBMODULE, since the
+            // parent has no method of that name either. The submodule's own
+            // check then runs on top, so the effect is a superset gate — it
+            // fails safe, but declare with that in mind.
+            $methodAttributes = $reflection->getMethod('__call')->getAttributes();
+            $methodScope      = 'call';
         }
 
         // Method-level attributes override class-level attributes of the same type.
@@ -264,18 +309,20 @@ class Application {
         foreach ($methodAttributes as $attr) {
             self::$attributeLog[] = [
                 'name'   => $attr->getName(),
-                'scope'  => 'method',
+                // 'call' marks an attribute read from __call() on behalf of a
+                // virtual endpoint that has no method of its own.
+                'scope'  => $methodScope,
                 'target' => $Module . '::' . $endpoint,
             ];
         }
 
         $attributes = array_merge($effectiveClass, $methodAttributes);
 
-        $this->handleAttributes($attributes);
+        self::handleAttributes($attributes);
 
     }
 
-    private function handleAttributes($attributes){
+    private static function handleAttributes($attributes){
          foreach($attributes as $attribute){
             $attr = $attribute->newInstance();
             $attr->handler();
