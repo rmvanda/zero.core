@@ -3,10 +3,20 @@
 namespace Zero\Core;
 
 /**
- * User Class
+ * A site user — the row gateway for `users`, the profile store, and the
+ * session facade, in one class.
  *
- * Provides convenient methods for accessing user session data
- * and checking authentication status.
+ * The governing rule: instance methods are record data, statics are the
+ * current request. `$user->name`, `->email`, `->save()`, `->profile()` and
+ * friends answer for whichever row the instance was loaded or built from.
+ * `isLoggedIn()`, `current()`, `establish()` and the rest answer for the
+ * session only — none of them take a user to answer about, and none of them
+ * ever will. That asymmetry is deliberate: it is what stops
+ * `$someoneElse->isLoggedIn()` from ever compiling.
+ *
+ * Replaces the EAV `user` entity type. `users.email` carries a real UNIQUE
+ * KEY, so a duplicate raises a PDOException that Model::isDuplicateKey()
+ * recognises.
  *
  * @author James Pope
  */
@@ -89,10 +99,20 @@ class User extends Model
      * a stale value. The session projection is exactly static::$columns plus
      * the pk, so every mapped column is present and no accessor can return
      * null merely because it "wasn't loaded".
+     *
+     * Checked with `instanceof static`, not `!== null`: $current is ONE
+     * storage slot shared by every subclass — private static properties are
+     * bound to the declaring class, not to static:: — but the return type is
+     * `?static`. Zero\Model\User extends this class as a deprecated shim, so
+     * `Zero\Core\User::current()` followed by `Zero\Model\User::current()`
+     * would otherwise hand back a Zero\Core\User instance where a
+     * `?Zero\Model\User` is required: a TypeError, not a quiet wrong answer.
+     * Checking the type on read rebuilds instead of reusing whenever the
+     * memoized instance is not of the class actually being asked for.
      */
     public static function current(): ?static
     {
-        if (self::$current !== null) {
+        if (self::$current instanceof static) {
             return self::$current;
         }
         $id = self::currentId();
@@ -347,6 +367,20 @@ class User extends Model
             return false;
         }
     }
+
+    /*
+     * Profile storage: values for the configurable registration fields. One
+     * row per (user_id, field_key) in `user_profile`, with per-row
+     * encryption for fields marked sensitive.
+     *
+     * `user_profile`'s primary key is composite (user_id, field_key), and
+     * Model assumes a single auto-increment pk with lastInsertId()
+     * semantics — that mismatch is why these three methods talk to
+     * `user_profile` directly with hand-written SQL rather than through the
+     * generic column-whitelist machinery this class inherits for `users`
+     * itself. Shaped after Zero\Entity\OAuthToken's encrypt-on-write /
+     * decrypt-on-read instead.
+     */
 
     /**
      * Upsert the supplied values. Keys absent from $fieldDefs are silently

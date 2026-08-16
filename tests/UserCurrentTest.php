@@ -85,18 +85,47 @@ class UserCurrentTest extends ZeroTestCase
             'current() must return the same memoized instance within a request.');
     }
 
-    public function testSaveOnASessionHydratedUserWritesOnlyTheChangedColumn(): void
+    public function testCurrentMemoDoesNotLeakAcrossLateStaticBindingSubclasses(): void
     {
         User::establish(User::find($this->userId));
 
+        $core = \Zero\Core\User::current();
+        $this->assertInstanceOf(\Zero\Core\User::class, $core);
+
+        // Zero\Model\User is a deprecated shim subclass (removed in Task 5).
+        // $current is ONE storage slot shared by every subclass — private
+        // static properties are bound to the declaring class, not to
+        // static:: — so calling through the subclass right after the parent
+        // must not hand back the parent's memoized instance: current()'s
+        // return type is ?static, and a Zero\Core\User does not satisfy
+        // ?Zero\Model\User. Before the instanceof-static fix, this line
+        // threw a TypeError rather than failing an assertion.
+        $model = \Zero\Model\User::current();
+        $this->assertInstanceOf(\Zero\Model\User::class, $model,
+            'current() must rebuild rather than reuse a memoized instance of the wrong subclass');
+    }
+
+    public function testSaveOnASessionHydratedUserWritesOnlyTheChangedColumn(): void
+    {
+        User::establish(User::find($this->userId));
         $u = User::current();
+
+        // Row moves on underneath the session — the real scenario this test
+        // guards against. Without this, the session instance's email/verified
+        // are already identical to the row's (establish() wrote them straight
+        // off the same find() result current() hydrates from), so a save()
+        // that wrote every column back would write the same values and this
+        // test would pass either way. Proven: see the fix report.
+        Database::getConnection()
+            ->prepare("UPDATE users SET verified = 0 WHERE id = ?")->execute([$this->userId]);
+
         $u->name = 'Renamed Probe';
         $u->save();
 
         $fresh = User::find($this->userId);
         $this->assertSame('Renamed Probe', $fresh->name);
-        $this->assertSame(self::E, $fresh->email, 'email must not have been rewritten');
-        $this->assertSame(1, (int) $fresh->verified, 'verified must not have been rewritten');
+        $this->assertSame(0, (int) $fresh->verified,
+            'a stale session value must not have been written back');
     }
 
     /*
