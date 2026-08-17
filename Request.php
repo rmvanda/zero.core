@@ -164,9 +164,27 @@ class Request
         return !isset($url[1]) || ($url[1] !== "/" && $url[1] !== "\\");
     }
 
+    /**
+     * Send a Location and stop, discarding whatever the page had buffered.
+     *
+     * Deliberately NOT guarded with isSiteRelative(): this is the general
+     * redirect helper, and the OAuth flow legitimately sends visitors to a
+     * provider's authorize endpoint. The guard belongs at the call sites that
+     * redirect to a URL derived from the request — see #[RequireLogin].
+     *
+     * Called ob_clean_end(), which is not a function; the real name is
+     * ob_end_clean(). Anything reaching this would have died with a fatal
+     * error instead of redirecting. It has no callers, which is presumably the
+     * only reason nobody noticed — 147 places in core and modules write the
+     * header by hand. The level check is because ob_end_clean() warns when
+     * there is no buffer to end, and there is not one on every path: it is
+     * Application::__construct() that calls ob_start().
+     */
     public static function redirect($url){
         header("Location: ".$url) ;
-        ob_clean_end();
+        if(ob_get_level() > 0){
+            ob_end_clean();
+        }
         exit();
     }
 

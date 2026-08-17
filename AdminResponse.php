@@ -3,6 +3,7 @@
 namespace Zero\Core;
 
 use Zero\Core\Module;
+use Zero\Core\Request;
 use Zero\Core\User;
 
 /**
@@ -37,8 +38,25 @@ abstract class AdminResponse extends Module {
     public function __construct() {
         // Check base admin access
         if (!User::hasPermission('allow.admin')) {
-            // Redirect to login with return URL
-            header('Location: /auth/login?redirect=' . urlencode($_SERVER['REQUEST_URI']));
+            // Send them to the login page holding on to where they were going.
+            //
+            // This used to redirect to '/auth/login?redirect=<uri>', which was
+            // wrong twice over: there is no Auth::login() and no __call() on
+            // Auth, so /auth/login is a 404 — a denied admin visitor landed on
+            // an error page rather than a login form — and nothing anywhere
+            // reads a 'redirect' query parameter, so the destination was
+            // discarded even if the page had existed. The login page is
+            // /user/login, and the mechanism for coming back afterwards is
+            // $_SESSION['return_url'], which Auth::complete() and Auth::token()
+            // already consume. Same guard #[RequireLogin] uses on the way in:
+            // REQUEST_URI is chosen by the requester and this value ends up in
+            // a Location header.
+            $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+            if (Request::isSiteRelative($requestUri)) {
+                $_SESSION['return_url'] = $requestUri;
+            }
+
+            header('Location: /user/login?r=y');
             exit;
         }
 
