@@ -56,8 +56,22 @@ class RequireLogin {
             throw new HTTPError(401, "Authentication required");
         }
 
-        // Store the current path so we can redirect back after login
-        $_SESSION['return_url'] = $_SERVER['REQUEST_URI'] ?? '/';
+        // Store the current path so we can redirect back after login.
+        //
+        // REQUEST_URI is attacker-controlled, and Auth::complete() /
+        // Auth::token() put this value straight into a Location header, so it
+        // is guarded on the way IN as well as on the way out. Nothing today
+        // reaches here with a hostile URI — Request trims leading slashes
+        // before routing, so "//evil.example/x" resolves to a module that does
+        // not exist and no gate ever runs — but that is an accident of the
+        // router, not a property of this code. An unsafe value is dropped
+        // rather than rewritten: both consumers already fall back to '/'.
+        $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+        if (Request::isSiteRelative($requestUri)) {
+            $_SESSION['return_url'] = $requestUri;
+        } else {
+            Console::warn("RequireLogin refusing to store non-relative return_url '{$requestUri}'");
+        }
 
         $url = self::DEFAULT_LOGIN_URL;
         if ($this->redirect !== null) {
@@ -65,7 +79,10 @@ class RequireLogin {
             // request, so this is a typo guard rather than a security boundary
             // — but a stray "https://..." would still be an open redirect, and
             // silently falling back to the login page is the harmless failure.
-            if (str_starts_with($this->redirect, '/')) {
+            // Same predicate as the return_url above: a plain str_starts_with
+            // '/' admitted "//evil.example/x", which is the very thing the
+            // guard is for.
+            if (Request::isSiteRelative($this->redirect)) {
                 $url = $this->redirect;
             } else {
                 Console::warn("RequireLogin ignoring non-relative redirect '{$this->redirect}'");

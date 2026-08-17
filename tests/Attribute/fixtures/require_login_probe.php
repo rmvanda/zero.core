@@ -11,7 +11,7 @@
  * via proc_open) so the exit() only ends that child, and prints the
  * observable effect on a single stdout line for the parent test to parse.
  *
- * Usage: php require_login_probe.php '<json $_SESSION, or "null">' [redirect] [json]
+ * Usage: php require_login_probe.php '<json $_SESSION, or "null">' [redirect] [json] [request_uri]
  *   - argv[1] "null"  → no session at all: session_start() is never called
  *     and $_SESSION is left completely undefined, matching a request that
  *     never touched a session.
@@ -22,12 +22,25 @@
  *     can pin which Location a custom (or malformed) target produces.
  *   - argv[3] "json" → Request::$acceptsJSON = true, the shape that makes
  *     handler() throw HTTPError(401) instead of redirecting.
+ *   - argv[4] the REQUEST_URI the denial is happening on. This is what
+ *     handler() considers storing as $_SESSION['return_url'], and it is
+ *     attacker-controlled in production, so the tests need to choose it.
  *
- * Output (exactly one line):
- *   APPROVED                 handler() returned true, no redirect happened
- *   HEADER:<Location value>  redirectToLogin() ran; this was the header it sent
- *   HTTPERROR:<code>:<detail> handler() threw instead of redirecting (JSON path)
- *   WARN:<message>           a PHP warning/notice fired before any of the above
+ * Output (two lines):
+ *   line 1, the outcome —
+ *     APPROVED                 handler() returned true, no redirect happened
+ *     HEADER:<Location value>  redirectToLogin() ran; this was the header it sent
+ *     HTTPERROR:<code>:<detail> handler() threw instead of redirecting (JSON path)
+ *     WARN:<message>           a PHP warning/notice fired before any of the above
+ *   line 2, always —
+ *     RETURN_URL:<value>       what handler() stored for the post-login bounce
+ *     RETURN_URL:NONE          ...or that it stored nothing
+ *
+ * The RETURN_URL line is emitted from a shutdown function rather than inline
+ * so it reports the settled session on EVERY exit path — including the two
+ * that never return to this script, redirectToLogin()'s exit() and the JSON
+ * path's throw. RequireLoginTest::probe() hides it again so the outcome-line
+ * assertions read as they did before it existed; probeReturnUrl() reads it.
  */
 
 // Shadow header(): an unqualified call inside namespace Zero\Core\Attribute
@@ -52,6 +65,14 @@ namespace {
     // the test user, and a failed fopen would otherwise surface as an
     // unrelated WARN line on stdout.
     \Zero\Core\Console::$defaultLogFile = sys_get_temp_dir() . '/require_login_probe.log';
+
+    // Reports the settled session on every exit path — see the header note.
+    register_shutdown_function(function (): void {
+        echo 'RETURN_URL:' . ($_SESSION['return_url'] ?? 'NONE') . "\n";
+    });
+
+    // handler() reads this when it decides what to store for the bounce back.
+    $_SERVER['REQUEST_URI'] = $argv[4] ?? '/gated/endpoint';
 
     $arg = $argv[1] ?? 'null';
     $session = json_decode($arg, true);

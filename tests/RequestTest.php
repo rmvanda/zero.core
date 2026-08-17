@@ -365,4 +365,65 @@ class RequestTest extends ZeroTestCase
         $_SERVER['REMOTE_ADDR'] = '203.0.113.99';
         $this->assertSame('203.0.113.99', Request::clientIp());
     }
+
+    /* ── isSiteRelative(): the open-redirect predicate ────────────────────
+     *
+     * Both ends of the return-to-where-you-were flow gate on this — the
+     * writer in #[RequireLogin] and the readers in Auth::complete() and
+     * Auth::token() — so the cases live with the predicate rather than being
+     * restated at each of the three call sites.
+     */
+
+    #[DataProvider('siteRelativeUrls')]
+    public function testAcceptsSiteRelativeUrls(string $url): void
+    {
+        $this->assertTrue(Request::isSiteRelative($url), "should accept '{$url}'");
+    }
+
+    public static function siteRelativeUrls(): array
+    {
+        return [
+            'bare root'            => ['/'],
+            'plain path'           => ['/notes/list'],
+            'path with query'      => ['/notes/list?tag=a&sort=desc'],
+            'path with fragment'   => ['/notes/list#top'],
+            'encoded slashes'      => ['/notes/%2F%2Fevil.example'],
+            // A backslash that is not in the host-confusing position is just a
+            // character in a path.
+            'inner backslash'      => ['/notes/a\\b'],
+            // A colon after the first segment cannot be read as a scheme.
+            'inner colon'          => ['/notes/a:b'],
+        ];
+    }
+
+    #[DataProvider('offSiteUrls')]
+    public function testRejectsAnythingThatCanLeaveTheSite(?string $url): void
+    {
+        $this->assertFalse(Request::isSiteRelative($url), "should reject '{$url}'");
+    }
+
+    public static function offSiteUrls(): array
+    {
+        return [
+            'null'                 => [null],
+            'empty'                => [''],
+            'absolute https'       => ['https://evil.example/harvest'],
+            'absolute http'        => ['http://evil.example/harvest'],
+            'scheme relative'      => ['//evil.example/harvest'],
+            'scheme relative bare' => ['//evil.example'],
+            // A browser normalizes a backslash to a forward slash before it
+            // parses the URL, so this is "//evil.example" by the time it is
+            // resolved. str_starts_with($u, '/') admitted it.
+            'backslash host'       => ['/\\evil.example/harvest'],
+            // Tab, CR and LF are REMOVED from a URL by the parser rather than
+            // encoded, so each of these collapses to "//evil.example".
+            'tab split'            => ["/\t/evil.example"],
+            'newline split'        => ["/\n/evil.example"],
+            'carriage return split'=> ["/\r/evil.example"],
+            'no leading slash'     => ['evil.example/harvest'],
+            'relative traversal'   => ['../evil'],
+            'javascript scheme'    => ['javascript:alert(1)'],
+            'data scheme'          => ['data:text/html,<script>0</script>'],
+        ];
+    }
 }

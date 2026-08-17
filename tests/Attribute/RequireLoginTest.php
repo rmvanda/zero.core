@@ -5,6 +5,7 @@ namespace Zero\Tests\Core\Attribute;
 use Zero\Tests\Core\ZeroTestCase;
 use Zero\Core\Attribute\RequireLogin;
 use Zero\Core\User;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * handler() now gates on User::isLoggedIn() instead of duplicating its own
@@ -47,15 +48,53 @@ class RequireLoginTest extends ZeroTestCase
 
     /**
      * Runs the probe script in a fresh OS process with the given $_SESSION
-     * shape (null = no session at all) and returns its single line of
-     * stdout, trimmed. See fixtures/require_login_probe.php for the output
-     * contract.
+     * shape (null = no session at all) and returns its OUTCOME line, trimmed
+     * — what handler() did. See fixtures/require_login_probe.php for the full
+     * output contract; the trailing RETURN_URL line it always prints is
+     * dropped here and read by probeReturnUrl() instead, so that these
+     * assertions stay about the one thing they are each testing.
      *
      * @param string|null $redirect    Passed to the RequireLogin constructor.
      * @param bool        $acceptsJSON Sets Request::$acceptsJSON in the child.
+     * @param string|null $requestUri  The URI the denial happens on.
      */
-    private function probe(?array $session, ?string $redirect = null, bool $acceptsJSON = false): string
-    {
+    private function probe(
+        ?array $session,
+        ?string $redirect = null,
+        bool $acceptsJSON = false,
+        ?string $requestUri = null
+    ): string {
+        return $this->probeRaw($session, $redirect, $acceptsJSON, $requestUri)[0] ?? '';
+    }
+
+    /**
+     * What handler() stored for the post-login bounce, or 'NONE'.
+     *
+     * REQUEST_URI is attacker-controlled, and Auth::complete()/Auth::token()
+     * put this value into a Location header, so what does and does not get
+     * stored is a security boundary rather than a convenience.
+     */
+    private function probeReturnUrl(
+        ?array $session,
+        ?string $redirect = null,
+        bool $acceptsJSON = false,
+        ?string $requestUri = null
+    ): string {
+        $lines = $this->probeRaw($session, $redirect, $acceptsJSON, $requestUri);
+        $last  = end($lines) ?: '';
+
+        $this->assertStringStartsWith('RETURN_URL:', $last, "Probe did not report a return_url. Output:\n" . implode("\n", $lines));
+
+        return substr($last, strlen('RETURN_URL:'));
+    }
+
+    /** @return string[] Every line the probe printed, trimmed, blanks dropped. */
+    private function probeRaw(
+        ?array $session,
+        ?string $redirect,
+        bool $acceptsJSON,
+        ?string $requestUri
+    ): array {
         $arg = $session === null ? 'null' : json_encode($session);
 
         $descriptors = [
@@ -65,7 +104,14 @@ class RequireLoginTest extends ZeroTestCase
         ];
 
         $process = proc_open(
-            [PHP_BINARY, self::PROBE, $arg, $redirect ?? 'null', $acceptsJSON ? 'json' : 'html'],
+            [
+                PHP_BINARY,
+                self::PROBE,
+                $arg,
+                $redirect ?? 'null',
+                $acceptsJSON ? 'json' : 'html',
+                $requestUri ?? '/gated/endpoint',
+            ],
             $descriptors,
             $pipes,
             dirname(__DIR__, 3) // zero root, for consistency with a real request's cwd
@@ -82,7 +128,7 @@ class RequireLoginTest extends ZeroTestCase
 
         $this->assertSame(0, $exitCode, "Probe exited abnormally (code {$exitCode}). stderr:\n{$stderr}");
 
-        return trim($stdout);
+        return array_values(array_filter(array_map('trim', explode("\n", $stdout)), fn($l) => $l !== ''));
     }
 
     /* ── Admitted ── */
@@ -172,6 +218,31 @@ class RequireLoginTest extends ZeroTestCase
         );
     }
 
+    /**
+     * ...and "site-relative" is the same predicate the stored return_url uses,
+     * not a bare leading slash. #[RequireLogin('//evil.example/x')] passed a
+     * str_starts_with($u, '/') check and was emitted verbatim as a Location,
+     * which is a protocol-relative URL and an open redirect — from a typo, or
+     * from a module author who did not know the difference.
+     */
+    #[DataProvider('offSiteRedirectOverrides')]
+    public function testIgnoresARedirectOverrideThatWouldLeaveTheSite(string $redirect): void
+    {
+        $this->assertSame(
+            'HEADER:Location: /user/login?r=y',
+            $this->probe(null, $redirect)
+        );
+    }
+
+    public static function offSiteRedirectOverrides(): array
+    {
+        return [
+            'scheme relative' => ['//evil.example/harvest'],
+            'backslash host'  => ['/\\evil.example/harvest'],
+            'tab split'       => ["/\t/evil.example"],
+        ];
+    }
+
     /** The override changes only WHERE a denial goes, never WHETHER it denies. */
     public function testRedirectOverrideDoesNotAdmitAnUnverifiedSession(): void
     {
@@ -251,5 +322,72 @@ class RequireLoginTest extends ZeroTestCase
         $attr = new RequireLogin();
         $this->assertTrue($attr->handler());
         $this->assertTrue($attr->approved);
+    }
+
+    /* ── What gets stored for the post-login bounce ───────────────────────
+     *
+     * $_SESSION['return_url'] is written here from REQUEST_URI and read by
+     * Auth::complete() and Auth::token(), each of which puts it straight into
+     * a Location header. REQUEST_URI is chosen by whoever made the request,
+     * so this is the write end of an open-redirect boundary, not bookkeeping.
+     */
+
+    public function testStoresTheRequestedPathToReturnTo(): void
+    {
+        $this->assertSame(
+            '/notes/list?tag=a',
+            $this->probeReturnUrl(null, requestUri: '/notes/list?tag=a')
+        );
+    }
+
+    /**
+     * The value is dropped rather than rewritten — both consumers already
+     * default to '/', so there is nothing for a substitute to buy.
+     *
+     * No request can currently reach the gate carrying one of these:
+     * Request trims leading slashes before routing, so '//evil.example/x'
+     * resolves to a module that does not exist and no attribute runs. That is
+     * a property of the router, though, not of this code, which is why the
+     * guard is here and pinned.
+     */
+    #[DataProvider('offSiteRequestUris')]
+    public function testRefusesToStoreAReturnUrlThatWouldLeaveTheSite(string $uri): void
+    {
+        $this->assertSame('NONE', $this->probeReturnUrl(null, requestUri: $uri));
+    }
+
+    public static function offSiteRequestUris(): array
+    {
+        return [
+            'scheme relative' => ['//evil.example/harvest'],
+            // A browser turns \ into / before parsing, so this is the case
+            // above. A str_starts_with('/') check admitted it.
+            'backslash host'  => ['/\\evil.example/harvest'],
+            // Tab is removed by the URL parser rather than encoded.
+            'tab split'       => ["/\t/evil.example"],
+            'absolute'        => ['https://evil.example/harvest'],
+        ];
+    }
+
+    /** Denying a redirect target does not stop the denial itself. */
+    public function testAnUnsafeReturnUrlStillRedirectsToLogin(): void
+    {
+        $this->assertSame(
+            'HEADER:Location: /user/login?r=y',
+            $this->probe(null, requestUri: '//evil.example/harvest')
+        );
+    }
+
+    /**
+     * The JSON path throws before it stores anything. An XHR has no bounce to
+     * come back to, and leaving a return_url behind would redirect the NEXT
+     * interactive login on that session somewhere the visitor never asked for.
+     */
+    public function testJsonDenialStoresNoReturnUrl(): void
+    {
+        $this->assertSame(
+            'NONE',
+            $this->probeReturnUrl(null, null, acceptsJSON: true, requestUri: '/notes/list')
+        );
     }
 }

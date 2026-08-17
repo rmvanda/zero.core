@@ -118,6 +118,52 @@ class Request
 
 	}
 
+    /**
+     * Is this URL safe to put in a Location header without leaving the site?
+     *
+     * A pure classifier — no state, no side effects. It lives on Request
+     * because what it parses is a URL, and because both ends of the
+     * return-to-where-you-were flow need the same answer: the writer
+     * (#[RequireLogin], storing $_SESSION['return_url']) and the readers
+     * (Auth::complete() and Auth::token(), emitting it as a redirect). One
+     * predicate is what keeps those two ends from drifting apart.
+     *
+     * Site-relative means one leading slash and nothing that lets a browser
+     * read a hostname out of the value:
+     *
+     *   /notes/list        yes
+     *   //evil.example/x   no  — protocol-relative; the browser leaves the site
+     *   /\evil.example/x   no  — a browser normalizes \ to / before parsing,
+     *                            so this is the line above wearing a hat
+     *   /<TAB>/evil.example  no — tab, CR and LF are STRIPPED from a URL by
+     *                            the browser rather than encoded, so this
+     *                            becomes //evil.example after parsing
+     *   https://evil/x     no  — absolute
+     *   ../x, x/y          no  — no leading slash; resolution depends on the
+     *                            page it is served from
+     *
+     * Callers keep their own fallback rather than being handed one, so the
+     * choice of where a rejected value lands stays with the caller.
+     */
+    public static function isSiteRelative(?string $url): bool {
+        if($url === null || $url === ""){
+            return false;
+        }
+
+        // Tab/CR/LF anywhere: header() already refuses CR and LF, but a tab
+        // passes it and is then removed by the URL parser, so the check has to
+        // be on the whole string rather than only on the first characters.
+        if(strpbrk($url, "\t\r\n") !== false){
+            return false;
+        }
+
+        if($url[0] !== "/"){
+            return false;
+        }
+
+        return !isset($url[1]) || ($url[1] !== "/" && $url[1] !== "\\");
+    }
+
     public static function redirect($url){
         header("Location: ".$url) ;
         ob_clean_end();
