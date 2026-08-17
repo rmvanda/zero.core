@@ -1,7 +1,20 @@
 <?php
 
-namespace Zero\Core; 
+namespace Zero\Core;
 
+/*
+ * Assigning to an undeclared property is deprecated as of PHP 8.2 and becomes
+ * an error in PHP 9. This framework assigns view data to undeclared properties
+ * by design — defineBasePaths() writes $this->{$path."Path"} from a list, and
+ * every module sets whatever its views read — so the deprecation fires on
+ * essentially every request.
+ *
+ * Opting out here rather than declaring the properties: the attribute is
+ * inherited, so this one line covers Module and every module that extends it.
+ * Leading backslash because this file is in namespace Zero\Core and the
+ * attribute is a global-namespace class.
+ */
+#[\AllowDynamicProperties]
 class Response
 {
 
@@ -14,7 +27,7 @@ class Response
 
     protected static $built = false; 
 
-    public $paths = ["frame", "view", "component", "model"]; 
+    public $paths = ["frame", "view", "component", "model"];
 
     public function __construct($altconfig = null){
         $this->defineBasePaths();
@@ -50,24 +63,109 @@ class Response
 
     protected function defineBasePaths(){
         //$class_info = new \ReflectionClass(get_class($this));
-        //$dirname    = dirname($class_info->getFileName())."/"; 
-        $dirname = MODULE_PATH.Request::$Module."/"; 
+        //$dirname    = dirname($class_info->getFileName())."/";
+        $dirname = MODULE_PATH.Request::$Module."/";
 
 
         foreach($this->paths as $path){
-            $pathString = $path."Path"; 
+            $pathString = $path."Path";
             if(!$this->$pathString && is_dir($dirname.$path)){
-// TODO - CLAUDE:
-// The purpose of putting the frame in the session was to allow the frame to persist
-// in the event of hitting things like error pages or "you need to log on" pages 
-// naturally, this implementation does not work and should be revisited. 
-                $this->$pathString = $dirname.$path."/";  
+// Paths resolve per request and are not persisted. Error pages need no help
+// here: renderError() runs on the live module instance, whose framePath this
+// method has already set. Cross-request frame inheritance, for shared modules
+// that should look like whatever sent the visitor to them, is adoptFrameFrom().
+                $this->$pathString = $dirname.$path."/";
             } else {
                 // this is not valid for model, but whatever. FIXME later
                 $this->$pathString = ZERO_ROOT."app/frontend/".$path."/";
             }
-            //echo "Set $pathString to: {$this->$pathString}<br>"; 
+            //echo "Set $pathString to: {$this->$pathString}<br>";
         }
+    }
+
+    /**
+     * Adopt the frame of the module that referred the client here.
+     *
+     * For shared modules — ones reachable from anywhere, that should look like
+     * part of whatever sent the visitor to them. /user/profile linked from a
+     * Ttrpg page should render in Ttrpg's frame, not the site default.
+     *
+     * Call it from the module constructor, BEFORE parent::__construct(), and
+     * pass $_SERVER['HTTP_REFERER']. defineBasePaths() skips any path that is
+     * already set, so an adopted frame survives and everything else still
+     * resolves normally.
+     *
+     * Referer rather than stored state: the frame belongs to one handoff, not
+     * to the browser, and storing it would cost a session file per visitor.
+     * Referer rather than an explicit ?from= parameter: the handoff is usually
+     * an ordinary link that no framework code builds, so there is nothing to
+     * append to.
+     *
+     * Absent, stripped or off-site Referer returns false and changes nothing —
+     * the caller keeps its own frame. That is the common case (direct
+     * navigation, bookmarks, privacy settings), so it is a quiet fallback and
+     * not an error. Note Auth::token() sets `Referrer-Policy: no-referrer`
+     * deliberately; pages reached from there always fall back.
+     *
+     * Referer is client-controlled, so the value is treated as untrusted input
+     * and only ever used to SELECT a directory, never to build one:
+     *
+     *   1. Host must equal Request::$domain. Compared host-to-host with the
+     *      port stripped from both, so a non-default port is not read as a
+     *      different site, and compared for equality rather than suffix, so
+     *      unisolu.com.evil.example does not pass.
+     *   2. The first path segment must match ^[a-z0-9-]+$ AFTER lowercasing.
+     *      That is the whole traversal defence: ".." , "%2e%2e", a null byte
+     *      and a nested path all fail the pattern rather than being stripped
+     *      out of it. Nothing is decoded first — an encoded separator has no
+     *      legitimate reading here, so it is refused, not unwrapped.
+     *   3. The resulting directory must exist AND contain frame/. A module
+     *      without its own frame contributes nothing to inherit.
+     *
+     * @param  string|null $url Typically $_SERVER['HTTP_REFERER'].
+     * @return bool True when framePath was set from $url.
+     */
+    protected function adoptFrameFrom(?string $url): bool
+    {
+        if($url === null || $url === ""){
+            return false;
+        }
+
+        $parts = parse_url($url);
+        if($parts === false || empty($parts['host']) || empty($parts['path'])){
+            return false;
+        }
+
+        // Same site only. strtok() drops the ":port" suffix; HTTP_HOST carries
+        // one whenever the URL did, and Request::$domain is HTTP_HOST verbatim.
+        $refererHost = strtolower(strtok($parts['host'], ":"));
+        $ownHost     = strtolower(strtok((string) Request::$domain, ":"));
+        if($refererHost === "" || $refererHost !== $ownHost){
+            return false;
+        }
+
+        // First segment of the path — the module, exactly as Request reads it.
+        $segment = strtolower(explode("/", trim($parts['path'], "/"))[0] ?? "");
+        if(!preg_match('/^[a-z0-9-]+$/', $segment)){
+            return false;
+        }
+
+        // Same dash-to-camel rule routing applies, so /access-request/ resolves
+        // to AccessRequest here exactly as it does in Request::__construct().
+        // Inlined rather than shared because Request::friendlyURLConverter() is
+        // private and non-static; if that ever changes, delegate to it instead.
+        $module = str_contains($segment, "-")
+            ? str_replace(" ", "", ucwords(str_replace("-", " ", $segment)))
+            : $segment;
+        $module = ucfirst($module);
+
+        $frame = MODULE_PATH . $module . "/frame/";
+        if(!is_dir($frame)){
+            return false;
+        }
+
+        $this->framePath = $frame;
+        return true;
     }
 
     public function __call($func, $args)
