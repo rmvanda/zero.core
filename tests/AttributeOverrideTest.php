@@ -35,6 +35,13 @@ class OverrideFixtureCallOnly {
     public function __call($name, $args) {}
 }
 
+/** Class-level and method-level permissions, which must UNION rather than replace. */
+#[\Zero\Core\Attribute\RequirePermission('zerotest.additive.classlevel')]
+class AdditiveFixture {
+    #[\Zero\Core\Attribute\RequirePermission('zerotest.additive.methodlevel')]
+    public function guarded() {}
+}
+
 /** Class-level gate plus a __call() that declares a different type. */
 #[AllowedMethods('GET')]
 class OverrideFixtureClassPlusCall {
@@ -77,6 +84,9 @@ class AttributeOverrideTest extends ZeroTestCase
         while (ob_get_level() > $this->obLevelBefore) {
             ob_end_clean();
         }
+        // Static, so it would otherwise survive into every test after the one
+        // that set it and silently change which branch the gates take.
+        Request::$acceptsJSON = false;
         parent::tearDown();
     }
 
@@ -177,6 +187,55 @@ class AttributeOverrideTest extends ZeroTestCase
 
         $this->assertContains('call', $scopes, 'Expected a "call"-scoped log entry');
         $this->assertNotContains('method', $scopes);
+    }
+
+    /* ── Additive types: RequirePermission unions instead of replacing ── */
+
+    public function testRequirePermissionIsMarkedAdditive(): void
+    {
+        $m = new \ReflectionMethod(Application::class, 'isAdditive');
+        $m->setAccessible(true);
+
+        $this->assertTrue($m->invoke(null, \Zero\Core\Attribute\RequirePermission::class),
+            'RequirePermission must union class-level and method-level declarations');
+        $this->assertFalse($m->invoke(null, AllowedMethods::class),
+            'AllowedMethods names a constraint — two of them contradict, so replace stands');
+        $this->assertFalse($m->invoke(null, \Zero\Core\Attribute\RequireLogin::class),
+            'RequireLogin names a destination — replace is what makes the redirect override work');
+    }
+
+    public function testAdditiveClassAttrIsNotMarkedOverriddenInTheLog(): void
+    {
+        // The behavioural half — a class-level permission surviving a
+        // method-level one — needs a real user holding one key and not the
+        // other, so it lives in RequirePermissionTest with the fixtures for
+        // that. Here we pin the resolver's own bookkeeping: a shadowing that
+        // did not happen must not be reported to DevToolbar as one.
+        //
+        // The log is written before handleAttributes() runs, so the denial
+        // this provokes does not stop us reading it. acceptsJSON makes that
+        // denial a throw rather than the header()+exit() that would take the
+        // PHPUnit process with it.
+        Request::$method      = 'GET';
+        Request::$acceptsJSON = true;
+
+        try {
+            $this->invokeCheck(AdditiveFixture::class, 'guarded');
+        } catch (HTTPError $e) {
+            // Anonymous, so RequireLogin denies first. Expected; not the point.
+        }
+
+        $classEntry = null;
+        foreach (Application::$attributeLog as $entry) {
+            if ($entry['scope'] === 'class' && str_ends_with($entry['name'], 'RequirePermission')) {
+                $classEntry = $entry;
+                break;
+            }
+        }
+
+        $this->assertNotNull($classEntry, 'expected a class-level RequirePermission log entry');
+        $this->assertFalse($classEntry['overridden'],
+            'an additive class-level attr is not shadowed and must not be flagged as such');
     }
 
     /* ── DevToolbar log metadata ── */

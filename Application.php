@@ -286,6 +286,12 @@ class Application {
         // Method-level attributes override class-level attributes of the same type.
         // If a method declares any attribute of type X, class-level attributes of
         // type X are skipped for this endpoint (replace semantics).
+        //
+        // Replace is the right default because the attributes it governs name a
+        // DESTINATION or a CONSTRAINT, and two of those contradict each other:
+        // #[RequireLogin('/notes/welcome')] on a method exists precisely to
+        // override the class's landing page, and running both would send the
+        // visitor to whichever fired first.
         $methodNames = array_flip(array_map(
             fn($a) => $a->getName(),
             $methodAttributes
@@ -294,6 +300,7 @@ class Application {
         $effectiveClass = array_filter(
             $classAttributes,
             fn($a) => !isset($methodNames[$a->getName()])
+                   || self::isAdditive($a->getName())
         );
 
         // Record for DevToolbar — scope-tagged so the tab can distinguish class vs method attributes.
@@ -303,7 +310,8 @@ class Application {
                 'name'       => $attr->getName(),
                 'scope'      => 'class',
                 'target'     => $Module,
-                'overridden' => isset($methodNames[$attr->getName()]),
+                'overridden' => isset($methodNames[$attr->getName()])
+                             && !self::isAdditive($attr->getName()),
             ];
         }
         foreach ($methodAttributes as $attr) {
@@ -320,6 +328,31 @@ class Application {
 
         self::handleAttributes($attributes);
 
+    }
+
+    /**
+     * Does a method-level declaration of this attribute ADD to the class-level
+     * one rather than replace it?
+     *
+     * One type, named rather than abstracted behind a marker interface — an
+     * interface for a set of size one is machinery without a second case to
+     * justify it. Add to the list if a second type ever earns it.
+     *
+     * #[RequirePermission] is that type because a permission is neither a
+     * destination nor a constraint: two of them are a longer list, not a
+     * contradiction. Under replace semantics, modules/Receipts declaring
+     * 'allow.receipt.view' on the class and 'allow.receipt.edit' on ten methods
+     * meant those methods required edit ALONE — measured, not inferred: a user
+     * holding only the method-level key passed, and the same user was denied on
+     * a sibling endpoint that declared no attribute of its own. A grant that
+     * reads narrower was in fact wider, and nothing surfaced it.
+     *
+     * Both declarations now run, each checking its own list, so the effective
+     * requirement is the union. Nothing in any module changes — the attributes
+     * already written start meaning what they look like they mean.
+     */
+    private static function isAdditive(string $attributeClass): bool {
+        return $attributeClass === \Zero\Core\Attribute\RequirePermission::class;
     }
 
     private static function handleAttributes($attributes){

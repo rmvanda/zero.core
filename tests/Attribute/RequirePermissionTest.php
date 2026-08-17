@@ -8,6 +8,17 @@ use Zero\Core\User;
 use Zero\Core\Database;
 use Zero\Core\Request;
 use Zero\Core\HTTPError;
+use Zero\Core\Application;
+
+/**
+ * Shaped exactly like modules/Receipts: a broad permission on the class, a
+ * narrower one on an endpoint. Both must be held.
+ */
+#[RequirePermission('zerotest.additive.classlevel')]
+class AdditivePermissionFixture {
+    #[RequirePermission('zerotest.additive.methodlevel')]
+    public function guarded() {}
+}
 
 /**
  * RequirePermission::handler() (C rewrote this) had no test at all before
@@ -146,6 +157,64 @@ class RequirePermissionTest extends ZeroTestCase
         Request::$acceptsJSON = true;
 
         $this->assertTrue((new RequirePermission('allow.zerotest_reqperm'))->handler());
+    }
+
+    /*
+     * Class-level and method-level RequirePermission UNION.
+     *
+     * These go through Application::checkAttributes() rather than calling
+     * handler() directly, because the union is the resolver's behaviour, not
+     * the attribute's — handler() only ever sees its own list.
+     *
+     * Under the replace semantics this replaced, a method declaring any
+     * RequirePermission dropped the class-level one entirely. Measured before
+     * the change on a fixture shaped exactly like modules/Receipts: a user
+     * holding ONLY the method-level key passed guarded(), and the same user
+     * was denied on a sibling that declared no attribute of its own. So a
+     * grant that reads narrower — edit but not view — was in fact wider.
+     */
+
+    public function testMethodLevelPermissionDoesNotDropTheClassLevelOne(): void
+    {
+        $this->grant('zerotest.additive.methodlevel');   // NOT the class-level key
+        $this->login();
+        Request::$acceptsJSON = true;
+
+        try {
+            Application::checkAttributes(AdditivePermissionFixture::class, 'guarded');
+            $this->fail('the class-level permission must still be required');
+        } catch (HTTPError $e) {
+            $this->assertSame(403, $e->getCode());
+            $this->assertStringContainsString('zerotest.additive.classlevel', $e->detail ?? '',
+                'the class-level key is what should be missing');
+        }
+    }
+
+    public function testBothPermissionsTogetherAreApproved(): void
+    {
+        $this->grant('zerotest.additive.classlevel');
+        $this->grant('zerotest.additive.methodlevel');
+        $this->login();
+        Request::$acceptsJSON = true;
+
+        Application::checkAttributes(AdditivePermissionFixture::class, 'guarded');
+        $this->addToAssertionCount(1);
+    }
+
+    public function testClassLevelAloneStillDeniesTheMethodLevelKey(): void
+    {
+        // The mirror of the first case: holding only the class-level key must
+        // not satisfy the method-level requirement either.
+        $this->grant('zerotest.additive.classlevel');
+        $this->login();
+        Request::$acceptsJSON = true;
+
+        try {
+            Application::checkAttributes(AdditivePermissionFixture::class, 'guarded');
+            $this->fail('the method-level permission must still be required');
+        } catch (HTTPError $e) {
+            $this->assertStringContainsString('zerotest.additive.methodlevel', $e->detail ?? '');
+        }
     }
 
     /**
