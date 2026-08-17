@@ -40,6 +40,52 @@ class UserEstablishTest extends ZeroTestCase
         $db->prepare("DELETE FROM users WHERE email = ?")->execute([self::E]);
     }
 
+    /*
+     * logout() is establish()'s counterpart and had NO test and NO callers —
+     * Auth::logout() and Jackpack::signout() each did teardown by hand, and
+     * both had drifted. It is the one teardown now, so it is pinned here
+     * beside the writer it undoes.
+     *
+     * The cookie half is not asserted: setcookie() needs headers that PHPUnit
+     * has already sent, so it cannot run under test. Verify by hand that
+     * /auth/logout returns a Set-Cookie expiring the session cookie.
+     */
+
+    public function testLogoutClearsTheSessionContract(): void
+    {
+        SessionUser::establish($this->row);
+        $this->assertTrue(SessionUser::isLoggedIn(), 'precondition: established');
+
+        SessionUser::logout();
+
+        $this->assertSame([], $_SESSION);
+        $this->assertFalse(SessionUser::isLoggedIn());
+        $this->assertNull(SessionUser::currentId());
+    }
+
+    public function testLogoutDropsTheCurrentMemo(): void
+    {
+        SessionUser::establish($this->row);
+        $this->assertNotNull(SessionUser::current(), 'precondition: memoized');
+
+        SessionUser::logout();
+
+        // Auth::logout() used to leave this set, so anything calling current()
+        // later in the same request still saw the user who had just left.
+        $this->assertNull(SessionUser::current());
+    }
+
+    public function testLogoutIsSafeWithNoActiveSession(): void
+    {
+        // CLI and test contexts have no session. logout() must clear what it
+        // can and return before the calls that would warn.
+        $_SESSION = ['user_id' => 1];
+
+        SessionUser::logout();
+
+        $this->assertSame([], $_SESSION);
+    }
+
     public function testSetsEveryKeyInTheSessionContract(): void
     {
         SessionUser::establish($this->row);

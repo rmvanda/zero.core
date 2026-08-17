@@ -252,14 +252,55 @@ class User extends Model
     }
 
     /**
-     * Logout user by clearing session
+     * Tear down the login session. THE counterpart to establish(), and the only
+     * place session teardown should live.
      *
-     * @return void
+     * There were three implementations of this before, and all three were
+     * incomplete in different ways — the drift establish() was created to stop,
+     * repeated on the way out:
+     *
+     *   Auth::logout()       cleared $_SESSION and expired the cookie, but left
+     *                        self::$current set and passed only a path to
+     *                        setcookie(), dropping secure/httponly/samesite.
+     *   Jackpack::signout()  called session_destroy() alone: $_SESSION stayed
+     *                        populated for the rest of the request and the
+     *                        cookie was never cleared.
+     *   this method          cleared the memo and the session but never touched
+     *                        the cookie — and had ZERO callers, so the most
+     *                        correct of the three was the one nothing used.
+     *
+     * The cookie attributes come from session_get_cookie_params() rather than
+     * being written out by hand. A browser matches a replacement cookie on
+     * name + path + domain, so a mismatch on either leaves the original in
+     * place and the client keeps presenting a session id we destroyed.
+     *
+     * Safe to call with no active session (CLI, tests): it clears the memo and
+     * $_SESSION, then returns before the calls that would warn.
      */
     public static function logout(): void
     {
         self::$current = null;
+        $_SESSION      = [];
+
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            return;
+        }
+
         session_unset();
+
+        if (ini_get('session.use_cookies') && isset($_COOKIE[session_name()])) {
+            $p = session_get_cookie_params();
+            setcookie(session_name(), '', [
+                'expires'  => time() - 42000,
+                'path'     => $p['path'],
+                'domain'   => $p['domain'],
+                'secure'   => $p['secure'],
+                'httponly' => $p['httponly'],
+                'samesite' => $p['samesite'] ?: 'Lax',
+            ]);
+            unset($_COOKIE[session_name()]);
+        }
+
         session_destroy();
     }
 
