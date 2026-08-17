@@ -253,8 +253,57 @@ class Application {
      */
     public static function checkAttributes(string $class, string $endpoint) : void {
 
+        $resolved = self::resolveAttributes($class, $endpoint);
+
+        // Record for DevToolbar — scope-tagged so the tab can distinguish class vs method attributes.
+        // `overridden` marks class-level attrs shadowed by a same-type method-level attr.
+        foreach ($resolved['class'] as $attr) {
+            self::$attributeLog[] = [
+                'name'       => $attr->getName(),
+                'scope'      => 'class',
+                'target'     => $class,
+                'overridden' => $resolved['overridden'][$attr->getName()] ?? false,
+            ];
+        }
+        foreach ($resolved['method'] as $attr) {
+            self::$attributeLog[] = [
+                'name'   => $attr->getName(),
+                // 'call' marks an attribute read from __call() on behalf of a
+                // virtual endpoint that has no method of its own.
+                'scope'  => $resolved['scope'],
+                'target' => $class . '::' . $endpoint,
+            ];
+        }
+
+        self::handleAttributes($resolved['effective']);
+
+    }
+
+    /**
+     * Work out which attributes gate $class::$endpoint, and in what order — the
+     * decision half of checkAttributes(), with none of the running.
+     *
+     * Split out so it can be asked the question without answering it. Attribute
+     * ORDER is a real invariant — #[AllowWithToken] seeds the session that
+     * #[RequireLogin] then checks, so a class-level RequireLogin above a
+     * method-level AllowWithToken silently breaks token auth — and
+     * core/tests/AttributeOrderTest.php enforces it across every module by
+     * calling this for every endpoint. That test has to see the sequence the
+     * framework will actually run, including the replace/additive filtering and
+     * the __call fallback below; reimplementing those rules in the test would
+     * mean the test could keep passing while this method changed underneath it.
+     *
+     * @return array{
+     *     class:      \ReflectionAttribute[],           all class-level attributes, overridden ones included
+     *     method:     \ReflectionAttribute[],           all method-level (or __call) attributes
+     *     effective:  \ReflectionAttribute[],           exactly what runs, in the order it runs
+     *     scope:      string,                           'method', or 'call' for a virtual endpoint
+     *     overridden: array<string,bool>                class-level attribute names shadowed by the method
+     * }
+     */
+    public static function resolveAttributes(string $class, string $endpoint) : array {
+
         $reflection = new \ReflectionClass($class);
-        $Module     = $class;
 
         $classAttributes  = $reflection->getAttributes();
         $methodAttributes = [];
@@ -303,31 +352,19 @@ class Application {
                    || self::isAdditive($a->getName())
         );
 
-        // Record for DevToolbar — scope-tagged so the tab can distinguish class vs method attributes.
-        // `overridden` marks class-level attrs shadowed by a same-type method-level attr.
+        $overridden = [];
         foreach ($classAttributes as $attr) {
-            self::$attributeLog[] = [
-                'name'       => $attr->getName(),
-                'scope'      => 'class',
-                'target'     => $Module,
-                'overridden' => isset($methodNames[$attr->getName()])
-                             && !self::isAdditive($attr->getName()),
-            ];
-        }
-        foreach ($methodAttributes as $attr) {
-            self::$attributeLog[] = [
-                'name'   => $attr->getName(),
-                // 'call' marks an attribute read from __call() on behalf of a
-                // virtual endpoint that has no method of its own.
-                'scope'  => $methodScope,
-                'target' => $Module . '::' . $endpoint,
-            ];
+            $overridden[$attr->getName()] = isset($methodNames[$attr->getName()])
+                                         && !self::isAdditive($attr->getName());
         }
 
-        $attributes = array_merge($effectiveClass, $methodAttributes);
-
-        self::handleAttributes($attributes);
-
+        return [
+            'class'      => $classAttributes,
+            'method'     => $methodAttributes,
+            'effective'  => array_merge($effectiveClass, $methodAttributes),
+            'scope'      => $methodScope,
+            'overridden' => $overridden,
+        ];
     }
 
     /**
