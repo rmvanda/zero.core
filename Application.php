@@ -305,11 +305,11 @@ class Application {
 
         $reflection = new \ReflectionClass($class);
 
-        $classAttributes  = $reflection->getAttributes();
+        $classAttributes  = self::gates($reflection->getAttributes());
         $methodAttributes = [];
         $methodScope      = 'method';
         if($reflection->hasMethod($endpoint)){
-            $methodAttributes = $reflection->getMethod($endpoint)->getAttributes();
+            $methodAttributes = self::gates($reflection->getMethod($endpoint)->getAttributes());
         } elseif($reflection->hasMethod('__call')){
             // Virtual endpoint. The URL segment is data — a paste slug, a short
             // link, a button name, an image path — not a method, so it has no
@@ -328,7 +328,7 @@ class Application {
             // parent has no method of that name either. The submodule's own
             // check then runs on top, so the effect is a superset gate — it
             // fails safe, but declare with that in mind.
-            $methodAttributes = $reflection->getMethod('__call')->getAttributes();
+            $methodAttributes = self::gates($reflection->getMethod('__call')->getAttributes());
             $methodScope      = 'call';
         }
 
@@ -388,6 +388,29 @@ class Application {
      * requirement is the union. Nothing in any module changes — the attributes
      * already written start meaning what they look like they mean.
      */
+    /**
+     * Keep only the attributes this framework is meant to run.
+     *
+     * handleAttributes() calls handler() on everything it is given, so anything
+     * reaching it that is not one of ours is a fatal. PHP's own built-ins are
+     * the live case: Response carries #[\AllowDynamicProperties], and
+     * Application::run() passes \Zero\Core\Response to checkAttributes()
+     * whenever the URL names no module — which made every standalone page and
+     * every 404 a 500.
+     *
+     * Namespace is the test because that is the only contract these attributes
+     * share; they have no common interface or base class, and isAdditive()
+     * identifies them the same way. Filtered here at the point of gathering
+     * rather than in handleAttributes() so 'effective' keeps meaning exactly
+     * what runs — AttributeOrderTest reads it precisely to avoid that drift.
+     */
+    private static function gates(array $attributes): array {
+        return array_values(array_filter(
+            $attributes,
+            fn($a) => str_starts_with($a->getName(), 'Zero\\Core\\Attribute\\')
+        ));
+    }
+
     private static function isAdditive(string $attributeClass): bool {
         return $attributeClass === \Zero\Core\Attribute\RequirePermission::class;
     }
