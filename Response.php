@@ -170,78 +170,150 @@ class Response
 
     public function __call($func, $args)
     {
-        // At this point, we know there's no method to handle the request. 
-        // So, we're going to see if there's a view file to use::
-        // -- Maybe in the module's view folder? 
-        // TODO - CLAUDE - let's put this in a loop or some such. 
-        if (file_exists($a = $view = MODULE_PATH .
-                        ucfirst(Request::$module) . 
-                        "/view/" . 
-                        Request::$endpoint . 
+        // At this point, we know there's no method to handle the request.
+        // Three things can still answer it, in descending precedence:
+        //
+        //   1. A view file in the requested module's own view/ folder.
+        //   2. A public method on Index named after the first URL segment.
+        //   3. A view file in Index's view/ folder, named after that segment.
+        //
+        // 2 beats 3 deliberately. Where Index has both a foo() method and a
+        // view/foo.php, the method is the page and the file is only its
+        // template — building the file directly renders the page with none of
+        // the data the method exists to fetch, and the result looks like a
+        // working page rather than a broken one.
+        //
+        // 1 still beats 2: a real module's own view is a better answer for
+        // /module/endpoint than a same-named standalone page in Index.
+        // TODO - CLAUDE - let's put this in a loop or some such.
+        if (file_exists($view = MODULE_PATH .
+                        ucfirst(Request::$module) .
+                        "/view/" .
+                        Request::$endpoint .
                         ".php"
-                    ) 
-        || file_exists($b = $view = MODULE_PATH .
-                        ucfirst(Request::$module) . 
-                        "/view/" . 
-                        Request::$endpointOrig . 
-                        ".php"
-                    ) 
-
-        || file_exists($c = $view = MODULE_PATH .
-                        ucfirst(Request::$moduleOrig) . 
-                        "/view/" . 
-                        Request::$endpoint . 
-                        ".php"
-                    ) 
-        || file_exists($d = $view = MODULE_PATH .
-                        ucfirst(Request::$moduleOrig) . 
-                        "/view/" . 
-                        Request::$endpointOrig . 
-                        ".php"
-                    ) 
-
-        || file_exists($e = $view = MODULE_PATH . 
-                        "Index/view/" . 
-                        Request::$module . 
+                    )
+        || file_exists($view = MODULE_PATH .
+                        ucfirst(Request::$module) .
+                        "/view/" .
+                        Request::$endpointOrig .
                         ".php"
                     )
 
-        || file_exists($f = $view = MODULE_PATH . 
-                        "Index/view/" . 
-                        Request::$moduleOrig . 
+        || file_exists($view = MODULE_PATH .
+                        ucfirst(Request::$moduleOrig) .
+                        "/view/" .
+                        Request::$endpoint .
+                        ".php"
+                    )
+        || file_exists($view = MODULE_PATH .
+                        ucfirst(Request::$moduleOrig) .
+                        "/view/" .
+                        Request::$endpointOrig .
                         ".php"
                     )
        ){
-            // TODO- this solution isn't great, but since 
-            // "standalone" pages ultimately belong to the Index module, it means 
+            $this->build($view);
+
+        } else if ($method = $this->indexEndpoint()) {
+            // A standalone page with a controller behind it.
+            //
+            // Gate it the way Module::__call() gates a submodule. Application
+            // resolved attributes once, against the *requested* module — which
+            // by definition does not exist here — and the URL's second segment,
+            // so nothing has gated this method. Without this, #[RequireLogin]
+            // on a standalone page would be decoration.
+            //
+            // Deliberately BEFORE construction, for the same reason the
+            // submodule gate is: a check that runs after the constructor has
+            // opened connections and loaded models gates the response, not the
+            // work.
+            Application::checkAttributes(\Zero\Module\Index::class, $method);
+
+            $index = new \Zero\Module\Index();
+
+            // Assets are matched on the endpoint name, and to Index this
+            // segment IS the endpoint — Request::$endpoint is the *second*
+            // segment, which for a bare /foo is the synthetic "index". Without
+            // these, /foo would look for index.css and never foo.css.
+            $index->activeEndpoint     = $method;
+            $index->activeEndpointOrig = Request::$moduleOrig;
+
+            $index->{$method}();
+
+        } else if (file_exists($view = MODULE_PATH .
+                        "Index/view/" .
+                        Request::$module .
+                        ".php"
+                    )
+        || file_exists($view = MODULE_PATH .
+                        "Index/view/" .
+                        Request::$moduleOrig .
+                        ".php"
+                    )
+       ){
+            // TODO- this solution isn't great, but since
+            // "standalone" pages ultimately belong to the Index module, it means
             // so do their assets. Therefore, this allows those assets to be auto-loaded
-            if($e || $f){Request::$module = "index";}
-            $this->build($view); 
-            
+            Request::$module = "index";
+            $this->build($view);
+
         } else {
-            // TODO: 
-            // This whole fallback block is never used except in the case 
-            // of not having anything else to do. If you're here, that means 
-            // we're about to issue a 404, but we're checking to see if there is
-            // a fallback method in Index we can call, first. 
-            // This is good if you want some simple, short thing, or perhaps an 
-            // alias or some such, but is probably not the cleanest approach. 
-            // 
-            //require "/var/www/html/unisolu.com/zero/modules/Index/Index.php";
-            // TODO ^ investigate why this doesn't autoload... 
-            //$fallback = new \Zero\Module\Index(); 
-            //if(method_exists($fallback, Request::$module)){
-                // Note this means your args are discarded. But you probably don't 
-                // want to have something that deep in your Index module anyway.
-                //$this->build( // to build or not to build? TODO 
-                //$fallback -> {Request::$module}(Request::$endpoint); 
-                //); 
-            //} else {
-                //new Error(404); 
-                throw new HTTPError(404, $func, $args);
-                // TODO: surface Request::$moduleOrig path detail in renderError
-            //}
+            //new Error(404);
+            throw new HTTPError(404, $func, $args);
+            // TODO: surface Request::$moduleOrig path detail in renderError
         }
+    }
+
+    /**
+     * The Index method that should answer this request, if there is one.
+     *
+     * Standalone pages are addressed by their first URL segment (/foo, not
+     * /index/foo), so that segment — not $func, which is the endpoint — is the
+     * method name. Both the camelCased and raw forms are tried, matching how
+     * the view-file candidates treat Request::$module and Request::$moduleOrig.
+     *
+     * Only methods Index itself declares as public qualify. method_exists()
+     * alone would also match everything inherited from Module and Response,
+     * making /renderError and /getAuxiliary routable — and since PHP matches
+     * method names case-insensitively, the URL would not even have to be spelt
+     * the same way.
+     *
+     * @return string|null Method name as declared, or null if Index has none
+     */
+    private function indexEndpoint(): ?string
+    {
+        // Application::run() require_once's Index whenever it falls back to
+        // Response, but a real module reaching __call may not have. The
+        // framework autoloader cannot resolve module classes — that is what
+        // Application::isModule() exists for — so load it by path or give up.
+        if (!class_exists('\Zero\Module\Index', false)) {
+            if (!file_exists($file = MODULE_PATH . "Index/Index.php")) {
+                return null;
+            }
+            require_once $file;
+        }
+
+        foreach ([Request::$module, Request::$moduleOrig] as $name) {
+            if ($name === "" || str_starts_with($name, "__")) {
+                continue; // never route to a magic method
+            }
+
+            try {
+                $candidate = new \ReflectionMethod('\Zero\Module\Index', $name);
+            } catch (\ReflectionException $e) {
+                continue; // no such method
+            }
+
+            if ($candidate->isPublic()
+             && !$candidate->isStatic()
+             && $candidate->getDeclaringClass()->getName() === 'Zero\Module\Index'
+            ) {
+                // Reflection matched case-insensitively; hand back the real name.
+                return $candidate->getName();
+            }
+        }
+
+        return null;
     }
 
     /**

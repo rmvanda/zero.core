@@ -111,6 +111,26 @@ and what to do if the `method` called does not exist (throw 404 page, automatica
     instead of HTML — or in the case of AJAX, it leaves off the header and the footer.
     As long as your module extends this class and calls `parent::__construct()` — the magic will happen.
 
+    When the requested method does not exist, `__call` resolves it in this order:
+
+    1. A view file in the requested module's own `view/` folder.
+    2. A public method on the Index module named after the *first* URL segment.
+    3. A view file in `Index/view/` named after that same segment.
+
+    2 and 3 are the "standalone page" case — a URL like `/about` with no module behind
+    it. 2 beats 3 on purpose: if Index has both an `about()` method and an `about.php`
+    view, the method is the page and the view is only its template. Building the
+    template on its own renders it with none of the data the method would have
+    fetched, and the result looks like a page that worked. 1 still beats 2, so a real
+    module's own view is never hijacked by a same-named page in Index.
+
+    Only methods Index itself declares as public are routable this way, and they go
+    through `Application::checkAttributes()` like any other dispatcher. Eligibility is
+    reflection, not `method_exists()` — the latter also matches everything inherited
+    from Module and Response, which would put `/renderError` and `/getAuxiliary` on
+    the web, and PHP's method lookup is case-insensitive so the URL would not even
+    have to match. The method is called with no arguments.
+
 - **Module.php**
     Just an alias for Response so that code you write can be a "Module" and not a "Response".
     Semantics! Think Modular! *Be* Modular. It also resolves submodules in `__call()`.
