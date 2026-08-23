@@ -194,11 +194,12 @@ Now: the class-level attribute is gone, ten endpoints carry `#[RequireLogin]` in
 `status()` and `__call()` are public with `handleView()`/`handlePress()` doing the real
 authorisation (owner, invitee, tracking hash, or nothing).
 
-**The general rule this produced:** attributes cannot be attached to a `__call`-dispatched
-endpoint. `Application::checkForAttributes()` resolves against the URL endpoint name, and a
-`__call` endpoint has no `ReflectionMethod` of its own, so only class-level attributes apply and
-nothing can override them per URL. **A class whose `__call()` serves anonymous traffic must not
-carry a class-level `RequireLogin`.**
+**The general rule this produced:** attributes cannot be attached to an individual
+`__call`-dispatched endpoint. `Application::checkAttributes()` resolves against the URL endpoint
+name, and a `__call` endpoint has no `ReflectionMethod` of its own. Attributes declared on
+`__call()` itself are read on its behalf, but they are additive on top of the class-level ones —
+nothing can override a class-level gate per URL. **A class whose `__call()` serves anonymous
+traffic must not carry a class-level `RequireLogin`.**
 
 ### Paste, examined in full
 
@@ -271,9 +272,21 @@ delegate: it checks `session_status()` then `User::current()?->authLevel()`, whi
 `user_settings['auth.level']` and never touches `users.verified`. So it is the one gate an
 unverified session can still pass.
 
-Latent, not live. Only `modules/Sitemap` and `modules/Test` gate on it alone; everywhere else it
-sits beside `#[RequirePermission]`, which enforces the real check. No module pairs it with
-`#[AllowWithToken]`, which is the only producer of an unverified session.
+Latent, not live: no module pairs it with `#[AllowWithToken]`, the only producer of an unverified
+session.
+
+**Every gate that sat beside a `#[RequirePermission]` was removed on 2026-08-16** — `Admin`,
+`System`, `Postgres`, `Bingo`, `HelloWorld::permittedHello()`, `NetworkMap::save()`/`load()`.
+That was not a tidy-up. `auth.level` is a separate `user_settings` key from the `allow.*` grants,
+so those gates were silently vetoing permissions that had been deliberately granted: user 9 held
+`allow.admin` and `network.mapper` and was refused by all of them, because only user 1 has ever
+had an `auth.level` row. **A second, invisible tier that overrides a permission grant is a
+footgun** — the same "true by coincidence of data" shape this document was written about, pointing
+the other way.
+
+Four bare gates remain, each the only thing gating its endpoint:
+`User::permissions()`/`permission()`, `Test`, `Sitemap`, `HelloWorld::secureHello()`.
+(`Ttrpg/Hexmap`'s six moved to `#[RequireLogin]` when submodule attributes started running.)
 
 Full reasoning, the usage inventory, and the condition for un-shelving it are in
 `docs/attributes/RequireAuthLevel.md`. **Do not add new bare `#[RequireAuthLevel]` gates** — use

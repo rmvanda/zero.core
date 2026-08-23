@@ -45,15 +45,15 @@ Whatever this becomes, it gets its own name.
 **1. There IS a module instance when attributes run.** `core/Application.php`:
 
 ```php
-$moduleInstance = new $Module();                   // :218
+$moduleInstance = new $Module();                // :218
 try {
-    $this->checkForAttributes($Module, $endpoint); // :220
-    $moduleInstance->{$endpoint}(...$args);        // :221
+    self::checkAttributes($Module, $endpoint);  // :220
+    $moduleInstance->{$endpoint}(...$args);     // :221
 ```
 
-The instance is constructed *before* attribute evaluation; `checkForAttributes()`
+The instance is constructed *before* attribute evaluation; `checkAttributes()`
 simply does not receive it. Thread it through
-`checkForAttributes()` → `handleAttributes()` → `handler()` and the callback can
+`checkAttributes()` → `handleAttributes()` → `handler()` and the callback can
 use `$this->` normally. No statics, and no `#[BranchOnLogin('Module::method')]`
 string form — both of which the original sketch assumed were forced.
 
@@ -149,7 +149,10 @@ call cannot do.
 1. New attribute, own name. Not a `RequireLogin` argument.
 2. Callback is `private`; invoke via `ReflectionMethod::setAccessible()`.
 3. Pass `$moduleInstance` from `Application::run()` through
-   `checkForAttributes()` and `handleAttributes()` into `handler()`.
+   `checkAttributes()` and `handleAttributes()` into `handler()`. `checkAttributes()`
+   is public static with three callers — `Application::run()`, `Module::__call()`
+   and `AdminResponse::routeToModuleAdmin()` — so the instance has to become a
+   parameter and every dispatcher must pass its own.
 4. Callback signature `f(bool $isLoggedIn): void`, reading the flag from
    `User::isLoggedIn()` — the same predicate `#[RequireLogin]` gates on, so the
    two can never drift.

@@ -7,11 +7,58 @@ use \Zero\Core\Console;
 use \Zero\Core\HTTPError;
 use \Zero\Core\Request;
 
+/**
+ * RequirePermission Attribute
+ *
+ * THE authorization gate, one layer above RequireLogin. An endpoint that needs
+ * a named grant carries this attribute; it does not re-implement the check in
+ * its own body.
+ *
+ * Usage:
+ *   #[RequirePermission('allow.receipt.view')]                  // one key
+ *   #[RequirePermission(['allow.admin', 'allow.aws.bill.read'])] // ALL of them
+ *
+ * Declaring #[RequireLogin] alongside is redundant but harmless: handler()
+ * opens by delegating to RequireLogin::handler(), because a permission check
+ * is meaningless without an authenticated user. That delegation is also what
+ * keeps the login predicate single — one isLoggedIn(), three attributes. See
+ * core/attribute/AUTH_GATE_CONSISTENCY.md.
+ *
+ * Class level gates every endpoint; method level gates one. Unlike every other
+ * attribute in this directory, a method-level RequirePermission ADDS to the
+ * class-level one rather than replacing it — the effective requirement is the
+ * union, and both declarations run. Application::isAdditive() names this class
+ * as the sole exception, with the reasoning: a permission is neither a
+ * destination nor a constraint, so two of them are a longer list rather than a
+ * contradiction. Under the old replace semantics, modules/Receipts declaring
+ * 'allow.receipt.view' on the class and 'allow.receipt.edit' on ten methods
+ * meant those methods required edit ALONE. There is therefore no way to *drop*
+ * or *narrow* the gate for a single endpoint, so a class with any deliberately
+ * public endpoint must gate per-method rather than at class level.
+ *
+ * Grants are read through to the database on every request —
+ * User::hasPermission() -> User::current()->can() -> User::settings(), memoized
+ * per instance for the life of the request and nowhere else. There is no
+ * session cache; there used to be a $_SESSION['user_settings'] one, and it made
+ * a revoked permission survive until logout. A value counts as granted only if
+ * it is strictly '1', 1 or true, and any lookup failure denies.
+ *
+ * NOTE for classes using __call(): Application resolves attributes against the
+ * URL endpoint name, and a __call-dispatched endpoint has no ReflectionMethod
+ * of its own, so it can carry no attributes itself. checkAttributes() reads the
+ * attributes on __call() instead, and since this attribute is additive anyway,
+ * nothing there can re-open what a class-level declaration closed. A class whose
+ * __call() serves anonymous traffic must therefore not carry a class-level
+ * RequirePermission; gate each real method instead.
+ */
 #[Attribute]
 class RequirePermission {
 
-    public $approved;
-    public $permissions;
+    /** True once handler() has passed. Never read by the framework; here if a caller wants it. */
+    public ?bool $approved = null;
+
+    /** Every key the request must hold. A single string constructor argument is wrapped into one. */
+    public array $permissions;
 
     /**
      * Deny a request that is missing a permission.
@@ -58,9 +105,11 @@ class RequirePermission {
     /**
      * Check if user has required permissions
      *
-     * @return bool Returns true if approved, redirects if denied
+     * @return bool Always true. A denial never returns: deny() redirects and
+     *              exits, or throws, and the delegated RequireLogin does the
+     *              same for an anonymous caller.
      */
-    public function handler() {
+    public function handler(): bool {
         // RequirePermission implicitly requires login — a permission check is
         // meaningless without an authenticated user. Delegate to RequireLogin
         // so the login-redirect behavior has a single source of truth.

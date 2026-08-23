@@ -390,19 +390,29 @@ grants. It has not earned that role:
 - The install has exactly one populated `auth.level` (user 1, value `1`), and every
   `#[RequireAuthLevel]` in the tree asks for level `1`. There is no second tier, so it collapses
   into "is this user special" — which `allow.admin` answers more precisely.
-- Every module gating on it also carries `#[RequirePermission]`, **except** `modules/Sitemap` and
-  `modules/Test`. Dropping it from the rest would change nothing about who gets in.
+- Where it sat beside `#[RequirePermission]` it was **not** redundant, as first assumed — it was
+  silently vetoing permission grants. `auth.level` is a different `user_settings` key from the
+  `allow.*` grants, so user 9 held `allow.admin` and `network.mapper` and was still locked out of
+  Admin, System, Postgres, Bingo and `NetworkMap::save()`/`load()`. Those gates were removed
+  2026-08-16; see "Removed" in the doc. A grant that does not grant access is a footgun.
 - It is the **only** auth gate that does not open with `(new RequireLogin())->handler();` the way
   `RequirePermission.php:46` does, so it alone does not enforce a verified email. Latent rather
-  than live: neither bare-use module carries `#[AllowWithToken]`, and no module anywhere pairs the
-  two attributes.
+  than live: no remaining bare-use module carries `#[AllowWithToken]`, and no module anywhere
+  pairs the two attributes.
 
 **Un-shelve when** there is a real need for tiers that named `allow.*` grants cannot express —
 more than one populated `auth.level` with a meaningful "level 5 implies level 3" ordering. If that
 happens, add the `RequireLogin` delegation first so all three gates share one definition.
 
-**Also:** `modules/Sqrlcam/Sqrlcam.php:5` imports `RequireAuthLevel` and never applies it. Dead
-`use`, safe to drop.
+**Also:** three files import `RequireAuthLevel` and never apply it — `modules/Sqrlcam/Sqrlcam.php:5`,
+`modules/Admin/submodule/ApiConfig/ApiConfig.php:7`, and
+`modules/Admin/submodule/Plugins/Plugins.php:8` (its `//#[RequireAuthLevel(9)]` at :16 is commented
+out). All three classes already carry `#[RequirePermission]`. Dead `use`, safe to drop.
+
+**Next, and the actual point:** the five remaining bare gates are bare because nothing narrower
+exists yet. `Ttrpg/Hexmap` (6 methods) and `User::permissions()`/`permission()` are the two holding
+real access decisions; both want a named `allow.*` grant. Mint those and the attribute has no
+callers left.
 
 ---
 

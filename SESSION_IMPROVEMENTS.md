@@ -1,5 +1,10 @@
 # Session Improvements: Silent Rehydration via Remember-Me Token
 
+**Status: PROPOSAL — not implemented.** Nothing below exists yet: there is no
+`core/RememberToken.php`, no `core/SessionState.php`, and no remember-token table. Today
+`RequireLogin` still redirects to `/user/login?r=y` when the session is gone. Read this as a
+design, not as behaviour.
+
 ## Goal
 
 When a returning user navigates to a protected URL (e.g. `/notebook`) and their PHP session has expired, the request should rehydrate the session **server-side** before any HTML is rendered — no redirect, no Google JS round-trip, no visible bounce. The user simply sees the page they asked for.

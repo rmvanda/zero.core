@@ -2,7 +2,7 @@
 
 Admin CSS/JS is **always served inline** — never exposed as a public URL. This is enforced at the framework layer; there is no admin asset URL scheme.
 
-> For a proposed future dynamic-URL-served approach (deferred), see `ADMIN_ASSETS_PROPOSAL.md`.
+> For a proposed future dynamic-URL-served approach (deferred), see `core/archive/ADMIN_ASSETS_PROPOSAL.md`.
 
 ## Why inline?
 

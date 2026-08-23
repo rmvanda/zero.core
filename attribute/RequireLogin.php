@@ -20,16 +20,19 @@ use \Zero\Core\User;
  *
  * Declarable at class level (gates every endpoint) or method level (gates one).
  * A method-level RequireLogin REPLACES the class-level one for that endpoint —
- * see Application::checkForAttributes() — so a class can be gated wholesale and
+ * see Application::checkAttributes() — so a class can be gated wholesale and
  * still send one endpoint to a different landing page. There is no way to
  * *drop* the gate for a single endpoint, so a class with any deliberately
  * public endpoint must gate per-method rather than at class level.
  *
  * NOTE for classes using __call(): Application resolves attributes against the
  * URL endpoint name, and a __call-dispatched endpoint has no ReflectionMethod
- * of its own. Only class-level attributes apply to it, and nothing can override
- * them per URL. A class whose __call() serves anonymous traffic must therefore
- * not carry a class-level RequireLogin.
+ * of its own, so it can carry no attributes itself. checkAttributes() reads the
+ * attributes on __call() instead, which lets a class gate everything it
+ * dispatches dynamically — but those are ADDITIVE on top of the class-level
+ * ones, so they cannot express "class gated, __call deliberately public".
+ * A class whose __call() serves anonymous traffic must therefore not carry a
+ * class-level RequireLogin; gate each real method instead, as TheButton does.
  */
 #[Attribute]
 class RequireLogin {
