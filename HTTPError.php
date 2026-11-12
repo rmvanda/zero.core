@@ -83,4 +83,23 @@ class HTTPError extends \Exception
         $this->detail = $detail;
         parent::__construct(self::$messages[$code] ?? "Unspecified", $code);
     }
+
+    /**
+     * The body a JSON client gets for this error
+     *
+     * `message` is the reason phrase ("Not Found") and `detail` the string the
+     * error was thrown with ("Item not found"), left out when there is none.
+     *
+     * @return array{status: string, message: string, detail?: string, code: int}
+     */
+    public function toArray(): array
+    {
+        $body = ['status' => 'error', 'message' => $this->getMessage()];
+        if ($this->detail !== null) {
+            $body['detail'] = $this->detail;
+        }
+        $body['code'] = $this->getCode();
+
+        return $body;
+    }
 }

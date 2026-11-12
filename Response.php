@@ -321,8 +321,11 @@ class Response
      * Called by Application::run() after catching an HTTPError, so that
      * framePath and all other resolved paths from the original module are preserved.
      *
+     * A JSON client gets HTTPError::toArray(), with the error's detail. An HTML
+     * request gets the module's view/error{code}.php, or a generic page that
+     * shows the detail as text.
+     *
      * @param HTTPError $e
-     * @param string|null $err Optional detail string (e.g. the URL that wasn't found)
      */
     public function renderError(HTTPError $e)
     {
@@ -333,16 +336,18 @@ class Response
         header("HTTP/1.1 $code $message");
         $this->title = "Error: $message";
 
-        // Use a custom error view if one exists in the already-resolved viewPath
-        $view = file_exists($v = $this->viewPath . "error" . $code . ".php")
-            ? $v
-            : "<h1>$code - $message</h1><hr>" . ($detail ? "<h4>$detail</h4><br>" : "");
+        if (Request::$acceptsJSON) {
+            // The error alone, not the payload the endpoint was building when it threw
+            $this->data = [];
+            $this->export(null, $e->toArray());
+        } else {
+            // Use a custom error view if one exists in the already-resolved viewPath
+            $view = file_exists($v = $this->viewPath . "error" . $code . ".php")
+                ? $v
+                : "<h1>$code - $message</h1><hr>" . ($detail ? "<h4>" . nl2br(htmlspecialchars($detail)) . "</h4><br>" : "");
 
-        $this->respond($view, [
-            "status"  => "error",
-            "message" => $message,
-            "code"    => $code,
-        ]);
+            $this->build($view);
+        }
 
         Console::error("$code - $message" . ($detail ? " : $detail" : ""));
         exit();

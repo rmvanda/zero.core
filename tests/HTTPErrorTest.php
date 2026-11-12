@@ -99,4 +99,25 @@ class HTTPErrorTest extends ZeroTestCase
             $this->assertSame(400, $e->getCode());
         }
     }
+
+    public function testToArrayCarriesTheDetail(): void
+    {
+        $this->assertSame(
+            ['status' => 'error', 'message' => 'Not Found', 'detail' => 'Item not found', 'code' => 404],
+            (new HTTPError(404, 'Item not found'))->toArray()
+        );
+    }
+
+    public function testToArrayLeavesOutAMissingDetail(): void
+    {
+        $this->assertSame(
+            ['status' => 'error', 'message' => 'Forbidden', 'code' => 403],
+            (new HTTPError(403))->toArray()
+        );
+    }
+
+    public function testToArrayKeepsAnEmptyDetail(): void
+    {
+        $this->assertSame('', (new HTTPError(400, ''))->toArray()['detail']);
+    }
 }

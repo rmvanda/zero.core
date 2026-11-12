@@ -143,7 +143,9 @@ and what to do if the `method` called does not exist (throw 404 page, automatica
     Exception class for HTTP errors. `throw new HTTPError(404)` bubbles up to
     `Application::run()`'s try/catch and renders an error page using the module's
     existing Response instance — preserving framePath and all resolved paths.
-    Optionally takes a second parameter (detail string) for diagnostic messages.
+    Optionally takes a second parameter (detail string) for diagnostic messages. The error page
+    shows it, and a JSON client gets it as `detail`, beside the reason phrase in `message`
+    (`HTTPError::toArray()`).
 
 ## Data
 
