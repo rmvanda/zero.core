@@ -12,6 +12,11 @@
  *
  * Sub-namespaces (Zero\Module\Auth\Model\*, ...\Tests\*) already resolve via
  * the per-module PSR-4 entries in composer.json and are deliberately skipped.
+ *
+ * The one sub-namespace registered here is a module's lib/ (classes other
+ * modules call, Zero\Module\{Name}\Lib\{Class} in modules/{Name}/lib/{Class}.php):
+ * Composer's Zero\Module\ -> modules/ mapping would look for it in Lib/, and
+ * the directory is lowercase.
  */
 // dirname(__DIR__, 2) is the assembly root: this file is core/tests/bootstrap.php,
 // and vendor/ + modules/ are siblings of core/, not of this directory.
@@ -24,6 +29,13 @@ spl_autoload_register(static function (string $class): void {
     }
 
     $rest = substr($class, strlen($prefix));
+    if (preg_match('/^(\w+)\\\\Lib\\\\(.+)$/', $rest, $m)) {
+        $file = dirname(__DIR__, 2) . '/modules/' . $m[1] . '/lib/' . str_replace('\\', '/', $m[2]) . '.php';
+        if (is_file($file)) {
+            require_once $file;
+        }
+        return;
+    }
     if (str_contains($rest, '\\')) {
         return;   // a sub-namespace — Composer's PSR-4 owns it
     }
