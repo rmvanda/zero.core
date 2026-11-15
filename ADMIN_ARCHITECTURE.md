@@ -22,7 +22,8 @@ This keeps domain logic co-located with its module and prevents the Admin module
 | Link management | Yes (`Links`) | `modules/Links/Admin/LinksAdmin.php` |
 | ComfyUI generations | Yes (`Comfy`) | `modules/Comfy/Admin/ComfyAdmin.php` |
 | LLM thread viewer | Yes (`Llm`) | `modules/Llm/Admin/LlmAdmin.php` |
-| Billing config | No | `modules/Admin/submodule/Billing/` |
+| AWS billing | Yes (`Billing`) | `modules/Billing/Admin/BillingAdmin.php` |
+| Plugin manager | Yes (`Plugins`) | `modules/Plugins/Admin/PluginsAdmin.php` |
 | API key config | Yes (`ApiConfig`) | `modules/ApiConfig/Admin/ApiConfigAdmin.php` |
 | Firewall rules | No | `modules/Admin/submodule/Firewall/` |
 
