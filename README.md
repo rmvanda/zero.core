@@ -188,11 +188,6 @@ and what to do if the `method` called does not exist (throw 404 page, automatica
     Authenticated at-rest encryption (AES-256-GCM). Table-agnostic: any column can store
     `Crypto::encrypt($plain)` and recover it.
 
-- **TokenBroker.php**
-    Provider-token access for consumers such as the Dashboard. Returns an always-valid access
-    token, refreshing transparently when the stored one has expired. The only component aware
-    of expiry and refresh.
-
 - **TrustedProxy.php**
     Which peers are entitled to tell us who the real client is. `X-Forwarded-For` and
     `CF-Connecting-IP` are just request headers — anyone can send them.

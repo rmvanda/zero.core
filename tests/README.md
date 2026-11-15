@@ -44,8 +44,8 @@ regardless of which repo a test lives in — the namespace is mapped by prefix i
 
 Placement follows the **subject under test**, not the collaborators. `SessionEstablishTest`
 lives in core because it tests `Zero\Core\Session::establish()`, even though it builds its
-fixture row via `Zero\Core\User::create()`; `TokenBrokerTest` likewise tests `Zero\Core\TokenBroker`
-through `Zero\Entity\OAuthToken`.
+fixture row via `Zero\Core\User::create()`; `OAuthBrokerTest` likewise tests
+`Zero\Module\Auth\OAuth\Broker` through `Zero\Module\Auth\OAuth\Token`, and lives in the Auth module.
 
 Note that `phpunit.xml`, `composer.json` and `composer.lock` sit at the assembly root and
 are tracked by **no** repo — a fresh clone of core alone has the test files but no runner

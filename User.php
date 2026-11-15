@@ -235,7 +235,7 @@ class User extends Model implements Holder
      * semantics — that mismatch is why these three methods talk to
      * `user_profile` directly with hand-written SQL rather than through the
      * generic column-whitelist machinery this class inherits for `users`
-     * itself. Shaped after Zero\Entity\OAuthToken's encrypt-on-write /
+     * itself. Shaped after Zero\Module\Auth\OAuth\Token's encrypt-on-write /
      * decrypt-on-read instead.
      */
 
