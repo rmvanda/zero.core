@@ -2,7 +2,7 @@
 
 Pluggable admin system for the Zero Framework.
 
-- **Auto-Discovery**: Modules with an `Admin/` directory appear on the admin dashboard
+- **Auto-Discovery**: Modules with an `{Module}Admin` class in `Admin/` appear on the admin dashboard when enabled and the user holds the card's `permissions`
 - **Secure by Default**: `allow.admin` permission enforced at base class + framework layers
 - **Inline Assets**: Admin CSS/JS served inline; never exposed as public URLs (see `ADMIN_ASSETS.md`)
 - **Flexible Routing**: Clean URLs with automatic controller routing
@@ -123,7 +123,7 @@ Standard CRUD/pagination/filtering patterns are just regular Zero controller pat
 
 ## Discovery Mechanism
 
-`AdminResponse::getAdminModules()` scans `MODULE_PATH/*/Admin`, reads optional `admin-config.php` for metadata, applies defaults, filters by `enabled`, and sorts by `order`.
+`AdminResponse::getAdminModules()` scans `MODULE_PATH/*/Admin`, keeps a module whose class `Zero\Module\{X}\Admin\{X}Admin` exists (a class that throws while loading is logged with `Console::warn()` and left out), reads optional `admin-config.php` for metadata, applies defaults, keeps the enabled modules whose every `permissions` key the user holds, and sorts by `order`.
 
 **admin-config.php format:**
 
@@ -190,7 +190,7 @@ See `core/ADMIN_ASSETS.md` for how inline loading works and the filename-matchin
 ## Summary
 
 - **Security**: multi-layer permission checks, assets never web-accessible
-- **Simplicity**: drop in `Admin/` folder, auto-discovered
+- **Simplicity**: drop in an `Admin/{Module}Admin.php` class, auto-discovered
 - **Scalability**: each module owns its admin interface
 - **Consistency**: shared UI patterns via `modules/Admin/assets/`
 

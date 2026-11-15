@@ -170,7 +170,14 @@ abstract class AdminResponse extends Module {
             }
 
             // A folder is not an offering: the class must exist
-            if (!class_exists("Zero\\Module\\{$moduleName}\\Admin\\{$moduleName}Admin")) {
+            // (a load failure in one offering leaves only that module unlisted)
+            try {
+                $offeringExists = class_exists("Zero\\Module\\{$moduleName}\\Admin\\{$moduleName}Admin");
+            } catch (\Throwable $e) {
+                Console::warn("Admin offering {$moduleName} failed to load: " . $e->getMessage());
+                continue;
+            }
+            if (!$offeringExists) {
                 continue;
             }
 

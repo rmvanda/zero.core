@@ -57,6 +57,30 @@ class AdminOfferingTest extends TestCase
         $this->assertContains('Links', $names);
     }
 
+    public function testAnOfferingThatThrowsOnLoadIsSkippedNotFatal(): void
+    {
+        mkdir($this->tmp . '/Boom/Admin', 0777, true);
+        $file = $this->tmp . '/Boom/Admin/BoomAdmin.php';
+        file_put_contents($file, "<?php\nthrow new \\RuntimeException('parse failure');\n");
+        $loader = function ($class) use ($file) {
+            if ($class === 'Zero\\Module\\Boom\\Admin\\BoomAdmin') {
+                require $file;
+            }
+        };
+        spl_autoload_register($loader);
+        try {
+            $names = array_column($this->admin()->discovered($this->tmp . '/'), 'name');
+            $this->assertNotContains('Boom', $names);
+            $links = array_column($this->admin()->discovered($this->modulesDir()), 'name');
+            $this->assertContains('Links', $links);
+        } finally {
+            spl_autoload_unregister($loader);
+            @unlink($file);
+            @rmdir($this->tmp . '/Boom/Admin');
+            @rmdir($this->tmp . '/Boom');
+        }
+    }
+
     public function testCardsNeedEveryPermissionTheyList(): void
     {
         $without = array_column($this->admin(['allow.admin'])->discovered($this->modulesDir()), 'name');
