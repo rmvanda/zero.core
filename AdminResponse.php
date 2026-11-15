@@ -201,6 +201,36 @@ abstract class AdminResponse extends Module {
     }
 
     /**
+     * Find a module's real directory name under MODULE_PATH
+     *
+     * Matches case-insensitively with hyphens ignored, so 'ApiConfig',
+     * 'apiconfig' and 'api-config' all resolve to the directory that exists
+     * ('ApiConfig'). Returns null when no such module directory exists.
+     *
+     * @param string $moduleName Module name in any casing, optionally kebab-case
+     * @param string|null $root Directory holding the modules (defaults to MODULE_PATH)
+     * @return string|null Directory name as it is on disk
+     */
+    protected static function resolveModuleDir($moduleName, $root = null) {
+        $root = $root ?? MODULE_PATH;
+        $wanted = strtolower(str_replace('-', '', (string) $moduleName));
+        if ($wanted === '' || !is_dir($root)) {
+            return null;
+        }
+
+        foreach (scandir($root) as $entry) {
+            if ($entry[0] === '.' || !is_dir(rtrim($root, '/') . '/' . $entry)) {
+                continue;
+            }
+            if (strtolower(str_replace('-', '', $entry)) === $wanted) {
+                return $entry;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Load admin assets inline (CSS and JS)
      *
      * Includes asset files directly in the view for security
@@ -211,10 +241,11 @@ abstract class AdminResponse extends Module {
      * @param string $filename Filename within assets directory
      */
     protected function loadInlineAsset($moduleName, $type, $filename) {
-        $moduleName = ucfirst(strtolower($moduleName));
-        $assetPath = MODULE_PATH . $moduleName . "/Admin/assets/{$filename}";
+        $moduleDir = static::resolveModuleDir($moduleName);
+        $assetPath = MODULE_PATH . ($moduleDir ?? $moduleName) . "/Admin/assets/{$filename}";
 
-        if (!file_exists($assetPath)) {
+        if ($moduleDir === null || !file_exists($assetPath)) {
+            Console::warn("Admin asset not found: {$assetPath}");
             if (defined('DEVMODE') && DEVMODE) {
                 echo "<!-- Admin asset not found: {$assetPath} -->\n";
             }
@@ -238,7 +269,7 @@ abstract class AdminResponse extends Module {
      * @param string $moduleName Module name
      */
     protected function loadAdminStyles($moduleName) {
-        $moduleName = ucfirst(strtolower($moduleName));
+        $moduleName = static::resolveModuleDir($moduleName) ?? $moduleName;
         $assetsDir = MODULE_PATH . $moduleName . "/Admin/assets";
 
         if (!is_dir($assetsDir)) {
@@ -258,7 +289,7 @@ abstract class AdminResponse extends Module {
      * @param string $moduleName Module name
      */
     protected function loadAdminScripts($moduleName) {
-        $moduleName = ucfirst(strtolower($moduleName));
+        $moduleName = static::resolveModuleDir($moduleName) ?? $moduleName;
         $assetsDir = MODULE_PATH . $moduleName . "/Admin/assets";
 
         if (!is_dir($assetsDir)) {
