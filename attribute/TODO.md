@@ -405,8 +405,8 @@ more than one populated `auth.level` with a meaningful "level 5 implies level 3"
 happens, add the `RequireLogin` delegation first so all three gates share one definition.
 
 **Also:** three files import `RequireAuthLevel` and never apply it — `modules/Sqrlcam/Sqrlcam.php:5`,
-`modules/Admin/submodule/ApiConfig/ApiConfig.php:7`, and
-`modules/Admin/submodule/Plugins/Plugins.php:8` (its `//#[RequireAuthLevel(9)]` at :16 is commented
+`modules/ApiConfig/Admin/ApiConfigAdmin.php`, and
+`modules/Plugins/Admin/PluginsAdmin.php` (its `//#[RequireAuthLevel(9)]` at :16 is commented
 out). All three classes already carry `#[RequirePermission]`. Dead `use`, safe to drop.
 
 **Next, and the actual point:** the five remaining bare gates are bare because nothing narrower

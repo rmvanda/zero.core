@@ -11,21 +11,36 @@ Pluggable admin system for the Zero Framework.
 
 ## Module Admin Controller vs Admin Submodule
 
-> **If a public module exists for the feature, its admin interface MUST be a Module Admin Controller inside that module's `Admin/` directory.**
+> **A feature's admin screen lives in its own module's `Admin/` directory as a Module Admin Controller, whether or not the module has a public controller.**
 >
-> **If no public module exists, it belongs as an Admin submodule under `modules/Admin/submodule/`.**
+> **Admin's `submodule/` directory is for Admin's own screens (Firewall).**
 
 This keeps domain logic co-located with its module and prevents the Admin module from becoming a dumping ground for unrelated controllers.
 
-| Feature | Public Module? | Correct Location |
-|---------|---------------|-----------------|
-| Link management | Yes (`Links`) | `modules/Links/Admin/LinksAdmin.php` |
-| ComfyUI generations | Yes (`Comfy`) | `modules/Comfy/Admin/ComfyAdmin.php` |
-| LLM thread viewer | Yes (`Llm`) | `modules/Llm/Admin/LlmAdmin.php` |
-| AWS billing | Yes (`Billing`) | `modules/Billing/Admin/BillingAdmin.php` |
-| Plugin manager | Yes (`Plugins`) | `modules/Plugins/Admin/PluginsAdmin.php` |
-| API key config | Yes (`ApiConfig`) | `modules/ApiConfig/Admin/ApiConfigAdmin.php` |
-| Firewall rules | No | `modules/Admin/submodule/Firewall/` |
+| Feature | Location |
+|---------|----------|
+| Link management | `modules/Links/Admin/LinksAdmin.php` |
+| ComfyUI generations | `modules/Comfy/Admin/ComfyAdmin.php` |
+| LLM thread viewer | `modules/Llm/Admin/LlmAdmin.php` |
+| AWS billing | `modules/Billing/Admin/BillingAdmin.php` |
+| Plugin manager | `modules/Plugins/Admin/PluginsAdmin.php` |
+| API key config | `modules/ApiConfig/Admin/ApiConfigAdmin.php` |
+| Entity types, records, event log | `modules/Entity/Admin/EntityAdmin.php` |
+| WebSocket monitor | `modules/Ws/Admin/WsAdmin.php` |
+| Push notifications | `modules/Push/Admin/PushAdmin.php` |
+| Firewall rules | `modules/Admin/submodule/Firewall/` (Admin's own screen) |
+
+### What makes an offering
+
+A module is an admin offering when the class `Zero\Module\{Module}\Admin\{Module}Admin` exists. This is the class `Admin::__call` routes to, and it is what `getAdminModules()` checks: an `Admin/` folder without the class (for example one holding only `view/`) is not listed on the dashboard.
+
+### Cards respect permissions
+
+`getAdminModules()` lists a card only when `enabled` is not false and the logged-in user holds every key in the `permissions` array of the offering's `admin-config.php` (default `['allow.admin']`), checked with `Session::can()`. `permissions` lists the same keys that gate the offering class.
+
+### Routable methods
+
+`routeToModuleAdmin()` routes only to a public, non-static method that is not a constructor or magic method and is declared outside the `Zero\Core\` namespace. Protected helpers and methods inherited from the framework (`loadConfig`, `loadInlineAsset`, ...) answer `HTTPError(404, 'Admin method not found: ...')` before the controller is constructed.
 
 **Namespaces:**
 - Admin submodules: `Zero\Module\Admin` (routed via `Module::__call` fallthrough)
@@ -43,7 +58,7 @@ Base class for all admin controllers. Extends `Module`.
 |--------|---------|
 | `__construct()` | Enforces `allow.admin`; removes any auto-created public symlink so admin assets are never web-accessible |
 | `getStylesheets()` / `getScripts()` | Override — inline admin assets using the framework's filename-matching convention |
-| `getAdminModules()` | Discover all modules with `Admin/` directories |
+| `getAdminModules()` | Discover the offerings (modules with an `{Module}Admin` class) the user may see |
 | `loadInlineAsset($module, $type, $filename)` | Include a single asset file inline |
 | `loadAdminStyles($module)` / `loadAdminScripts($module)` | Include all CSS/JS for a module inline (manual usage in views) |
 | `setBreadcrumbs(array $crumbs)` | Prepend "Admin" and set navigation |

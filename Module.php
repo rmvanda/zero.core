@@ -181,7 +181,7 @@ class Module extends Response {
             }
             return;
         }
-        Console::debug("Couldn't find anything. Calling $func using $args"); 
+        Console::debug("Couldn't find anything. Calling $func using " . implode('/', array_filter($args, 'is_scalar'))); 
         parent::__call($func, $args);
     }
 }

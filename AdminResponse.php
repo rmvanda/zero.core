@@ -140,12 +140,15 @@ abstract class AdminResponse extends Module {
     /**
      * Discover all modules with admin capabilities
      *
-     * Scans MODULE_PATH for directories containing an Admin subdirectory
-     * Loads optional admin-config.php for metadata
+     * Scans the modules directory for directories containing an Admin subdirectory
+     * and lists a module only when Zero\Module\{X}\Admin\{X}Admin exists (the
+     * class Admin::__call routes to) and the logged-in user holds every key in
+     * the card's `permissions`. Loads optional admin-config.php for metadata
      *
+     * @param string|null $root Directory holding the modules (defaults to MODULE_PATH)
      * @return array Array of admin module configurations
      */
-    protected function getAdminModules() {
+    protected function getAdminModules($root = null) {
         // Check cache first
         $cacheKey = 'admin_modules_discovery';
         // TODO: Implement caching when Cache class is available
@@ -154,7 +157,7 @@ abstract class AdminResponse extends Module {
         // }
 
         $adminModules = [];
-        $adminDirs = glob(MODULE_PATH . '*/Admin', GLOB_ONLYDIR);
+        $adminDirs = glob(($root ?? MODULE_PATH) . '*/Admin', GLOB_ONLYDIR);
 
         foreach ($adminDirs as $dir) {
             // Extract module name from path
@@ -163,6 +166,11 @@ abstract class AdminResponse extends Module {
 
             // Skip the main Admin module itself from discovery
             if (strtolower($moduleName) === 'admin') {
+                continue;
+            }
+
+            // A folder is not an offering: the class must exist
+            if (!class_exists("Zero\\Module\\{$moduleName}\\Admin\\{$moduleName}Admin")) {
                 continue;
             }
 
@@ -188,8 +196,18 @@ abstract class AdminResponse extends Module {
             ];
         }
 
-        // Filter by enabled status
-        $adminModules = array_filter($adminModules, fn($m) => $m['enabled']);
+        // Filter by enabled status and by the permissions the user holds
+        $adminModules = array_filter($adminModules, function ($m) {
+            if (!$m['enabled']) {
+                return false;
+            }
+            foreach ((array) $m['permissions'] as $permission) {
+                if (!$this->userHolds($permission)) {
+                    return false;
+                }
+            }
+            return true;
+        });
 
         // Sort by order
         usort($adminModules, fn($a, $b) => $a['order'] <=> $b['order']);
@@ -198,6 +216,37 @@ abstract class AdminResponse extends Module {
         // Cache::set($cacheKey, $adminModules, 3600);
 
         return $adminModules;
+    }
+
+    /**
+     * Whether the logged-in user holds a capability
+     *
+     * @param string $permission Capability key (e.g., 'allow.admin')
+     */
+    protected function userHolds(string $permission): bool {
+        return Session::can($permission);
+    }
+
+    /**
+     * Whether a URL may reach a method of an offering
+     *
+     * Only a public, non-static method that is not a constructor or magic
+     * method and is declared outside the Zero\Core\ namespace is an endpoint.
+     * Methods an offering inherits from the framework (loadConfig,
+     * loadInlineAsset, ...) and its protected helpers are not.
+     */
+    protected static function isRoutableMethod(string $class, string $method): bool {
+        if (!class_exists($class) || !method_exists($class, $method)) {
+            return false;
+        }
+
+        $reflection = new \ReflectionMethod($class, $method);
+
+        return $reflection->isPublic()
+            && !$reflection->isStatic()
+            && !$reflection->isConstructor()
+            && !str_starts_with($reflection->getName(), '__')
+            && !str_starts_with($reflection->getDeclaringClass()->getName(), 'Zero\\Core\\');
     }
 
     /**
@@ -338,10 +387,11 @@ abstract class AdminResponse extends Module {
             $method = lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $method))));
         }
 
-        // Ensure method is a string and exists. Checked against the class name
-        // rather than an instance so the 404 — and the gate below — both settle
-        // before anything is constructed.
-        if (!is_string($method) || !method_exists($adminClass, $method)) {
+        // Ensure method is a string and is one of the offering's own public
+        // endpoints. Checked against the class name rather than an instance so
+        // the 404 — and the gate below — both settle before anything is
+        // constructed.
+        if (!is_string($method) || !static::isRoutableMethod($adminClass, $method)) {
             throw new HTTPError(404, "Admin method not found: " . (is_string($method) ? $method : 'invalid'));
         }
 
