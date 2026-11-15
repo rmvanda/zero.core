@@ -23,7 +23,7 @@ This keeps domain logic co-located with its module and prevents the Admin module
 | ComfyUI generations | Yes (`Comfy`) | `modules/Comfy/Admin/ComfyAdmin.php` |
 | LLM thread viewer | Yes (`Llm`) | `modules/Llm/Admin/LlmAdmin.php` |
 | Billing config | No | `modules/Admin/submodule/Billing/` |
-| API key config | No | `modules/Admin/submodule/ApiConfig/` |
+| API key config | Yes (`ApiConfig`) | `modules/ApiConfig/Admin/ApiConfigAdmin.php` |
 | Firewall rules | No | `modules/Admin/submodule/Firewall/` |
 
 **Namespaces:**
