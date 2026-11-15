@@ -535,7 +535,11 @@ class Response
             if($asset[0] == "."){continue;} // Skip dotfiles
             // Load if it matches module name or endpoint name
             if(in_array($asset, $matches)){
-                echo sprintf($html_asset, $pubdir . $asset);
+                // Versioned by modification time. Apache sends no
+                // Cache-Control, so without it a browser keeps an old copy
+                // for weeks after a deploy and runs it against new markup.
+                $version = filemtime($dir . $asset);
+                echo sprintf($html_asset, $pubdir . $asset . ($version ? '?v=' . $version : ''));
             } else {
                 Console::debug("$asset doesn't match so not loaded");  
             }
