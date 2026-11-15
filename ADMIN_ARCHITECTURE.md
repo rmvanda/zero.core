@@ -51,7 +51,7 @@ Base class for all admin controllers. Extends `Module`.
 
 ### `Admin` Module (`modules/Admin/Admin.php`)
 
-Main admin hub. Extends `AdminResponse`. Handles the `/admin` dashboard, user/group/entity management, and routes `/admin/{module}/*` to module admin controllers via `__call`.
+Main admin hub. Extends `AdminResponse`. Handles user and group management, and routes `/admin/{module}/*` to module admin controllers via `__call`.
 
 ```
 /admin                    → Admin::index()
@@ -59,6 +59,8 @@ Main admin hub. Extends `AdminResponse`. Handles the `/admin` dashboard, user/gr
 /admin/links              → Admin::__call('links', ...) → LinksAdmin::index()
 /admin/links/edit/5       → Admin::__call('links', ...) → LinksAdmin::edit(5)
 ```
+
+The `/admin` dashboard has two sections. "Users and access" holds the Users, Groups and Firewall cards, the only links written into the view. "Modules" holds one card per offering that `getAdminModules()` discovers (an offering whose `admin-config.php` sets `'enabled' => false` is left out). A module's feature screens appear there with no change to Admin.
 
 ---
 

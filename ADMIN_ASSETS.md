@@ -71,7 +71,7 @@ For views that need to load everything in a module's admin assets dir (bypassing
 | `loadAdminStyles($module)` | Inline every `*.css` in `modules/{Module}/Admin/assets/` |
 | `loadAdminScripts($module)` | Inline every `*.js` in `modules/{Module}/Admin/assets/` |
 
-Missing files print an HTML comment in `DEVMODE` and silently no-op otherwise.
+`loadInlineAsset()`, `loadAdminStyles()` and `loadAdminScripts()` find the module's folder by name regardless of case or hyphens (`ApiConfig`, `apiconfig` and `api-config` all reach `modules/ApiConfig/`). A missing file logs a warning, and prints an HTML comment in `DEVMODE`.
 
 **When to use which:** prefer auto mode and rely on naming conventions. Reach for manual mode only when an admin view needs assets that don't follow the `{module}/{endpoint}` naming pattern.
 
