@@ -4,7 +4,6 @@ namespace Zero\Core;
 
 use Zero\Core\Module;
 use Zero\Core\Request;
-use Zero\Core\User;
 
 /**
  * AdminResponse - Base class for all admin controllers
@@ -37,7 +36,7 @@ abstract class AdminResponse extends Module {
      */
     public function __construct() {
         // Check base admin access
-        if (!User::hasPermission('allow.admin')) {
+        if (!Session::can('allow.admin')) {
             // Send them to the login page holding on to where they were going.
             //
             // This used to redirect to '/auth/login?redirect=<uri>', which was

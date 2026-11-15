@@ -2,22 +2,22 @@
 
 namespace Zero\Tests\Core;
 
-use Zero\Core\User;
+use Zero\Core\Session;
 
 /**
  * Static guard against the "argument silently discarded" bug class.
  *
- * Zero\Core\User exposes several public static accessors — getName(),
- * getEmail(), getId(), etc. — that take ZERO parameters and read $_SESSION.
- * PHP's user-defined functions discard extra call-site arguments silently,
- * with no warning and no error. Three call sites in TheButton passed a user
- * id to User::getName()/getEmail() anyway, and each one silently answered
+ * Zero\Core\Session exposes several public static accessors — user(),
+ * userId(), isLoggedIn(), end() — that take ZERO parameters and read
+ * $_SESSION. PHP's user-defined functions discard extra call-site arguments
+ * silently, with no warning and no error. A call site that passes a user id
+ * to one of them anyway (`Session::user($recipientId)`) is silently answered
  * with the CURRENT SESSION USER instead of the one it named — e.g. an
- * invitation email that greeted its recipient by the sender's name.
+ * invitation email that greets its recipient by the sender's name.
  *
  * This test is a SOURCE-LEVEL / STATIC check, not a behavioural one. It does
  * not run any code and cannot observe a fix take effect at runtime; it can
- * only prove that no `User::<zero-param-method>(...)` call site in the
+ * only prove that no `Session::<zero-param-method>(...)` call site in the
  * scanned trees passes an argument. A behavioural regression test would need
  * to drive a real call site through its public entry point, which for
  * TheButton's private sendInviteEmail()/linkEmailInvite() would mean
@@ -25,17 +25,14 @@ use Zero\Core\User;
  * brief for this guard deliberately avoided that fragility.
  *
  * The method list is derived by reflection, not hardcoded, so this guard
- * keeps covering whatever zero-parameter public statics exist on User at any
- * given time — including after sub-project B removes getName()/getEmail()
- * entirely, and including accessors this bug report never named (getId(),
- * current(), currentId(), logout() are zero-parameter too — getAllPermissions()
- * was too, but sub-project C removed it for having zero callers).
+ * keeps covering whatever zero-parameter public statics exist on Session at
+ * any given time.
  *
- * Out of scope: aliased imports. The regex matches literal `User::` — a call
- * site importing the class under another name (e.g.
- * `use \Zero\Core\User as SessionUser;` then `SessionUser::getId($x)`) is
+ * Out of scope: aliased imports. The regex matches literal `Session::` — a
+ * call site importing the class under another name (e.g.
+ * `use \Zero\Core\Session as Login;` then `Login::userId($x)`) is
  * invisible to it. This is not exhaustive over every possible spelling of a
- * call site, only over the literal `User::` one.
+ * call site, only over the literal `Session::` one.
  */
 class SessionAccessorArityTest extends ZeroTestCase
 {
@@ -59,14 +56,20 @@ class SessionAccessorArityTest extends ZeroTestCase
 
         // A guard that silently covers nothing is worse than no guard —
         // if reflection ever finds zero such methods, something about
-        // User's shape changed enough that this test needs re-thinking,
+        // Session's shape changed enough that this test needs re-thinking,
         // not a quiet pass.
         $this->assertNotEmpty(
             $methods,
             'Reflection found no zero-parameter public static methods on '
-            . 'Zero\Core\User. Either the class changed shape or reflection '
+            . 'Zero\Core\Session. Either the class changed shape or reflection '
             . 'is broken — this guard has nothing to check either way.'
         );
+
+        // The accessors this guard exists for. If one of them gains a
+        // parameter or moves off Session, the scan below stops covering it.
+        foreach (['user', 'userId', 'isLoggedIn', 'end'] as $accessor) {
+            $this->assertContains($accessor, $methods);
+        }
 
         $offenses = $this->findOffendingCallSites($methods);
 
@@ -74,7 +77,7 @@ class SessionAccessorArityTest extends ZeroTestCase
             [],
             $offenses,
             "Found call site(s) passing an argument to a zero-parameter \n"
-            . "Zero\\Core\\User accessor. PHP discards the argument silently \n"
+            . "Zero\\Core\\Session accessor. PHP discards the argument silently \n"
             . "and the call answers from \$_SESSION instead of the user \n"
             . "named at the call site:\n  "
             . implode("\n  ", $offenses)
@@ -82,12 +85,12 @@ class SessionAccessorArityTest extends ZeroTestCase
     }
 
     /**
-     * Every public static method on Zero\Core\User that takes no parameters
+     * Every public static method on Zero\Core\Session that takes no parameters
      * — the shape that makes a call-site argument silently discardable.
      */
     private function zeroParameterPublicStaticMethods(): array
     {
-        $reflection = new \ReflectionClass(User::class);
+        $reflection = new \ReflectionClass(Session::class);
         $names = [];
 
         foreach ($reflection->getMethods(\ReflectionMethod::IS_PUBLIC | \ReflectionMethod::IS_STATIC) as $method) {
@@ -100,7 +103,7 @@ class SessionAccessorArityTest extends ZeroTestCase
     }
 
     /**
-     * Scan every directory in SCAN_DIRS for `User::<name>(` calls where the
+     * Scan every directory in SCAN_DIRS for `Session::<name>(` calls where the
      * parenthesised text is anything other than optional whitespace.
      *
      * @param string[] $methodNames
@@ -113,7 +116,7 @@ class SessionAccessorArityTest extends ZeroTestCase
             fn(string $m) => preg_quote($m, '/'),
             $methodNames
         ));
-        $pattern = '/\bUser::(?:' . $alternation . ')\(([^)]*)\)/';
+        $pattern = '/\bSession::(?:' . $alternation . ')\(([^)]*)\)/';
 
         $offenses = [];
 

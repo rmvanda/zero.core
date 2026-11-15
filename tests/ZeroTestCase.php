@@ -105,6 +105,56 @@ abstract class ZeroTestCase extends TestCase
         ]);
     }
 
+    /**
+     * Remove the rows a test made, with raw SQL so cleanup never depends on
+     * the classes under test: the users whose email matches $emailLike and
+     * the groups whose name matches $groupLike, with their memberships,
+     * the permissions granted to them, and the users' settings and profiles.
+     *
+     * Both patterns must start with "zerotest": nothing else is a test row.
+     *
+     * @param string      $emailLike A LIKE pattern for users.email
+     * @param string|null $groupLike A LIKE pattern for user_group.group_name
+     */
+    protected function removeTestRows(string $emailLike, ?string $groupLike = null): void
+    {
+        foreach ([$emailLike, $groupLike] as $pattern) {
+            if ($pattern !== null && !str_starts_with($pattern, 'zerotest')) {
+                throw new \InvalidArgumentException("Refusing to remove rows matching '{$pattern}'");
+            }
+        }
+        $db = \Zero\Core\Database::getConnection();
+
+        $stmt = $db->prepare("SELECT id FROM users WHERE email LIKE ?");
+        $stmt->execute([$emailLike]);
+        foreach ($stmt->fetchAll(\PDO::FETCH_COLUMN) as $id) {
+            foreach ([
+                "DELETE FROM user_group_member WHERE user_id = ?",
+                "DELETE FROM permission WHERE user_id = ?",
+                "DELETE FROM user_settings WHERE user_id = ?",
+                "DELETE FROM user_profile WHERE user_id = ?",
+                "DELETE FROM users WHERE id = ?",
+            ] as $sql) {
+                $db->prepare($sql)->execute([$id]);
+            }
+        }
+
+        if ($groupLike === null) {
+            return;
+        }
+        $stmt = $db->prepare("SELECT group_id FROM user_group WHERE group_name LIKE ?");
+        $stmt->execute([$groupLike]);
+        foreach ($stmt->fetchAll(\PDO::FETCH_COLUMN) as $id) {
+            foreach ([
+                "DELETE FROM user_group_member WHERE group_id = ?",
+                "DELETE FROM permission WHERE group_id = ?",
+                "DELETE FROM user_group WHERE group_id = ?",
+            ] as $sql) {
+                $db->prepare($sql)->execute([$id]);
+            }
+        }
+    }
+
     /* ── $_SESSION helpers ── */
 
     /**

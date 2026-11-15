@@ -98,7 +98,7 @@ class AllowWithToken {
                 throw new HTTPError(401, "Token owner not found");
             }
 
-            \Zero\Core\User::establish($user);
+            \Zero\Core\Session::establish($user);
 
             // Flag so downstream code can distinguish token-based auth
             $_SESSION['_api_token_auth'] = true;

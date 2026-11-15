@@ -5,7 +5,7 @@ namespace Zero\Tests\Core\Attribute;
 use Zero\Tests\Core\ZeroTestCase;
 use Zero\Core\Attribute\RequireAuthLevel;
 use Zero\Core\HTTPError;
-use Zero\Core\User;
+use Zero\Core\Session;
 use Zero\Core\Database;
 
 class RequireAuthLevelTest extends ZeroTestCase
@@ -21,16 +21,16 @@ class RequireAuthLevelTest extends ZeroTestCase
     }
 
     /**
-     * handler() now reads auth level through User::current()->authLevel(),
-     * which memoizes into User::$current for the rest of the process. Each
+     * handler() now reads auth level through Session::user()->authLevel(),
+     * which memoizes into Session::$user for the rest of the process. Each
      * test below builds a different mock/session for user_id 1 — without
      * clearing the memo, a later test would answer from an earlier test's
      * cached instance instead of its own mock. Same convention as
-     * core/tests/UserTest.php.
+     * core/tests/SessionTest.php.
      */
     protected function tearDown(): void
     {
-        $prop = new \ReflectionProperty(User::class, 'current');
+        $prop = new \ReflectionProperty(\Zero\Core\Session::class, 'user');
         $prop->setAccessible(true);
         $prop->setValue(null, null);
 

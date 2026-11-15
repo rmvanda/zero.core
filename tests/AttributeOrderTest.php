@@ -61,7 +61,7 @@ class AttributeOrderTest extends ZeroTestCase
      *                     still live in modules/User, so it still needs a slot.
      *   RequirePermission What may you do. After RequireLogin, so an anonymous
      *                     caller gets 401 rather than 403.
-     *   AuditLog          Reads User::currentId(), so it must follow
+     *   AuditLog          Reads Session::userId(), so it must follow
      *                     AllowWithToken or every Bearer-authenticated admin
      *                     action is recorded with no user against it.
      *   AllowedMethods    Request shape, after auth: an anonymous caller gets

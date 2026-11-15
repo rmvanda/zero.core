@@ -36,9 +36,9 @@ class OverrideFixtureCallOnly {
 }
 
 /** Class-level and method-level permissions, which must UNION rather than replace. */
-#[\Zero\Core\Attribute\RequirePermission('zerotest.additive.classlevel')]
+#[\Zero\Core\Attribute\RequirePermission('allow.zerotest.additive.classlevel')]
 class AdditiveFixture {
-    #[\Zero\Core\Attribute\RequirePermission('zerotest.additive.methodlevel')]
+    #[\Zero\Core\Attribute\RequirePermission('allow.zerotest.additive.methodlevel')]
     public function guarded() {}
 }
 

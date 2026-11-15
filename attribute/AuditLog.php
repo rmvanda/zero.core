@@ -40,8 +40,8 @@ class AuditLog {
         $detail = "Endpoint: {$endpoint}";
 
         // Add user info if available
-        if (\Zero\Core\User::currentId() !== null) {
-            $detail .= " | User ID: " . \Zero\Core\User::currentId();
+        if (\Zero\Core\Session::userId() !== null) {
+            $detail .= " | User ID: " . \Zero\Core\Session::userId();
         }
 
         // Add username if available

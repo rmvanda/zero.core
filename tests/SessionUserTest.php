@@ -3,9 +3,14 @@ namespace Zero\Tests\Core;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use Zero\Core\User;
+use Zero\Core\Session;
 use Zero\Core\Database;
 
-class UserCurrentTest extends ZeroTestCase
+/**
+ * Zero\Core\Session::user() and Session::userId(): who is making this
+ * request, read from $_SESSION and never from a query.
+ */
+class SessionUserTest extends ZeroTestCase
 {
     private const E = 'zerotest-current@example.invalid';
     private int $userId;
@@ -36,28 +41,28 @@ class UserCurrentTest extends ZeroTestCase
     /**
      * The fallback tests below set $_SESSION directly rather than going
      * through establish() (which clears the memo itself), so without this a
-     * User::current() memoized by an earlier test could leak into one of
+     * Session::user() memoized by an earlier test could leak into one of
      * them depending on execution order. Reflection, not a public reset
      * method, because nothing outside tests should ever need to clear it.
      */
     private function resetCurrentMemo(): void
     {
-        $prop = new \ReflectionProperty(User::class, 'current');
+        $prop = new \ReflectionProperty(\Zero\Core\Session::class, 'user');
         $prop->setAccessible(true);
         $prop->setValue(null, null);
     }
 
-    public function testCurrentIsNullWithNoSession(): void
+    public function testUserIsNullWithNoSession(): void
     {
         $_SESSION = [];
-        $this->assertNull(User::current());
-        $this->assertNull(User::currentId());
+        $this->assertNull(Session::user());
+        $this->assertNull(Session::userId());
     }
 
-    public function testCurrentExposesEveryMappedColumn(): void
+    public function testUserExposesEveryMappedColumn(): void
     {
-        User::establish(User::find($this->userId));
-        $u = User::current();
+        Session::establish(User::find($this->userId));
+        $u = Session::user();
 
         $this->assertNotNull($u);
         $this->assertSame($this->userId, (int) $u->id);
@@ -67,34 +72,34 @@ class UserCurrentTest extends ZeroTestCase
         $this->assertNull($u->pic);
     }
 
-    public function testCurrentAgreesWithFind(): void
+    public function testUserAgreesWithFind(): void
     {
-        User::establish(User::find($this->userId));
+        Session::establish(User::find($this->userId));
         foreach (['id', 'name', 'email', 'verified', 'pic'] as $col) {
             $this->assertSame(
                 User::find($this->userId)->{$col},
-                User::current()->{$col},
-                "current() and find() disagree on {$col}"
+                Session::user()->{$col},
+                "Session::user() and User::find() disagree on {$col}"
             );
         }
     }
 
-    public function testCurrentReturnsTheSameInstanceWithinARequest(): void
+    public function testUserReturnsTheSameInstanceWithinARequest(): void
     {
-        User::establish(User::find($this->userId));
-        $this->assertSame(User::current(), User::current(),
-            'current() must return the same memoized instance within a request.');
+        Session::establish(User::find($this->userId));
+        $this->assertSame(Session::user(), Session::user(),
+            'Session::user() must return the same memoized instance within a request.');
     }
 
     public function testSaveOnASessionHydratedUserWritesOnlyTheChangedColumn(): void
     {
-        User::establish(User::find($this->userId));
-        $u = User::current();
+        Session::establish(User::find($this->userId));
+        $u = Session::user();
 
         // Row moves on underneath the session — the real scenario this test
         // guards against. Without this, the session instance's email/verified
         // are already identical to the row's (establish() wrote them straight
-        // off the same find() result current() hydrates from), so a save()
+        // off the same find() result Session::user() hydrates from), so a save()
         // that wrote every column back would write the same values and this
         // test would pass either way. Proven: see the fix report.
         Database::getConnection()
@@ -110,24 +115,23 @@ class UserCurrentTest extends ZeroTestCase
     }
 
     /*
-     * currentId() reads $_SESSION['user_id'] and nothing else.
+     * Session::userId() reads $_SESSION['user_id'] and nothing else.
      *
-     * It used to fall back to $_SESSION['user']['id'] for sessions built
-     * before establish() existed. That key holds the raw provider identity,
-     * whose 'id' is the PROVIDER's user id — a foreign number in the same
-     * shape as a local users.id — so the fallback could answer with an id
-     * that belongs to no local account. These two tests previously asserted
-     * the fallback worked; they now pin that it is gone.
+     * It does not fall back to $_SESSION['user']['id']. That key holds the
+     * raw provider identity, whose 'id' is the PROVIDER's user id — a foreign
+     * number in the same shape as a local users.id — so a fallback could
+     * answer with an id that belongs to no local account. These tests pin
+     * that there is none.
      */
 
-    public function testCurrentIdIgnoresTheUserArrayWhenFlatKeyIsAbsent(): void
+    public function testUserIdIgnoresTheUserArrayWhenFlatKeyIsAbsent(): void
     {
         $_SESSION = ['user' => ['id' => $this->userId]];
-        $this->assertNull(User::currentId(),
-            "currentId() must not read \$_SESSION['user']['id'] — it holds the provider's id");
+        $this->assertNull(Session::userId(),
+            "Session::userId() must not read \$_SESSION['user']['id'] — it holds the provider's id");
     }
 
-    public function testCurrentIsNullWhenOnlyTheUserArrayIsPresent(): void
+    public function testUserIsNullWhenOnlyTheUserArrayIsPresent(): void
     {
         $_SESSION = ['user' => [
             'id'        => $this->userId,
@@ -136,27 +140,26 @@ class UserCurrentTest extends ZeroTestCase
             'pic'       => 'https://x/y.jpg',
         ]];
 
-        $this->assertNull(User::current(),
+        $this->assertNull(Session::user(),
             'a session with no user_id is not a logged-in session');
     }
 
-    public function testCurrentIdIgnoresAForeignProviderIdInTheUserArray(): void
+    public function testUserIdIgnoresAForeignProviderIdInTheUserArray(): void
     {
-        // The concrete failure the fallback allowed: Auth::complete() wrote
-        // $_SESSION['user'] before enforceVerifiedEmail() could throw, so a
-        // REFUSED sign-in left this shape behind. 12345678 is a plausible
-        // GitHub id and passes every filter_var check currentId() applies.
+        // The concrete failure a fallback would allow: a sign-in that is
+        // REFUSED after $_SESSION['user'] is written leaves this shape
+        // behind. 12345678 is a plausible GitHub id and passes every
+        // filter_var check Session::userId() applies.
         $_SESSION = ['user' => ['id' => 12345678, 'email' => 'attacker@example.invalid']];
-        $this->assertNull(User::currentId());
+        $this->assertNull(Session::userId());
     }
 
     /*
-     * Hardening: currentId() must reject anything that is not a positive
+     * Hardening: Session::userId() must reject anything that is not a positive
      * integer rather than silently coercing it. A bare (int) cast turns
-     * 'abc' into 0, and 0 is not "nobody" — user_settings uses user_id = 0
-     * as a deliberate registry of available setting keys (see
-     * modules/Admin/USER_SETTINGS_POLISH.md). A User built on id 0 would
-     * read that registry through can()/authLevel() as if it were a real
+     * 'abc' into 0, and 0 is not "nobody" — the permission table uses
+     * user_id = 0 to mean "this row is a group's". A User built on id 0 would
+     * read every group's grants through can() as if they were a real
      * user's permissions. Rejecting outright degrades to "not logged in",
      * the safe direction.
      */
@@ -173,38 +176,38 @@ class UserCurrentTest extends ZeroTestCase
     }
 
     #[DataProvider('badFlatSessionValues')]
-    public function testCurrentIdRejectsBadFlatSessionValues($bad): void
+    public function testUserIdRejectsBadFlatSessionValues($bad): void
     {
         $_SESSION = ['user_id' => $bad];
-        $this->assertNull(User::currentId());
+        $this->assertNull(Session::userId());
     }
 
-    public function testCurrentIdRejectsBadUserArrayId(): void
+    public function testUserIdRejectsBadUserArrayId(): void
     {
-        // Retained from when $_SESSION['user']['id'] was a fallback path.
-        // It is no longer read at all, so this now pins the stronger property.
+        // $_SESSION['user']['id'] is not read at all, so even a value
+        // that could never be an id changes nothing.
         $_SESSION = ['user' => ['id' => 'xyz']];
-        $this->assertNull(User::currentId());
+        $this->assertNull(Session::userId());
     }
 
-    public function testCurrentIdResolvesValidFlatKey(): void
+    public function testUserIdResolvesValidFlatKey(): void
     {
         $_SESSION = ['user_id' => $this->userId];
-        $this->assertSame($this->userId, User::currentId());
+        $this->assertSame($this->userId, Session::userId());
     }
 
-    public function testCurrentIdResolvesValidFlatKeyGivenAsNumericString(): void
+    public function testUserIdResolvesValidFlatKeyGivenAsNumericString(): void
     {
         // PHP sessions can round-trip ids as strings depending on how they
         // were written; filter_var must still accept a clean numeric string.
         $_SESSION = ['user_id' => (string) $this->userId];
-        $this->assertSame($this->userId, User::currentId());
+        $this->assertSame($this->userId, Session::userId());
     }
 
-    public function testCurrentReturnsNullWhenSessionIdIsRejected(): void
+    public function testUserReturnsNullWhenSessionIdIsRejected(): void
     {
         $_SESSION = ['user_id' => 'abc'];
-        $this->assertNull(User::current(),
-            'current() must not build an instance from an id currentId() rejected.');
+        $this->assertNull(Session::user(),
+            'Session::user() must not build an instance from an id Session::userId() rejected.');
     }
 }

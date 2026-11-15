@@ -42,8 +42,8 @@ Tests live inside the repo they exercise, so each repo carries its own suite:
 regardless of which repo a test lives in — the namespace is mapped by prefix in
 `composer.json`, not by directory nesting.
 
-Placement follows the **subject under test**, not the collaborators. `UserEstablishTest`
-lives in core because it tests `Zero\Core\User::establish()`, even though it builds its
+Placement follows the **subject under test**, not the collaborators. `SessionEstablishTest`
+lives in core because it tests `Zero\Core\Session::establish()`, even though it builds its
 fixture row via `Zero\Core\User::create()`; `TokenBrokerTest` likewise tests `Zero\Core\TokenBroker`
 through `Zero\Entity\OAuthToken`.
 

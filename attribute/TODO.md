@@ -330,7 +330,7 @@ public function updateSettings($args) {
 ## Refactors (existing attributes)
 
 ### AllowWithToken — stop hand-building the login session
-**Status:** ✅ **DONE** — converted onto `Zero\Core\User::establish()` (2026-08-08)
+**Status:** ✅ **DONE** — converted onto `Zero\Core\Session::establish()` (2026-08-08)
 **Location:** `core/attribute/AllowWithToken.php:100-126`
 
 `AllowWithToken` constructs a full login session by hand, under a comment claiming parity with
@@ -362,13 +362,13 @@ the divergence just moves.
 **Priority:** Low (no longer a bypass, but still wrong)
 **Location:** `core/attribute/AllowWithToken.php:94-101`
 
-`AllowWithToken` calls `User::establish($user)` for whoever owns the token, without checking
+`AllowWithToken` calls `Session::establish($user)` for whoever owns the token, without checking
 `$user->verified`. That produces a session with a `user_id` for an account that has never
 verified its email.
 
 Until 2026-08-16 that session passed `#[RequireLogin]`, which tested `isset($_SESSION['user_id'])`
 — see `core/attribute/AUTH_GATE_CONSISTENCY.md`. `RequireLogin` now delegates to
-`User::isLoggedIn()`, so the session is refused at the gate and the bypass is closed.
+`Session::isLoggedIn()`, so the session is refused at the gate and the bypass is closed.
 
 What remains is the smaller wrong: establishing a session that nothing downstream will honour.
 Better to fail the request at the token check with a clear 401 than to hand back a session that
@@ -424,10 +424,10 @@ callers left.
 Two invariants currently hold **by coincidence of data**, exactly like the one
 `AUTH_GATE_CONSISTENCY.md` documents:
 
-**1. "No unverified user has permissions."** True — all 27 `allow.*` rows in `user_settings`
-belong to verified accounts — but nothing enforces it. `User::setSetting()` (`core/User.php:341`)
-has no `verified` check, and neither grant path does (`modules/Admin/Admin.php:310`,
-`modules/AccessRequest/AccessRequest.php:269`). **Fix:** the check belongs in `setSetting()` —
+**1. "No unverified user has permissions."** True — every `allow.*` row in `permission`
+belongs to a verified account — but nothing enforces it. `grant()` (`core/HoldsCapabilities.php`)
+has no `verified` check, and neither grant path does (`modules/Admin/Admin.php`,
+`modules/AccessRequest/AccessRequest.php`). **Fix:** the check belongs in `grant()` —
 one place, both callers covered. This matters more than the `RequireLogin`/`RequireVerified`
 question, because it is what actually makes `RequirePermission` the reliable gate.
 

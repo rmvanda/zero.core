@@ -4,11 +4,11 @@ namespace Zero\Tests\Core\Attribute;
 
 use Zero\Tests\Core\ZeroTestCase;
 use Zero\Core\Attribute\RequireLogin;
-use Zero\Core\User;
+use Zero\Core\Session;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * handler() now gates on User::isLoggedIn() instead of duplicating its own
+ * handler() now gates on Session::isLoggedIn() instead of duplicating its own
  * `isset($_SESSION['user_id'])` predicate (see the docblock on handler()
  * for why). The admitted case is a normal in-process call.
  *
@@ -39,7 +39,7 @@ class RequireLoginTest extends ZeroTestCase
 
     protected function tearDown(): void
     {
-        $prop = new \ReflectionProperty(User::class, 'current');
+        $prop = new \ReflectionProperty(\Zero\Core\Session::class, 'user');
         $prop->setAccessible(true);
         $prop->setValue(null, null);
 
@@ -147,9 +147,9 @@ class RequireLoginTest extends ZeroTestCase
     /**
      * The behaviour change: before this change, a session with a user_id but
      * verified=0 passed the old `isset($_SESSION['user_id'])` check and was
-     * admitted, even though User::isLoggedIn() already said no. That is the
+     * admitted, even though Session::isLoggedIn() already said no. That is the
      * exact shape AllowWithToken::handler() can produce, since it calls
-     * User::establish() without checking verified. Gating on isLoggedIn()
+     * Session::establish() without checking verified. Gating on isLoggedIn()
      * closes that gap — this must deny.
      */
     public function testDeniesSessionWithUserIdAndEmailButUnverified(): void
@@ -304,7 +304,7 @@ class RequireLoginTest extends ZeroTestCase
     /* ── In-process sanity check of the same predicate handler() now uses ── */
 
     /**
-     * handler() is documented to call User::isLoggedIn() rather than
+     * handler() is documented to call Session::isLoggedIn() rather than
      * reimplement it. This confirms handler()'s own decision — read via
      * $approved, without going through the redirect — matches
      * isLoggedIn()'s answer for the admitted case, in-process where a
@@ -317,7 +317,7 @@ class RequireLoginTest extends ZeroTestCase
         }
         $this->loginUser(['verified' => 1]);
 
-        $this->assertTrue(User::isLoggedIn());
+        $this->assertTrue(Session::isLoggedIn());
 
         $attr = new RequireLogin();
         $this->assertTrue($attr->handler());

@@ -158,15 +158,29 @@ and what to do if the `method` called does not exist (throw 404 page, automatica
     `Zero\Entity` — for models that want a real schema with real constraints.
 
 - **User.php**
-    A site user: the row gateway for `users`, the profile store, and the session facade in one
-    class. `establish()` is the single writer of the login session and `logout()` the single
-    teardown. See `modules/Auth/CLAUDE.md` for the session contract.
+    A site user: the row gateway for `users`, the user's settings and profile store, and what
+    the user may do (`can()`, `grant()`, `groups()`). Nothing in it reads the session.
 
-- **GroupPermission.php**
-    Reusable group-based permission handler for per-row sharing — owner check plus group
-    membership, with read/update/delete granularity. Used by Notes, Notebook, Kanban and Lists.
-    Distinct from the `allow.*` capability keys that `#[RequirePermission]` gates on.
-    See `GROUP_PERMISSIONS.md`.
+- **Session.php**
+    Who is making this request: `userId()`, `user()`, `isLoggedIn()`, `can()`. `establish()` is
+    the single writer of the login session and `end()` the single teardown. See
+    `modules/Auth/CLAUDE.md` for the session contract.
+
+- **Holder.php**, **HoldsCapabilities.php**
+    A holder is something a permission is granted to. `User` and `Group` are the two holders
+    and share the capability methods in the trait.
+
+- **Group.php**
+    A user group: the row gateway for `user_group` and the group's members. The only code that
+    reads or writes the `user_group` and `user_group_member` tables. Modules ask it for a user's
+    groups; the Admin module's group screens edit groups through it.
+    See `PERMISSIONS.md`.
+
+- **Permission.php**
+    Who may do what. The only code that reads or writes the `permission` table. Per-item
+    sharing: grants go to a group or a user under a `{module}.{entity}` key. Capabilities:
+    the `allow.*` keys that `#[RequirePermission]` gates on and a holder's `can()` reads. See
+    `PERMISSIONS.md`.
 
 ## Auth and security
 

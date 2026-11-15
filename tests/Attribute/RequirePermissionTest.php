@@ -5,7 +5,9 @@ namespace Zero\Tests\Core\Attribute;
 use Zero\Tests\Core\ZeroTestCase;
 use Zero\Core\Attribute\RequirePermission;
 use Zero\Core\User;
+use Zero\Core\Session;
 use Zero\Core\Database;
+use Zero\Core\Group;
 use Zero\Core\Request;
 use Zero\Core\HTTPError;
 use Zero\Core\Application;
@@ -14,9 +16,9 @@ use Zero\Core\Application;
  * Shaped exactly like modules/Receipts: a broad permission on the class, a
  * narrower one on an endpoint. Both must be held.
  */
-#[RequirePermission('zerotest.additive.classlevel')]
+#[RequirePermission('allow.zerotest.additive.classlevel')]
 class AdditivePermissionFixture {
-    #[RequirePermission('zerotest.additive.methodlevel')]
+    #[RequirePermission('allow.zerotest.additive.methodlevel')]
     public function guarded() {}
 }
 
@@ -24,7 +26,7 @@ class AdditivePermissionFixture {
  * RequirePermission::handler() (C rewrote this) had no test at all before
  * this file. handler() does two things: delegate the anonymous case to
  * RequireLogin::handler(), then loop over every required permission calling
- * User::hasPermission() — whose strict grant semantics are already covered
+ * Session::can() — whose strict grant semantics are already covered
  * one layer down by core/tests/UserPermissionTest.php. What THIS test covers
  * is the part unique to handler() itself: a logged-in user holding the
  * permission(s) is approved, and ALL of a list of required permissions must
@@ -40,6 +42,7 @@ class AdditivePermissionFixture {
 class RequirePermissionTest extends ZeroTestCase
 {
     private const E = 'zerotest-reqperm@example.invalid';
+    private const GROUP = 'zerotest-reqperm-group';
     private int $userId;
 
     protected function setUp(): void
@@ -60,13 +63,10 @@ class RequirePermissionTest extends ZeroTestCase
 
     private function cleanup(): void
     {
-        $db = Database::getConnection();
-        $stmt = $db->prepare("SELECT id FROM users WHERE email = ?");
-        $stmt->execute([self::E]);
-        foreach ($stmt->fetchAll(\PDO::FETCH_COLUMN) as $id) {
-            $db->prepare("DELETE FROM user_settings WHERE user_id = ?")->execute([$id]);
-        }
-        $db->prepare("DELETE FROM users WHERE email = ?")->execute([self::E]);
+        $this->removeTestRows(self::E, self::GROUP);
+        Database::getConnection()
+            ->prepare("DELETE FROM permission WHERE permission_key LIKE 'allow.zerotest%'")
+            ->execute();
         $_SESSION = [];
         // Static, so it survives the test that set it and would silently change
         // the branch taken by every test after it.
@@ -75,23 +75,20 @@ class RequirePermissionTest extends ZeroTestCase
     }
 
     /**
-     * Same convention as UserPermissionTest::resetCurrentMemo() — User::$current
+     * Same convention as UserPermissionTest::resetCurrentMemo() — Session::$user
      * is a per-process memo, not per-test, and must not survive between tests.
      */
     private function resetCurrentMemo(): void
     {
-        $prop = new \ReflectionProperty(User::class, 'current');
+        $prop = new \ReflectionProperty(\Zero\Core\Session::class, 'user');
         $prop->setAccessible(true);
         $prop->setValue(null, null);
     }
 
     private function grant(string $key): void
     {
-        Database::getConnection()->prepare(
-            "INSERT INTO user_settings (user_id, setting_key, setting_value)
-             VALUES (?, ?, '1')
-             ON DUPLICATE KEY UPDATE setting_value = '1'"
-        )->execute([$this->userId, $key]);
+        \Zero\Core\Permission::capability($key)
+            ->grant(0, User::find($this->userId), true, false, false, $this->userId);
     }
 
     private function login(): void
@@ -100,7 +97,7 @@ class RequirePermissionTest extends ZeroTestCase
             @session_start();
         }
         $this->loginUser(['user_id' => $this->userId]);
-        User::establish(User::find($this->userId));
+        Session::establish(User::find($this->userId));
     }
 
     public function testApprovesWhenSinglePermissionIsGranted(): void
@@ -159,6 +156,29 @@ class RequirePermissionTest extends ZeroTestCase
         $this->assertTrue((new RequirePermission('allow.zerotest_reqperm'))->handler());
     }
 
+    public function testAPermissionHeldThroughAnActiveGroupIsApproved(): void
+    {
+        $group = Group::create(['group_name' => self::GROUP, 'created_by' => $this->userId]);
+        $group->add($this->userId, 'member', $this->userId);
+        $group->grant('allow.zerotest_reqperm', $this->userId);
+        $this->login();
+        Request::$acceptsJSON = true;
+
+        $this->assertTrue((new RequirePermission('allow.zerotest_reqperm'))->handler());
+
+        // A deactivated group grants nothing. A new session models the next request.
+        $group->deactivate();
+        $this->resetCurrentMemo();
+        $this->login();
+
+        try {
+            (new RequirePermission('allow.zerotest_reqperm'))->handler();
+            $this->fail('a deactivated group must not satisfy the requirement');
+        } catch (HTTPError $e) {
+            $this->assertSame(403, $e->getCode());
+        }
+    }
+
     /*
      * Class-level and method-level RequirePermission UNION.
      *
@@ -176,7 +196,7 @@ class RequirePermissionTest extends ZeroTestCase
 
     public function testMethodLevelPermissionDoesNotDropTheClassLevelOne(): void
     {
-        $this->grant('zerotest.additive.methodlevel');   // NOT the class-level key
+        $this->grant('allow.zerotest.additive.methodlevel');   // NOT the class-level key
         $this->login();
         Request::$acceptsJSON = true;
 
@@ -185,15 +205,15 @@ class RequirePermissionTest extends ZeroTestCase
             $this->fail('the class-level permission must still be required');
         } catch (HTTPError $e) {
             $this->assertSame(403, $e->getCode());
-            $this->assertStringContainsString('zerotest.additive.classlevel', $e->detail ?? '',
+            $this->assertStringContainsString('allow.zerotest.additive.classlevel', $e->detail ?? '',
                 'the class-level key is what should be missing');
         }
     }
 
     public function testBothPermissionsTogetherAreApproved(): void
     {
-        $this->grant('zerotest.additive.classlevel');
-        $this->grant('zerotest.additive.methodlevel');
+        $this->grant('allow.zerotest.additive.classlevel');
+        $this->grant('allow.zerotest.additive.methodlevel');
         $this->login();
         Request::$acceptsJSON = true;
 
@@ -205,7 +225,7 @@ class RequirePermissionTest extends ZeroTestCase
     {
         // The mirror of the first case: holding only the class-level key must
         // not satisfy the method-level requirement either.
-        $this->grant('zerotest.additive.classlevel');
+        $this->grant('allow.zerotest.additive.classlevel');
         $this->login();
         Request::$acceptsJSON = true;
 
@@ -213,7 +233,7 @@ class RequirePermissionTest extends ZeroTestCase
             Application::checkAttributes(AdditivePermissionFixture::class, 'guarded');
             $this->fail('the method-level permission must still be required');
         } catch (HTTPError $e) {
-            $this->assertStringContainsString('zerotest.additive.methodlevel', $e->detail ?? '');
+            $this->assertStringContainsString('allow.zerotest.additive.methodlevel', $e->detail ?? '');
         }
     }
 

@@ -3,16 +3,15 @@
 namespace Zero\Core;
 
 /**
- * A site user — the row gateway for `users`, the profile store, and the
- * session facade, in one class.
+ * A site user — the row gateway for `users`, the user's settings and profile
+ * store, and what the user may do.
  *
- * The governing rule: instance methods are record data, statics are the
- * current request. `$user->name`, `->email`, `->save()`, `->profile()` and
- * friends answer for whichever row the instance was loaded or built from.
- * `isLoggedIn()`, `current()`, `establish()` and the rest answer for the
- * session only — none of them take a user to answer about, and none of them
- * ever will. That asymmetry is deliberate: it is what stops
- * `$someoneElse->isLoggedIn()` from ever compiling.
+ * Every method answers for whichever row the instance was loaded or built
+ * from: `$user->name`, `->email`, `->save()`, `->profile()`, `->can()`,
+ * `->groups()`. Nothing here reads the session. "Who is making this request"
+ * is Zero\Core\Session's question: Session::user(), Session::userId().
+ *
+ * A user is a Holder: permissions are granted to it (see Zero\Core\Permission).
  *
  * Replaces the EAV `user` entity type. `users.email` carries a real UNIQUE
  * KEY, so a duplicate raises a PDOException that Model::isDuplicateKey()
@@ -20,8 +19,10 @@ namespace Zero\Core;
  *
  * @author James Pope
  */
-class User extends Model
+class User extends Model implements Holder
 {
+    use HoldsCapabilities;
+
     protected static string $table = 'users';
 
     /** id/created_at/updated_at are owned by the DDL and deliberately absent. */
@@ -76,254 +77,68 @@ class User extends Model
         return parent::create($data);
     }
 
-    /**
-     * Check if user is logged in and verified
-     *
-     * @return bool
-     */
-    public static function isLoggedIn(): bool
+    /* ── Holder ── */
+
+    public function holderColumn(): string
     {
-        return isset($_SESSION['email']) &&
-               isset($_SESSION['verified']) &&
-               $_SESSION['verified'];
+        return 'user_id';
     }
 
-    /** Memoized per request. Null between requests and after logout(). */
-    private static ?self $current = null;
-
-    /**
-     * The user making this request, hydrated from $_SESSION — never a query.
-     *
-     * Safe to mutate and save(): Model::save() writes only columns explicitly
-     * set since load, so a session-built instance cannot clobber the row with
-     * a stale value. The session projection is exactly static::$columns plus
-     * the pk, so every mapped column is present and no accessor can return
-     * null merely because it "wasn't loaded".
-     *
-     * Checked with `instanceof static`, not `!== null`: $current is ONE
-     * storage slot shared by every subclass — private static properties are
-     * bound to the declaring class, not to static:: — but the return type is
-     * `?static`. Checking the type on read rebuilds instead of reusing
-     * whenever the memoized instance is not of the class actually being
-     * asked for.
-     *
-     * `save()` is safe, as described above — `delete()` is NOT. It is
-     * inherited from Model and compiles fine on the returned instance, but
-     * calling it here issues `DELETE FROM users WHERE id = <session user>`
-     * while leaving the session itself intact, silently orphaning it.
-     */
-    public static function current(): ?static
+    public function holderId(): int
     {
-        if (self::$current instanceof static) {
-            return self::$current;
-        }
-        $id = self::currentId();
-        if ($id === null) {
-            return null;
-        }
-        // name/email/pic fall back to the $_SESSION['user'] array — see the
-        // rationale on currentId() below. Note the array's key is full_name,
-        // not name (establish() builds it that way when no $identity is
-        // passed). verified deliberately has NO array fallback: the old
-        // isVerified() never had one either, and isLoggedIn() gates on the
-        // flat $_SESSION['verified'] alone, so adding one here would be a
-        // behaviour change, not a restoration.
-        return self::$current = new static([
-            'id'       => $id,
-            'name'     => $_SESSION['name']  ?? $_SESSION['user']['full_name'] ?? null,
-            'email'    => $_SESSION['email'] ?? $_SESSION['user']['email']     ?? null,
-            'verified' => $_SESSION['verified'] ?? 0,
-            'pic'      => $_SESSION['pic']   ?? $_SESSION['user']['pic']       ?? null,
-        ], true);
+        return (int) $this->id;
     }
 
     /**
-     * The current user's id, without building an object.
+     * The groups this user belongs to.
      *
-     * Kept separate from current() because 107 call sites want only the id or
-     * a logged-in check, and none of them should pay for object construction.
-     *
-     * Reads $_SESSION['user_id'] and NOTHING ELSE. There used to be a fallback
-     * to $_SESSION['user']['id'], for sessions built before establish()
-     * existed. It was a liability rather than a convenience: $_SESSION['user']
-     * holds the raw provider identity, and every adapter's format() puts the
-     * PROVIDER's user id under 'id' — a foreign number in the same shape as a
-     * local users.id. Auth::complete() wrote that array before its
-     * verified-email gate could throw, so a refused sign-in left a session
-     * whose currentId() answered with a provider-scoped id. That is the same
-     * bug class as the Notes bypass recorded in
-     * core/attribute/AUTH_GATE_CONSISTENCY.md, and the filter_var hardening
-     * below could not catch it: a GitHub or GitLab id is a perfectly valid
-     * positive integer.
-     *
-     * establish() is the single session writer and always sets user_id, so
-     * dropping the fallback costs only a one-time re-login for any session
-     * still in PHP's store from before it landed. Do NOT restore it.
-     *
-     * Validated with filter_var(), never a bare (int) cast: the cast
-     * silently turns 'abc' into 0, and 0 is not "nobody" — user_settings
-     * uses user_id = 0 as a deliberate registry of available setting keys
-     * (see modules/Admin/USER_SETTINGS_POLISH.md; production holds 8 such
-     * rows). A User instance built on id 0 would have can() read that
-     * registry as if it were a real user's permissions, and setSetting()
-     * would write into it. filter_var also rejects arrays outright, which
-     * matters because $_SESSION is attacker-influenced in shape as well as
-     * value. Rejecting anything that is not a clean positive integer
-     * degrades to "not logged in" — the safe direction — rather than
-     * coercing to a usable-looking id. Do NOT simplify this back to (int).
+     * @param bool $activeOnly False to include inactive groups too. Only a
+     *                         screen that manages groups wants those; an
+     *                         inactive group grants nothing.
+     * @return Group[] Each also carries role, added_at and member_count
      */
-    public static function currentId(): ?int
+    public function groups(bool $activeOnly = true): array
     {
-        $id = $_SESSION['user_id'] ?? null;
-        if ($id === null) {
-            return null;
-        }
-        $id = filter_var($id, FILTER_VALIDATE_INT);
-        return ($id !== false && $id > 0) ? $id : null;
+        return Group::forUser($this, $activeOnly);
     }
 
     /**
-     * Build the login session. THE single writer of the session contract
-     * documented in modules/Auth/CLAUDE.md.
+     * Delete the account and everything core keeps about it: its group
+     * memberships, the permissions granted to it, its settings and its
+     * profile. No foreign key does any of this.
      *
-     * Three callers: Auth::complete() (OAuth), the magic-link token consumer,
-     * and core/attribute/AllowWithToken.php (API tokens). Before this existed,
-     * complete() and AllowWithToken each built the session by hand and had
-     * already drifted apart — AllowWithToken set neither created_at nor
-     * login_provider and never rotated the session id.
+     * What modules keep about a user (tokens, content) is not core's to
+     * delete. The CALLER owns the transaction.
      *
-     * @param self             $user     The account being signed in.
-     * @param array|null       $identity Normalized provider identity, when the
-     *                                   caller has one richer than the stored
-     *                                   row (OAuth). Null builds it from the row.
+     * Do not call it on Session::user(): the row goes and the session stays.
      */
-    public static function establish(self $user, ?array $identity = null): void
+    public function delete(): void
     {
-        // Clear the per-request memo so a sign-in following an earlier
-        // current() call in the same request does not keep returning the
-        // previous user.
-        self::$current = null;
-
-        // Rotate at the privilege boundary. Application::__construct() only
-        // rotates on a timer, which leaves a session-fixation window at exactly
-        // the moment it matters. Guarded because CLI/test contexts have no session.
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_regenerate_id(true);
-        }
-
-        $_SESSION['user'] = $identity ?? [
-            'full_name' => $user->name,
-            'email'     => $user->email,
-            'verified'  => $user->verified,
-            'pic'       => $user->pic,
-            'id'        => $user->id,
-        ];
-
-        // OUR id, never the provider's. A supplied $identity comes from an
-        // adapter's format(), and all five put the provider's user id under
-        // 'id' — a GitHub or GitLab integer, a Discord snowflake. Left alone,
-        // the two branches of the assignment above disagree about what 'id'
-        // means: a local users.id when built from the row, a foreign one when
-        // the caller passed an identity. Overwriting here makes the key mean
-        // one thing.
-        //
-        // Set at the writer rather than stripped in the adapters: GoogleAdapter
-        // reads $this->user['id'] itself, for normalizeGoogleToken(), before it
-        // ever returns the identity.
-        $_SESSION['user']['id'] = $user->id;
-
-        $_SESSION['user_id']  = $user->id;
-        $_SESSION['name']     = $user->name;
-        $_SESSION['email']    = $user->email;
-        $_SESSION['verified'] = $user->verified;
-        $_SESSION['pic']      = $user->pic;
-
-        // Permissions/settings are no longer cached into the session here —
-        // User::can()/authLevel() read through to the database, memoized per
-        // instance, so a permission revoked mid-session denies on the very
-        // next request instead of waiting for logout. See
-        // core/attribute/RequirePermission.php and RequireAuthLevel.php.
-
-        $_SESSION['created_at'] = time();
-
-        // Non-expiring "probably a returning user" hint. NOT authentication —
-        // it holds a plaintext id and must never be trusted as proof of identity.
-        setcookie('unisolu_user_id', (string) $user->id, 2147483647, '/', '', true, true);
-    }
-
-    /**
-     * Tear down the login session. THE counterpart to establish(), and the only
-     * place session teardown should live.
-     *
-     * There were three implementations of this before, and all three were
-     * incomplete in different ways — the drift establish() was created to stop,
-     * repeated on the way out:
-     *
-     *   Auth::logout()       cleared $_SESSION and expired the cookie, but left
-     *                        self::$current set and passed only a path to
-     *                        setcookie(), dropping secure/httponly/samesite.
-     *   Jackpack::signout()  called session_destroy() alone: $_SESSION stayed
-     *                        populated for the rest of the request and the
-     *                        cookie was never cleared.
-     *   this method          cleared the memo and the session but never touched
-     *                        the cookie — and had ZERO callers, so the most
-     *                        correct of the three was the one nothing used.
-     *
-     * The cookie attributes come from session_get_cookie_params() rather than
-     * being written out by hand. A browser matches a replacement cookie on
-     * name + path + domain, so a mismatch on either leaves the original in
-     * place and the client keeps presenting a session id we destroyed.
-     *
-     * Safe to call with no active session (CLI, tests): it clears the memo and
-     * $_SESSION, then returns before the calls that would warn.
-     */
-    public static function logout(): void
-    {
-        self::$current = null;
-        $_SESSION      = [];
-
-        if (session_status() !== PHP_SESSION_ACTIVE) {
+        if (!$this->exists || !$this->hasUsableId()) {
             return;
         }
+        Group::removeFromAll($this);
+        Permission::forgetHolder($this);
+        Database::getConnection()->prepare("DELETE FROM user_settings WHERE user_id = ?")->execute([$this->id]);
+        $this->forgetProfile();
 
-        session_unset();
-
-        if (ini_get('session.use_cookies') && isset($_COOKIE[session_name()])) {
-            $p = session_get_cookie_params();
-            setcookie(session_name(), '', [
-                'expires'  => time() - 42000,
-                'path'     => $p['path'],
-                'domain'   => $p['domain'],
-                'secure'   => $p['secure'],
-                'httponly' => $p['httponly'],
-                'samesite' => $p['samesite'] ?: 'Lax',
-            ]);
-            unset($_COOKIE[session_name()]);
-        }
-
-        session_destroy();
-    }
-
-    /** @deprecated Use currentId(). Retained so this task does not touch 68 call sites. */
-    public static function getId()
-    {
-        return self::currentId();
+        parent::delete();
     }
 
     /** Settings for this user, loaded once per instance. */
     private ?array $settings = null;
 
     /**
-     * Guards settings()/setSetting() — the only two methods that touch
-     * user_settings by id — against a non-positive $this->id.
+     * Guards settings()/setSetting() and delete() —
+     * the methods here that touch a table by this id — against a
+     * non-positive $this->id.
      *
-     * currentId() rejects a bad session id before a User is ever built from
+     * Session::userId() rejects a bad session id before a User is ever built from
      * it, but tests (and anything else constructing a User directly, e.g.
      * `new User(['id' => 999000077], true)` in UserProfileTest) bypass that
-     * path entirely. id 0 in particular is not "no such user" here — it is
-     * the deliberate registry of available setting keys (see
-     * modules/Admin/USER_SETTINGS_POLISH.md); reading or writing through it
-     * would treat that registry as a real user's permissions. Negative ids
+     * path entirely. id 0 in particular is not "no such user" here — in the
+     * permission table it marks a row as a group's; reading or writing
+     * through it would treat every group's grants as one user's. Negative ids
      * are simply meaningless. One helper rather than a duplicated
      * conditional in each method.
      */
@@ -333,29 +148,10 @@ class User extends Model
     }
 
     /**
-     * Does this user hold $key?
-     *
-     * Reads through to the database, memoized per instance. That is one query
-     * per user per request — which is what buys mid-session revocation: a
-     * permission removed in the DB denies on the very next request, with no
-     * re-login, no TTL to tune and no flush API to build.
-     *
-     * Grant is a strict whitelist: '1', 1 and true. Everything else denies.
-     * The looser check this replaces treated 'false', 'off' and 'no' as grants.
-     */
-    public function can(string $key): bool
-    {
-        $value = $this->settings()[$key] ?? null;
-        return $value === '1' || $value === 1 || $value === true;
-    }
-
-    /**
      * All of this user's settings, keyed by setting_key. Memoized.
      *
-     * Public (not just used internally by can()/authLevel()): callers that
-     * need the whole map — the profile view splitting allow.* permissions
-     * from other config — read it here rather than the session cache that
-     * used to carry it.
+     * Settings are values (auth.level, index0.confirmations), stored in
+     * user_settings. Capabilities are not here: see can() and capabilities().
      */
     public function settings(): array
     {
@@ -363,8 +159,8 @@ class User extends Model
             return $this->settings;
         }
         if (!$this->hasUsableId()) {
-            // id 0 is the user_settings key registry, not a user; a negative
-            // id is meaningless. Neither gets a query — see hasUsableId().
+            // id 0 is not a user and a negative id is meaningless. Neither
+            // gets a query — see hasUsableId().
             return $this->settings = [];
         }
         try {
@@ -388,9 +184,8 @@ class User extends Model
     /**
      * auth.level as an integer.
      *
-     * It shares user_settings with the booleans but is a LEVEL, so it must not
-     * go through can(): under the strict whitelist a future auth.level of 2
-     * would read as denied.
+     * A setting, not a capability: it is a LEVEL, so it does not go through
+     * can().
      */
     public function authLevel(): int
     {
@@ -399,14 +194,15 @@ class User extends Model
 
     /**
      * Set one setting. $actorId records who did it; null means self-service.
+     * A capability is not a setting: use grant() and revoke().
      *
      * Drops the memo so a read later in the same request sees the write.
      */
     public function setSetting(string $key, $value, ?int $actorId = null): bool
     {
         if (!$this->hasUsableId()) {
-            // Refuse rather than write into the id-0 key registry (or under
-            // a meaningless negative id) — see hasUsableId().
+            // Refuse rather than write under id 0 (or a meaningless
+            // negative id) — see hasUsableId().
             return false;
         }
         try {
@@ -427,22 +223,6 @@ class User extends Model
             error_log("User::setSetting() failed: " . $e->getMessage());
             return false;
         }
-    }
-
-    /**
-     * Does the CURRENT user hold $key?
-     *
-     * A current-request question, so it stays static per the class rule. It is
-     * the only permission static that survives; getPermission(),
-     * getAllPermissions() and setPermission() had zero callers and are gone.
-     *
-     * Deliberately kept rather than replaced by can() at the call sites: this
-     * framework serves the live site from the working tree, so deleting a
-     * method with 12 live callers is an immediate outage.
-     */
-    public static function hasPermission(string $permission): bool
-    {
-        return static::current()?->can($permission) ?? false;
     }
 
     /*

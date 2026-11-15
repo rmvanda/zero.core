@@ -37,11 +37,11 @@ use \Zero\Core\Request;
  * public endpoint must gate per-method rather than at class level.
  *
  * Grants are read through to the database on every request —
- * User::hasPermission() -> User::current()->can() -> User::settings(), memoized
+ * Session::can() -> Session::user()->can() -> User::capabilities(), memoized
  * per instance for the life of the request and nowhere else. There is no
  * session cache; there used to be a $_SESSION['user_settings'] one, and it made
- * a revoked permission survive until logout. A value counts as granted only if
- * it is strictly '1', 1 or true, and any lookup failure denies.
+ * a revoked permission survive until logout. A capability is granted by a row in
+ * `permission` (see Zero\Core\Permission), and any lookup failure denies.
  *
  * NOTE for classes using __call(): Application resolves attributes against the
  * URL endpoint name, and a __call-dispatched endpoint has no ReflectionMethod
@@ -122,11 +122,11 @@ class RequirePermission {
         // undefined-key warning, so it is safe here whatever the session holds.
         // (It used to also fall back to $_SESSION['user']['id']; that fallback
         // is gone — it read the PROVIDER's id, not ours. See core/User.php.)
-        $userId = \Zero\Core\User::currentId();
+        $userId = \Zero\Core\Session::userId();
 
         // Check each required permission
         foreach ($this->permissions as $permission) {
-            if (!\Zero\Core\User::hasPermission($permission)) {
+            if (!\Zero\Core\Session::can($permission)) {
                 Console::warn("RequirePermission attribute blocked request: user {$userId} missing permission '{$permission}'");
                 $this->deny($permission);
             }

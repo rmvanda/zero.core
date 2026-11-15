@@ -164,7 +164,7 @@ See `core/ADMIN_ASSETS.md` for how inline loading works and the filename-matchin
 ## Debugging
 
 - `var_dump($this->getAdminModules())` in `Admin::index()` to inspect discovery
-- `var_dump(User::hasPermission('allow.admin'))` / `User::getAuthLevel()` to check permission state
+- `var_dump(Session::can('allow.admin'))` / `User::getAuthLevel()` to check permission state
 - Test URLs: `/admin` (dashboard), `/admin/{module}` (module admin), `/admin/invalid` (404)
 
 ---

@@ -110,7 +110,7 @@ objection. They are repetitive. Almost none of it is login-*branching*:
 | Pattern | Sites | A login branch? |
 |---|---|---|
 | Resolve → compare `user_id` → reject | Paste ×3, TheButton ×6 | No — that is `#[RequireOwnership]` |
-| `$userId = User::getId();` at method top | Ttrpg ×13, TheButton ×6 | No — inside `#[RequireLogin]`, login is guaranteed |
+| `$userId = Session::userId();` at method top | Ttrpg ×13, TheButton ×6 | No — inside `#[RequireLogin]`, login is guaranteed |
 | `pageTitle` / `activeSection` preamble | Ttrpg ×8 | No — per-endpoint constants |
 | **Actual login-state branch** | **Paste ×4, TheButton ×3, Ttrpg ×1** | Yes |
 
@@ -133,7 +133,7 @@ constructor already solves it better. The class-level form of the attribute
 buys exactly one thing a constructor line does not — per-endpoint opt-out —
 and none of these three classes wants one.
 
-Ttrpg's 13 `$userId = User::getId();` lines deserve a specific note, since they
+Ttrpg's 13 `$userId = Session::userId();` lines deserve a specific note, since they
 look like the strongest case: they assign a **local**, which a callback cannot
 set. Converting them would mean rewriting every downstream use as
 `$this->userId` first — at which point the constructor does it again for free.
@@ -154,7 +154,7 @@ call cannot do.
    and `AdminResponse::routeToModuleAdmin()` — so the instance has to become a
    parameter and every dispatcher must pass its own.
 4. Callback signature `f(bool $isLoggedIn): void`, reading the flag from
-   `User::isLoggedIn()` — the same predicate `#[RequireLogin]` gates on, so the
+   `Session::isLoggedIn()` — the same predicate `#[RequireLogin]` gates on, so the
    two can never drift.
 5. Document that it must be declared **after** `#[Sanitize]`, and why.
 6. Tests: that the callback runs, that it runs with the right `$isLoggedIn` for

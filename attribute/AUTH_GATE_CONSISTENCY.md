@@ -7,7 +7,7 @@
 
 ## Why this exists
 
-Someone noticed that `modules/TheButton/TheButton.php` calls `User::isLoggedIn()` **13 times**
+Someone noticed that `modules/TheButton/TheButton.php` calls `Session::isLoggedIn()` **13 times**
 inside a class already carrying `#[RequireLogin]`, and reasonably concluded those calls can never
 return false — dead code to be deleted.
 
@@ -46,7 +46,7 @@ stricter**. It additionally demanded a verified email.
 Yes, by design; no, by the data of the day.
 
 `core/attribute/AllowWithToken.php:94-101` loads the token's owner and calls
-`User::establish($user)` **without checking `verified`**. `establish()` writes
+`Session::establish($user)` **without checking `verified`**. `establish()` writes
 `$_SESSION['verified'] = $user->verified`, so an API token belonging to an unverified account
 produces exactly the second row of that table: `#[RequireLogin]` passes, `isLoggedIn()` denies.
 
@@ -133,7 +133,7 @@ is no attribute behind it. Get one wrong and the endpoint is open.
 
 That is not hypothetical. `modules/Notes/Notes.php` had a **live authentication bypass** on
 2026-08-16, introduced by migrating its eight `isset($_SESSION['user_id'])` gates to
-`User::currentId() !== null`. `currentId()` falls back to `$_SESSION['user']['id']`, which
+`Session::userId() !== null`. `currentId()` falls back to `$_SESSION['user']['id']`, which
 `modules/Auth/Auth.php:155` writes *before* `enforceVerifiedEmail()` at `:164` can throw — so an
 ordinary OAuth attempt with an unverified provider email left a session that passed all eight
 gates with a provider-controlled id. Fixed by gating on `isLoggedIn()` instead (`ff39479`), and
@@ -206,7 +206,7 @@ traffic must not carry a class-level `RequireLogin`.**
 The file this audit called highest-risk, on the grounds that it matched `Notes.php` exactly: no
 attribute, 8 hand-rolled checks. **No bypass.** All four gates — `edit`, `update`, `delete`,
 `mine` — were correct; they were simply written by hand. They are now `#[RequireLogin]`, and
-every `$_SESSION['user_id']` read went to `User::currentId()` / `User::isLoggedIn()`. The only
+every `$_SESSION['user_id']` read went to `Session::userId()` / `Session::isLoggedIn()`. The only
 `$_SESSION` left in the file is `paste_verified`, which is per-paste password state, not identity.
 
 Three unrelated bugs surfaced while reading it, all fixed:
@@ -254,7 +254,7 @@ Roughly in order of value.
    already had a bypass.~~ **Done** — no bypass; see "Paste, examined in full" above.
    `AccessRequest` (6 checks), `Auth` (3) and `Thingiverse` (1) are what remain.
 4. ~~**Decide what `#[RequireLogin]` should mean** and write it down.~~ **Done** — it means
-   `User::isLoggedIn()`: a fully established session for a verified account. Written down in
+   `Session::isLoggedIn()`: a fully established session for a verified account. Written down in
    `docs/attributes/RequireLogin.md` and `docs/ATTRIBUTES.md`.
 5. **Make `AllowWithToken` refuse an unverified owner.** No longer a bypass — the gate catches it
    — but establishing a session it will not honour is still wrong.
@@ -263,12 +263,12 @@ Roughly in order of value.
 
 ## The third gate: `RequireAuthLevel`
 
-This document unified `#[RequireLogin]` and `User::isLoggedIn()`, and `RequirePermission` is
+This document unified `#[RequireLogin]` and `Session::isLoggedIn()`, and `RequirePermission` is
 already covered because `RequirePermission::handler():46` opens by delegating to
 `(new RequireLogin())->handler()` — one predicate, three attributes.
 
 **`RequireAuthLevel` is the exception, and it is now shelved** (2026-08-16). It does not
-delegate: it checks `session_status()` then `User::current()?->authLevel()`, which reads
+delegate: it checks `session_status()` then `Session::user()?->authLevel()`, which reads
 `user_settings['auth.level']` and never touches `users.verified`. So it is the one gate an
 unverified session can still pass.
 
@@ -317,5 +317,5 @@ simply calls the second one):
 php -r 'require "core/tests/bootstrap.php";
   $_SESSION = ["user_id"=>42, "email"=>"a@x.invalid", "verified"=>0];
   var_dump(isset($_SESSION["user_id"]));            // old RequireLogin: true
-  var_dump(\Zero\Core\User::isLoggedIn());          // isLoggedIn:       false'
+  var_dump(\Zero\Core\Session::isLoggedIn());          // isLoggedIn:       false'
 ```
