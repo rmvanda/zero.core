@@ -32,6 +32,7 @@ class Modules
     private static array $roots = [];
     private static ?string $iniFile = null;
     private static ?array $all = null;
+    private static ?array $listing = null;
     private static ?array $ini = null;
 
     /**
@@ -41,13 +42,18 @@ class Modules
     public static function configure(array $roots, ?string $iniFile): void
     {
         self::$roots = [];
+        $real = [];
         foreach ($roots as $root) {
-            if (is_dir($root)) {
+            // A root that is the same folder as an earlier one (a symlink to
+            // it) would clash with itself, so it is dropped.
+            if (is_dir($root) && !in_array($path = realpath($root), $real, true)) {
+                $real[] = $path;
                 self::$roots[] = rtrim($root, '/') . '/';
             }
         }
         self::$iniFile = $iniFile;
         self::$all = null;
+        self::$listing = null;
         self::$ini = null;
     }
 
@@ -65,11 +71,9 @@ class Modules
         }
 
         $found = [];
-        foreach (self::$roots as $root) {
-            foreach (self::entries($root) as $entry) {
-                if (ctype_upper($entry[0]) && !isset($found[$entry])) {
-                    $found[$entry] = $root . $entry . '/';
-                }
+        foreach (self::listing() as [$root, $entry]) {
+            if (ctype_upper($entry[0]) && !isset($found[$entry])) {
+                $found[$entry] = $root . $entry . '/';
             }
         }
 
@@ -171,25 +175,25 @@ class Modules
     }
 
     /**
-     * Throw when two roots hold the same module name, compared
-     * case-insensitively. The message names both paths.
+     * Throw when two roots hold the same module name, compared the way path()
+     * compares (case-insensitive, hyphens ignored). The message names both
+     * paths. Reads the cached listing.
      */
     public static function assertNoClash(): void
     {
         $seen = [];
-        foreach (self::$roots as $root) {
-            foreach (self::entries($root) as $entry) {
-                $key = strtolower($entry);
-                if (isset($seen[$key])) {
-                    if (ctype_upper($entry[0]) || ctype_upper(basename($seen[$key])[0])) {
-                        throw new \RuntimeException(
-                            "Module name clash: {$seen[$key]} and {$root}{$entry}/ are the same module name"
-                        );
-                    }
-                    continue;
+        foreach (self::listing() as [$root, $entry]) {
+            $key = self::fold($entry);
+            if (isset($seen[$key])) {
+                [$first, $firstEntry] = $seen[$key];
+                if (ctype_upper($entry[0]) || ctype_upper($firstEntry[0])) {
+                    throw new \RuntimeException(
+                        "Module name clash: {$first}{$firstEntry}/ and {$root}{$entry}/ are the same module name"
+                    );
                 }
-                $seen[$key] = $root . $entry . '/';
+                continue;
             }
+            $seen[$key] = [$root, $entry];
         }
     }
 
@@ -202,22 +206,141 @@ class Modules
     }
 
     /**
-     * Remove {webRoot}/assets/{module} symlinks that belong to a module that
-     * is not enabled. A real directory, or the link of an enabled module,
-     * stays.
+     * The folder (trailing slash) of a module that exists and is switched
+     * on, or null. The one rule every "may this module be used" lookup shares.
      */
-    public static function dropDisabledAssetLinks(string $webRoot): void
+    public static function routablePath(string $name): ?string
     {
-        $assets = rtrim($webRoot, '/') . '/assets/';
-        foreach (array_keys(self::all()) as $name) {
-            if (self::enabled((string) $name)) {
-                continue;
-            }
-            $link = $assets . strtolower((string) $name);
-            if (is_link($link)) {
-                unlink($link);
+        return self::routable($name) ? self::path($name) : null;
+    }
+
+    /**
+     * The app/modules.ini path handed to configure(), or null.
+     */
+    public static function iniFile(): ?string
+    {
+        return self::$iniFile;
+    }
+
+    /**
+     * The real paths (trailing slash, sorted) of every module that is not
+     * enabled. A module whose real path is not strictly inside one of the
+     * roots (a folder that is a symlink to a parent directory) is ignored, so
+     * it cannot make the walk drop every link.
+     *
+     * @return string[]
+     */
+    public static function disabledPaths(): array
+    {
+        $rootReals = [];
+        foreach (self::$roots as $root) {
+            if (($real = realpath($root)) !== false) {
+                $rootReals[] = rtrim($real, '/') . '/';
             }
         }
+
+        $disabled = [];
+        foreach (self::all() as $name => $dir) {
+            if (self::enabled((string) $name) || ($real = realpath($dir)) === false) {
+                continue;
+            }
+            $real = rtrim($real, '/') . '/';
+            foreach ($rootReals as $rootReal) {
+                if ($real !== $rootReal && str_starts_with($real, $rootReal)) {
+                    $disabled[] = $real;
+                    break;
+                }
+            }
+        }
+        sort($disabled);
+
+        return $disabled;
+    }
+
+    /**
+     * Remove the public asset links of modules that are not enabled: every
+     * symlink under {webRoot}/assets/, and under each real directory there
+     * (one level), whose real path lies inside a disabled module's folder.
+     * That covers links of any spelling (assets/networkMap) and links into a
+     * submodule (assets/hexmap, assets/test/route). Only symlinks are looked
+     * at or removed: a real directory, a link into an enabled module and a
+     * link pointing outside every module stay. A link another request removed
+     * first is not an error. Returns false when a link that had to go could
+     * not be removed.
+     */
+    public static function dropDisabledAssetLinks(string $webRoot): bool
+    {
+        $disabled = self::disabledPaths();
+        if ($disabled === []) {
+            return true;
+        }
+
+        $ok = true;
+        $assets = rtrim($webRoot, '/') . '/assets/';
+        foreach (self::entries($assets, true) as $entry) {
+            $path = $assets . $entry;
+            if (is_link($path)) {
+                $ok = self::dropLinkInto($path, $disabled) && $ok;
+            } elseif (is_dir($path)) {
+                foreach (self::entries($path . '/', true) as $inner) {
+                    if (is_link($path . '/' . $inner)) {
+                        $ok = self::dropLinkInto($path . '/' . $inner, $disabled) && $ok;
+                    }
+                }
+            }
+        }
+
+        return $ok;
+    }
+
+    /**
+     * Run dropDisabledAssetLinks() when the set of disabled modules is not the
+     * one the marker file recorded (a hash of the sorted real paths). The
+     * marker is written only when every removal succeeded; when it cannot be
+     * written, or a removal failed, the cleanup runs again next time. An
+     * empty set with no marker means nothing to do; an empty set with a marker
+     * of a former set rewrites the marker. Returns whether the cleanup ran.
+     */
+    public static function dropDisabledAssetLinksWhenChanged(string $marker, string $webRoot): bool
+    {
+        $disabled = self::disabledPaths();
+        $state = $disabled === [] ? 'none' : sha1(implode("\n", $disabled));
+        $known = is_file($marker) ? trim((string) @file_get_contents($marker)) : null;
+
+        if ($known === $state || ($known === null && $disabled === [])) {
+            return false;
+        }
+
+        $ok = $disabled === [] ? true : self::dropDisabledAssetLinks($webRoot);
+        if ($ok) {
+            $dir = dirname($marker);
+            if (is_dir($dir) || @mkdir($dir, 0775, true)) {
+                @file_put_contents($marker, $state);
+            }
+        }
+
+        return $disabled !== [];
+    }
+
+    /**
+     * Unlink a symlink whose real path is inside one of the folders (each
+     * with a trailing slash, so Foo does not match FooBar). False when the
+     * link had to go and could not be removed.
+     */
+    private static function dropLinkInto(string $link, array $folders): bool
+    {
+        $target = realpath($link);
+        if ($target === false) {
+            return true;
+        }
+        $target = rtrim($target, '/') . '/';
+        foreach ($folders as $folder) {
+            if (str_starts_with($target, $folder)) {
+                return @unlink($link) || !is_link($link);
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -229,15 +352,37 @@ class Modules
     }
 
     /**
-     * Names of the sub-directories of a root.
+     * Every sub-directory of every root as [root, name], in root priority
+     * order, scanned once per configure().
+     *
+     * @return array<int,array{0:string,1:string}>
+     */
+    private static function listing(): array
+    {
+        if (self::$listing !== null) {
+            return self::$listing;
+        }
+
+        $listing = [];
+        foreach (self::$roots as $root) {
+            foreach (self::entries($root) as $entry) {
+                $listing[] = [$root, $entry];
+            }
+        }
+
+        return self::$listing = $listing;
+    }
+
+    /**
+     * Names of the sub-directories of a root (and, with $links, its symlinks).
      *
      * @return string[]
      */
-    private static function entries(string $root): array
+    private static function entries(string $root, bool $links = false): array
     {
         $entries = [];
-        foreach (scandir($root) ?: [] as $entry) {
-            if ($entry[0] !== '.' && is_dir($root . $entry)) {
+        foreach (@scandir($root) ?: [] as $entry) {
+            if ($entry[0] !== '.' && ((is_dir($root . $entry)) || ($links && is_link($root . $entry)))) {
                 $entries[] = $entry;
             }
         }

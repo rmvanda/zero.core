@@ -3,19 +3,27 @@
 namespace Zero\Tests\Core;
 
 use PHPUnit\Framework\TestCase;
-use Zero\Core\AdminResponse;
+use Zero\Core\Modules;
 
 /**
- * AdminResponse finds a module's real directory whatever casing or hyphenation
- * the caller used for its name.
+ * Admin asset loaders find a module's real directory name through
+ * Modules::name(), whatever casing or hyphenation the caller used.
  */
 class AdminAssetResolverTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        Modules::configure([dirname(__DIR__, 2) . '/modules/'], null);
+    }
+
+    protected function tearDown(): void
+    {
+        zeroTestConfigureModules();
+    }
+
     private function resolve(string $name): ?string
     {
-        $method = new \ReflectionMethod(AdminResponse::class, 'resolveModuleDir');
-
-        return $method->invoke(null, $name, dirname(__DIR__, 2) . '/modules/');
+        return Modules::name($name);
     }
 
     public function testMultiWordModuleResolvesInAnyForm(): void

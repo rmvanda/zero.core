@@ -2,7 +2,7 @@
 
 Pluggable admin system for the Zero Framework.
 
-- **Auto-Discovery**: Modules with an `{Module}Admin` class in `Admin/` appear on the admin dashboard when enabled and the user holds the card's `permissions`
+- **Auto-Discovery**: Modules with an `{Module}Admin` class in `Admin/` appear on the admin dashboard when the module is switched on in `app/modules.ini` (or on by default) and the user holds the card's `permissions`
 - **Secure by Default**: `allow.admin` permission enforced at base class + framework layers
 - **Inline Assets**: Admin CSS/JS served inline; never exposed as public URLs (see `ADMIN_ASSETS.md`)
 - **Flexible Routing**: Clean URLs with automatic controller routing
@@ -36,7 +36,7 @@ A module is an admin offering when the class `Zero\Module\{Module}\Admin\{Module
 
 ### Cards respect permissions
 
-`getAdminModules()` lists a card only when `enabled` is not false and the logged-in user holds every key in the `permissions` array of the offering's `admin-config.php` (default `['allow.admin']`), checked with `Session::can()`. `permissions` lists the same keys that gate the offering class.
+`getAdminModules()` lists a card only when `Modules::enabled()` is true for the module and the logged-in user holds every key in the `permissions` array of the offering's `admin-config.php` (default `['allow.admin']`), checked with `Session::can()`. `permissions` lists the same keys that gate the offering class.
 
 ### Routable methods
 
@@ -75,7 +75,7 @@ Main admin hub. Extends `AdminResponse`. Handles user and group management, and 
 /admin/links/edit/5       → Admin::__call('links', ...) → LinksAdmin::edit(5)
 ```
 
-The `/admin` dashboard has two sections. "Users and access" holds the Users, Groups and Firewall cards, the only links written into the view. "Modules" holds one card per offering that `getAdminModules()` discovers (an offering whose `admin-config.php` sets `'enabled' => false` is left out). A module's feature screens appear there with no change to Admin.
+The `/admin` dashboard has two sections. "Users and access" holds the Users, Groups and Firewall cards, the only links written into the view. "Modules" holds one card per offering that `getAdminModules()` discovers (a module that is switched off has no card). A module's feature screens appear there with no change to Admin.
 
 ---
 
@@ -123,7 +123,7 @@ Standard CRUD/pagination/filtering patterns are just regular Zero controller pat
 
 ## Discovery Mechanism
 
-`AdminResponse::getAdminModules()` scans `MODULE_PATH/*/Admin`, keeps a module whose class `Zero\Module\{X}\Admin\{X}Admin` exists (a class that throws while loading is logged with `Console::warn()` and left out), reads optional `admin-config.php` for metadata, applies defaults, keeps the enabled modules whose every `permissions` key the user holds, and sorts by `order`.
+`AdminResponse::getAdminModules()` walks `Modules::all()` (every module folder in every root), keeps the modules that are switched on (`Modules::enabled()`) and have an `Admin/` folder, keeps a module whose class `Zero\Module\{X}\Admin\{X}Admin` exists (a class that throws while loading is logged with `Console::warn()` and left out), reads optional `admin-config.php` for metadata, applies defaults, keeps the modules whose every `permissions` key the user holds, and sorts by `Modules::order()` (the `[order]` section of `app/modules.ini`; modules without an order come last, then by name). `Admin::__call` checks `Application::isModuleName()` and `Modules::routable()` before any `class_exists()`, so `/admin/{module}` for a module that is switched off never loads its admin file and falls through exactly as a module with no offering; `routeToModuleAdmin()` repeats the check and answers 404.
 
 **admin-config.php format:**
 
@@ -133,13 +133,11 @@ return [
     'label' => 'Manage Links',              // Display name
     'icon' => 'link',                       // Material Symbol name
     'description' => 'Manage shared links',
-    'order' => 10,                          // Lower = first
-    'enabled' => true,
     'permissions' => ['allow.admin']
 ];
 ```
 
-**Defaults (if missing):** `label="{Module} Management"`, `icon="settings"`, `order=999`, `enabled=true`, `permissions=['allow.admin']`.
+**Defaults (if missing):** `label="{Module} Management"`, `icon="settings"`, `permissions=['allow.admin']`. Whether the module is on, and the order of its card, are set in `app/modules.ini`, never in `admin-config.php`.
 
 ---
 

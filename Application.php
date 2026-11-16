@@ -16,6 +16,8 @@ function pprint($m){
     print_wrap($m,"pre"); 
 }
 
+require_once __DIR__ . "/Modules.php";
+
 class Application {
 
     /** Loaded plugin instances */
@@ -78,39 +80,49 @@ class Application {
      * to pull and define constants from. 
      */ 
     public function defineConstants(?array $key = null){
+        // Wording first: the site's app/strings/*.ini. A key defined here is
+        // not defined again by a config file. The fallbacks for SITE_NAME and
+        // SITE_SHORT_NAME come after the config files are read.
+        Strings::loadSite(ZERO_ROOT . 'app/strings/');
         // Since the shift has been towards modules, this should 
         // be able to change in some way that respects the modules a bit more. 
         // Also, see the modular-respective block before the return
-        $inis = array_diff(scandir(ZERO_ROOT."app/config/"),['.','..']); 
-        foreach ($inis as $ini) {
-            $inifile   = ZERO_ROOT."app/config/".$ini; 
+        // A config file the site does not have is read from core/skeleton/config/.
+        foreach (self::configFiles(ZERO_ROOT."app/config/", __DIR__."/skeleton/config/") as $inifile) {
             $constants = parse_ini_file($inifile, false, INI_SCANNER_RAW); 
             foreach ($constants as $constant => $value) {
                 // if we're defining paths, auto-append the ZERO_ROOT
-                define($constant,($ini == "paths.ini"?ZERO_ROOT:"").$value);
+                self::defineOnce($constant,self::configValue($inifile,$value),$inifile);
             }
         }
+        Strings::defineSiteFallbacks();
         if ($key) {
             foreach ($key as $k => $v) {
                 define($k, $v);
             }
         }
+        // The module's own constants. A module that is off or does not exist
+        // contributes none.
         //$mp for module path
         //$mf for module folder
-        if(file_exists($inifile=($mp=MODULE_PATH.Request::$Module)."/config.ini")){
+        $mp = self::moduleConfigDir(Request::$Module);
+        if($mp !== null){
+            Strings::loadModule(Request::$Module);
+        }
+        if($mp !== null && file_exists($inifile=$mp."config.ini")){
             $constants = parse_ini_file($inifile); 
             foreach($constants as $constant=>$value){
-                define($constant,$value) ;    
+                self::defineOnce($constant,$value,$inifile) ;    
             }
         }
-        if(file_exists($mf=$mp."/config/")){
+        if($mp !== null && file_exists($mf=$mp."config/")){
             $inis = array_diff(scandir($mf),['.','..']); 
             foreach ($inis as $ini) {
                 $inifile   = $mf.$ini; 
                 $constants = parse_ini_file($inifile, false, INI_SCANNER_RAW); 
                 foreach ($constants as $constant => $value) {
                     // if we're defining paths, auto-append the ZERO_ROOT
-                    define($constant,$value);
+                    self::defineOnce($constant,$value,$inifile);
                 }
             }
         }
@@ -200,6 +212,16 @@ class Application {
      */
     public function run($module, $endpoint, $args){
         $this->banmotherfuckers(); 
+
+        // Two modules of one name in two folders is a configuration error, not
+        // a missing page: the request fails with a bare 500 and nothing else.
+        if (!self::checkModules(defined('WEB_ROOT') ? WEB_ROOT : null, ZERO_ROOT . 'storage/cache/modules-assets.marker')) {
+            http_response_code(500);
+            header('Content-Type: text/plain');
+            echo "Internal Server Error";
+            return;
+        }
+
         //Console::log("Module: $module Endpoint: $endpoint Args: ".print_r($args,true)); 
 
         if ($this->isModule($Module=ucfirst($module))) {
@@ -423,62 +445,247 @@ class Application {
     }
 
     /**
-     * autoloader for zero things that are NOT modules... see the isModule method
-     * for how modules are loaded. 
-     * 
+     * autoloader for every Zero class: core, lib, entity, app/lib and module
+     * classes (controllers, models, libs, submodules). classFile() says where
+     * a class lives; this loads it. Names outside the Zero\ namespaces belong
+     * to the other autoloaders.
+     *
      * This USED to be for loading modules too. 
      * TODO - maybe this isn't needed? or can be simplified further? 
      * TODO - deprecate the hell out of this. 
+     * (Now it loads module classes too, through classFile(); the notes above
+     * are the owner's, from when it was the "dumb" autoloader for non-modules.)
      */
     public static function autoloader($class){
-        $path = explode("\\", strtolower($class)); 
-        $step = explode("\\", $class);
-
-        $camel = array_pop($step); 
-        //$path[count($path)-1] = ucfirst($path[count($path)-1]?:$path[1])??""; 
-        $path[count($path)-1] = $camel; 
-
-        $psrPath=ROOT_PATH.implode(DIRECTORY_SEPARATOR,$path).".php";
-        if(file_exists($psrPath)){
-            return require_once($psrPath); 
+        $file = self::classFile($class);
+        if ($file !== null) {
+            return require_once($file);
             //return true; 
         }
 
-        Console::warn("Dumb autoloader Failed to load $class after looking in $psrPath");
-
-        // try another, simpler approach for module sub-classes: 
-        $check = str_replace("Zero", "zero", $class); 
-        $check = str_replace("Module", "modules", $check); 
-        $check = str_replace("Model", "model", $check); 
-        $check = str_replace("Lib", "lib", $check); 
-        $step  = explode("\\", $check); 
-        $newPath = ROOT_PATH.implode(DIRECTORY_SEPARATOR,$step).".php";
-
-        Console::debug("Atempting to load $class after looking in $newPath");
-
-        if(file_exists($newPath)){
-            return require_once($newPath); 
+        if (str_starts_with(ltrim($class, "\\"), "Zero\\")) {
+            Console::warn("Autoloader failed to place $class");
         }
 
-        Console::warn("STILL Failed to load $class after looking in $newPath");
-
         //echo "Failed to load $class after looking in $psrPath<br>"; 
-        return false; 
-    
+        //$path[count($path)-1] = ucfirst($path[count($path)-1]?:$path[1])??""; 
+        // (classFile() now computes the path these lines were about.)
+        return false;
     }
+
+    /**
+     * The file a class name maps to, or null when the namespace map has no
+     * such file. The map, in order:
+     *
+     *   Zero\Core\Attribute\  core/attribute/
+     *   Zero\Core\            core/
+     *   Zero\Lib\             lib/
+     *   Zero\Entity\          entity/
+     *   Zero\Aux\             aux/
+     *   Zero\App\Lib\        app/lib/
+     *   Zero\Module\{X}\...  the folder Modules::path(X) names
+     *
+     * The remaining namespace segments are folders. Each is tried as written,
+     * then as a submodule (module classes only: submodule/{Segment}/), then
+     * lowercased (Model -> model/, Lib -> lib/). The class of a submodule
+     * resolves under submodule/{Class}/ the same way.
+     *
+     * Every segment must be a PHP identifier, and the file found must lie
+     * inside the folder its rule names (a module's own folder for a module
+     * class); anything else is null. The framework root is the folder that
+     * holds core/, i.e. dirname(__DIR__): core/ sits directly inside the site
+     * root, and the site folder may carry any name.
+     */
+    public static function classFile(string $class): ?string
+    {
+        $class = ltrim($class, "\\");
+        if (!self::isQualifiedName($class)) {
+            return null;
+        }
+        $root  = dirname(__DIR__) . "/";
+
+        foreach ([
+            "Zero\\Core\\Attribute\\" => "core/attribute/",
+            "Zero\\Core\\"            => "core/",
+            "Zero\\Lib\\"             => "lib/",
+            "Zero\\Entity\\"          => "entity/",
+            "Zero\\Aux\\"             => "aux/",
+            "Zero\\App\\Lib\\"        => "app/lib/",
+        ] as $prefix => $folder) {
+            if (str_starts_with($class, $prefix)) {
+                return self::findIn($root . $folder, substr($class, strlen($prefix)), false);
+            }
+        }
+
+        if (str_starts_with($class, "Zero\\Module\\")) {
+            $rest = substr($class, strlen("Zero\\Module\\"));
+            $name = strstr($rest, "\\", true);
+            $module = $name === false ? $rest : $name;
+            $dir = Modules::path($module);
+            if ($dir === null) {
+                return null;
+            }
+            return self::findIn($dir, $name === false ? $module : substr($rest, strlen($name) + 1), true);
+        }
+
+        return null;
+    }
+
+    /**
+     * Whether every namespace segment of a class name is a PHP identifier.
+     */
+    public static function isQualifiedName(string $class): bool
+    {
+        return preg_match('/^[A-Za-z_\x80-\xff][A-Za-z0-9_\x80-\xff]*(\\\\[A-Za-z_\x80-\xff][A-Za-z0-9_\x80-\xff]*)*$/D', ltrim($class, "\\")) === 1;
+    }
+
+    /**
+     * Whether a URL's module name is one identifier: a URL names a
+     * controller, never a nested class or a path.
+     */
+    public static function isModuleName(string $name): bool
+    {
+        return preg_match('/^[A-Za-z_\x80-\xff][A-Za-z0-9_\x80-\xff]*$/D', $name) === 1;
+    }
+
+    /**
+     * Walk the namespace segments of $rest down from $base; the last one is
+     * the class, the rest are folders. The file must lie inside $base.
+     */
+    private static function findIn(string $base, string $rest, bool $submodules): ?string
+    {
+        $dir = $base;
+        $segments = explode("\\", $rest);
+        $class = array_pop($segments);
+
+        foreach ($segments as $segment) {
+            if (is_dir($next = $dir . $segment)) {
+                $dir = $next . "/";
+            } elseif ($submodules && is_dir($next = $dir . "submodule/" . $segment)) {
+                $dir = $next . "/";
+            } elseif (is_dir($next = $dir . strtolower($segment))) {
+                $dir = $next . "/";
+            } else {
+                return null;
+            }
+        }
+
+        if (is_file($file = $dir . $class . ".php")
+            || ($submodules && is_file($file = $dir . "submodule/" . $class . "/" . $class . ".php"))) {
+            $real = realpath($file);
+            $inside = realpath($base);
+            if ($real !== false && $inside !== false && str_starts_with($real, rtrim($inside, "/") . "/")) {
+                return $file;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The start-of-request check on the module folders. A name held by two
+     * roots is logged once through Console (the message names both paths and
+     * is never shown to a visitor) and false is returned. Otherwise a module
+     * that is switched off loses its public asset links (when a web root is
+     * given) and true is returned. The links are cleaned only when the set of
+     * disabled modules differs from the one the marker file recorded.
+     */
+    public static function checkModules(?string $webRoot, string $marker): bool
+    {
+        try {
+            Modules::assertNoClash();
+        } catch (\RuntimeException $e) {
+            Console::error($e->getMessage());
+            return false;
+        }
+        if ($webRoot !== null) {
+            Modules::dropDisabledAssetLinksWhenChanged($marker, $webRoot);
+        }
+        return true;
+    }
+
+    /**
+     * The module's directory (trailing slash) when the module exists and is
+     * switched on, otherwise null. Its config.ini and config/ are loaded from
+     * there; a module that is off contributes no constants.
+     */
+    public static function moduleConfigDir(string $module): ?string
+    {
+        return self::isModuleName($module) ? Modules::routablePath($module) : null;
+    }
+
+    /**
+     * The config files to read: every file in the site's config directory,
+     * then each file of core's skeleton config directory the site does not
+     * have. A site overrides a skeleton file by having one of the same name.
+     *
+     * @return string[] full paths
+     */
+    public static function configFiles(string $siteDir, string $skeletonDir): array
+    {
+        $files = [];
+        foreach (is_dir($siteDir) ? array_diff(scandir($siteDir), ['.', '..']) : [] as $name) {
+            $files[$name] = $siteDir . $name;
+        }
+        foreach (is_dir($skeletonDir) ? array_diff(scandir($skeletonDir), ['.', '..']) : [] as $name) {
+            $files[$name] ??= $skeletonDir . $name;
+        }
+        return array_values($files);
+    }
+
+    /**
+     * A config file's value as it is defined: the values of a file named
+     * paths.ini are paths and get ZERO_ROOT in front.
+     */
+    public static function configValue(string $file, mixed $value): mixed
+    {
+        return (basename($file) === 'paths.ini' ? ZERO_ROOT : '') . $value;
+    }
+
+    /**
+     * Define a constant from a config file unless something (a strings file,
+     * an earlier config file) already did; a site should not hold the same
+     * key in two places, so the repeat is named in the log.
+     */
+    private static function defineOnce(string $constant, mixed $value, string $file): void
+    {
+        if (!Strings::isConstantName($constant)) {
+            Console::warn("Constant name $constant in $file is not valid and is skipped");
+            return;
+        }
+        if (defined($constant)) {
+            Console::warn("Constant $constant from $file is already defined and keeps its value");
+            return;
+        }
+        define($constant, $value);
+    }
+
+    /**
+     * The controller file of a module that exists and is switched on, or null.
+     * A module that is off is answered exactly as one that does not exist.
+     */
+    public static function controllerFile(string $module): ?string
+    {
+        if (!self::isModuleName($module) || !Modules::routable($module)) {
+            return null;
+        }
+        return self::classFile("Zero\\Module\\" . (Modules::name($module) ?? $module));
+    }
+
     /** 
      * If a class if found in the MODULE_PATH *TODO: why isn't this using MODULE_PATH
-     * Then it loads it and returns true. 
+     * (It looks in the folder Modules::path() names, which covers every module
+     * root, and only for a module that is switched on.)
+     * If the module's controller class file exists and the module is on, load
+     * it and return true. Modules::path() says where the module lives. 
      * Doing this ensures the controller can't call things outside of the module path
      */
     private function isModule($module){
-        if(
-            file_exists($file=$a=ZERO_ROOT."modules/".$module."/".$module.".php")||
-            file_exists($file=$b=ZERO_ROOT."modules/".strtolower($module)."/".$module.".php")
-        ){
+        $file = self::controllerFile($module);
+        if ($file !== null) {
            return require_once $file;  
         } 
-        Console::warn("Could not find a $module module in $a or $b");
+        Console::warn("Could not find a $module module that is switched on in " . (Modules::path($module) ?? "any module folder"));
         return false; 
     }
 
@@ -491,6 +698,8 @@ class Application {
      * Finally, also loads the vendor autoload. 
      */
     public function registerAutoloaders(null|string|callable|array $autoloader = null){
+        // the autoloader asks Modules where a module lives
+        Modules::configure([MODULE_PATH, ZERO_ROOT . "core/modules/"], ZERO_ROOT . "app/modules.ini");
         spl_autoload_register("\Zero\Core\Application::autoloader"); 
         // if you want to add external autoloaders
         if ($autoloader) {

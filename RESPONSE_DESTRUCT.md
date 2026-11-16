@@ -25,9 +25,9 @@ with code review but no behavioural test — see `docs/superpowers/plans/2026-08
 defined in exactly one place:
 
 ```php
-// app/frontend/www/index.php:17-20
-define("ZERO_ROOT",   $root_path[0].$SiteName."/");
-define("ROOT_PATH",   $root_path[0]);
+// app/frontend/www/index.php
+define("ZERO_ROOT",   dirname(__DIR__, 3) . "/");
+define("ROOT_PATH",   dirname(ZERO_ROOT) . "/");
 define("VIEW_PATH",   ZERO_ROOT . "app/frontend/frame/");
 define("MODULE_PATH", ZERO_ROOT . "modules/");
 ```

@@ -21,6 +21,7 @@
 #       ├── app/                            (your app — git-initialized)
 #       │   ├── _config_templates/          (reference copies — don't edit)
 #       │   ├── config/                     (your config — edit these)
+#       │   ├── strings/                    (your wording — site.ini names the site)
 #       │   └── frontend/
 #       │       ├── frame/                  (head, header, footer, sideNav)
 #       │       └── www/                    (webroot: index.php, .htaccess, assets/)
@@ -90,6 +91,7 @@ mkdir -p "$SITE_DIR/zero/app"
 
 cp -r "$SKEL/frontend"          "$SITE_DIR/zero/app/frontend"
 cp -r "$SKEL/_config_templates" "$SITE_DIR/zero/app/_config_templates"
+cp -r "$SKEL/strings"           "$SITE_DIR/zero/app/strings"
 
 # Create editable config from templates
 mkdir -p "$SITE_DIR/zero/app/config"
@@ -129,7 +131,7 @@ ok "Configs written to etc/  (apache.conf, apache-ssl.conf, nginx.conf)"
 info "Configuring for ${BOLD}$DOMAIN${NC}..."
 sed -i "s|example.com|$DOMAIN|g"                          "$SITE_DIR/zero/app/config/config.ini"
 sed -i "s|/var/www/html/example.com/www|$SITE_DIR/www|g"  "$SITE_DIR/zero/app/config/config.ini"
-sed -i "s|My Zero App|$DOMAIN|g"                          "$SITE_DIR/zero/app/config/config.ini"
+sed -i "s|My Zero App|$DOMAIN|g"                          "$SITE_DIR/zero/app/strings/site.ini"
 ok "Config updated."
 
 # ─── Git init the app directory ──────────────────────────────────────

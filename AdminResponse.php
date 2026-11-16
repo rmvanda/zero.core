@@ -118,11 +118,12 @@ abstract class AdminResponse extends Module {
         ]));
 
         $loaded = [];
-        $adminDir = MODULE_PATH . 'Admin/assets/' . $type . '/';
+        $adminModuleDir = Modules::path('Admin');
+        $adminDir = $adminModuleDir === null ? null : $adminModuleDir . 'assets/' . $type . '/';
         $moduleDir = $this->moduleAssetDir . $type . '/';
 
         // Search admin assets dir first, then module-specific dir
-        foreach (array_unique([$adminDir, $moduleDir]) as $dir) {
+        foreach (array_unique(array_filter([$adminDir, $moduleDir])) as $dir) {
             if (!is_dir($dir)) continue;
             foreach (glob($dir . '*.' . $type) as $file) {
                 $filename = basename($file);
@@ -140,15 +141,16 @@ abstract class AdminResponse extends Module {
     /**
      * Discover all modules with admin capabilities
      *
-     * Scans the modules directory for directories containing an Admin subdirectory
-     * and lists a module only when Zero\Module\{X}\Admin\{X}Admin exists (the
-     * class Admin::__call routes to) and the logged-in user holds every key in
-     * the card's `permissions`. Loads optional admin-config.php for metadata
+     * Walks Modules::all() for modules with an Admin subdirectory and lists a
+     * module only when it is switched on (Modules::enabled()), Zero\Module\{X}\Admin\{X}Admin
+     * exists (the class Admin::__call routes to) and the logged-in user holds
+     * every key in the card's `permissions`. Loads optional admin-config.php
+     * for metadata. Cards are sorted by Modules::order(), modules without an
+     * order last, then by name.
      *
-     * @param string|null $root Directory holding the modules (defaults to MODULE_PATH)
      * @return array Array of admin module configurations
      */
-    protected function getAdminModules($root = null) {
+    protected function getAdminModules() {
         // Check cache first
         $cacheKey = 'admin_modules_discovery';
         // TODO: Implement caching when Cache class is available
@@ -157,15 +159,17 @@ abstract class AdminResponse extends Module {
         // }
 
         $adminModules = [];
-        $adminDirs = glob(($root ?? MODULE_PATH) . '*/Admin', GLOB_ONLYDIR);
 
-        foreach ($adminDirs as $dir) {
-            // Extract module name from path
-            preg_match('#/([^/]+)/Admin$#', $dir, $matches);
-            $moduleName = $matches[1];
+        foreach (Modules::all() as $moduleName => $moduleDir) {
+            $moduleName = (string) $moduleName;
+            $dir = $moduleDir . 'Admin';
 
             // Skip the main Admin module itself from discovery
             if (strtolower($moduleName) === 'admin') {
+                continue;
+            }
+
+            if (!is_dir($dir) || !Modules::enabled($moduleName)) {
                 continue;
             }
 
@@ -196,18 +200,14 @@ abstract class AdminResponse extends Module {
                 'label' => $metadata['label'] ?? ucfirst($moduleName) . ' Management',
                 'icon' => $metadata['icon'] ?? 'settings',
                 'description' => $metadata['description'] ?? '',
-                'order' => $metadata['order'] ?? 999,
-                'enabled' => $metadata['enabled'] ?? true,
+                'order' => Modules::order($moduleName),
                 'permissions' => $metadata['permissions'] ?? ['allow.admin'],
                 'url' => '/admin/' . $slug
             ];
         }
 
-        // Filter by enabled status and by the permissions the user holds
+        // Filter by the permissions the user holds
         $adminModules = array_filter($adminModules, function ($m) {
-            if (!$m['enabled']) {
-                return false;
-            }
             foreach ((array) $m['permissions'] as $permission) {
                 if (!$this->userHolds($permission)) {
                     return false;
@@ -216,8 +216,11 @@ abstract class AdminResponse extends Module {
             return true;
         });
 
-        // Sort by order
-        usort($adminModules, fn($a, $b) => $a['order'] <=> $b['order']);
+        // Sort by order, modules without one last, then by name
+        usort($adminModules, fn($a, $b) =>
+            [$a['order'] === null, $a['order'] ?? 0, $a['name']]
+            <=> [$b['order'] === null, $b['order'] ?? 0, $b['name']]
+        );
 
         // TODO: Cache results for 1 hour
         // Cache::set($cacheKey, $adminModules, 3600);
@@ -257,36 +260,6 @@ abstract class AdminResponse extends Module {
     }
 
     /**
-     * Find a module's real directory name under MODULE_PATH
-     *
-     * Matches case-insensitively with hyphens ignored, so 'ApiConfig',
-     * 'apiconfig' and 'api-config' all resolve to the directory that exists
-     * ('ApiConfig'). Returns null when no such module directory exists.
-     *
-     * @param string $moduleName Module name in any casing, optionally kebab-case
-     * @param string|null $root Directory holding the modules (defaults to MODULE_PATH)
-     * @return string|null Directory name as it is on disk
-     */
-    protected static function resolveModuleDir($moduleName, $root = null) {
-        $root = $root ?? MODULE_PATH;
-        $wanted = strtolower(str_replace('-', '', (string) $moduleName));
-        if ($wanted === '' || !is_dir($root)) {
-            return null;
-        }
-
-        foreach (scandir($root) as $entry) {
-            if ($entry[0] === '.' || !is_dir(rtrim($root, '/') . '/' . $entry)) {
-                continue;
-            }
-            if (strtolower(str_replace('-', '', $entry)) === $wanted) {
-                return $entry;
-            }
-        }
-
-        return null;
-    }
-
-    /**
      * Load admin assets inline (CSS and JS)
      *
      * Includes asset files directly in the view for security
@@ -297,8 +270,8 @@ abstract class AdminResponse extends Module {
      * @param string $filename Filename within assets directory
      */
     protected function loadInlineAsset($moduleName, $type, $filename) {
-        $moduleDir = static::resolveModuleDir($moduleName);
-        $assetPath = MODULE_PATH . ($moduleDir ?? $moduleName) . "/Admin/assets/{$filename}";
+        $moduleDir = Modules::path($moduleName);
+        $assetPath = ($moduleDir ?? '') . "Admin/assets/{$filename}";
 
         if ($moduleDir === null || !file_exists($assetPath)) {
             Console::warn("Admin asset not found: {$assetPath}");
@@ -325,10 +298,10 @@ abstract class AdminResponse extends Module {
      * @param string $moduleName Module name
      */
     protected function loadAdminStyles($moduleName) {
-        $moduleName = static::resolveModuleDir($moduleName) ?? $moduleName;
-        $assetsDir = MODULE_PATH . $moduleName . "/Admin/assets";
+        $moduleDir = Modules::path($moduleName);
+        $moduleName = Modules::name($moduleName) ?? $moduleName;
 
-        if (!is_dir($assetsDir)) {
+        if ($moduleDir === null || !is_dir($assetsDir = $moduleDir . "Admin/assets")) {
             return;
         }
 
@@ -345,10 +318,10 @@ abstract class AdminResponse extends Module {
      * @param string $moduleName Module name
      */
     protected function loadAdminScripts($moduleName) {
-        $moduleName = static::resolveModuleDir($moduleName) ?? $moduleName;
-        $assetsDir = MODULE_PATH . $moduleName . "/Admin/assets";
+        $moduleDir = Modules::path($moduleName);
+        $moduleName = Modules::name($moduleName) ?? $moduleName;
 
-        if (!is_dir($assetsDir)) {
+        if ($moduleDir === null || !is_dir($assetsDir = $moduleDir . "Admin/assets")) {
             return;
         }
 
@@ -384,6 +357,13 @@ abstract class AdminResponse extends Module {
      */
     protected function routeToModuleAdmin($moduleClassName, $method = 'index', $params = []) {
         $adminClass = "Zero\\Module\\{$moduleClassName}\\Admin\\{$moduleClassName}Admin";
+
+        // A module that is switched off has no admin: answered before this
+        // method looks for the class. Admin::__call makes the same check before
+        // its own class_exists(), so the autoloader never opens the file.
+        if (!Modules::routable($moduleClassName)) {
+            throw new HTTPError(404, "Admin interface not found for module: {$moduleClassName}");
+        }
 
         if (!class_exists($adminClass)) {
             throw new HTTPError(404, "Admin interface not found for module: {$moduleClassName}");

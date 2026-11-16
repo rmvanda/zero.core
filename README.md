@@ -18,7 +18,7 @@ First, you need to define some constants to let the Core Frame know where it is 
 
 The only required paths are ZERO_ROOT, VIEW_PATH, and MODULE_PATH.
 ZERO_ROOT is the folder that you put the core/ into.
-ROOT_PATH for autoloading external classes not in the above folder.
+ROOT_PATH is the parent of ZERO_ROOT; it is where the vendor autoload check looks.
 VIEW_PATH is the path of your global views, such as your head.php, header.php, sideNav.php, and footer.php
 MODULE_PATH is the base path of where your code lives.
 

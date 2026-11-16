@@ -1,20 +1,9 @@
 <?php
 // Zero Framework Bootstrap
-// Locates the zero/ directory by splitting on $SiteName in the path.
-// The www/ directory must live inside zero/app/frontend/www/
-$SiteName = "zero";
-$root_path = explode($SiteName, __DIR__);
-if (($c = count($root_path)) == 1 || $c > 2) {
-    trigger_error(
-        "Cannot find zero libraries from index directory." .
-        " If this is your preferred setup, rename index.alt.php" .
-        " to index.php and specify paths manually." .
-        " Otherwise, revisit the setup portion of the documentation."
-    );
-}
-
-define("ZERO_ROOT", $root_path[0] . $SiteName . "/");
-define("ROOT_PATH", $root_path[0]);
+// ZERO_ROOT is the folder three levels above www/ (app/frontend/www inside the
+// zero root), whatever the site folder is called.
+define("ZERO_ROOT", dirname(__DIR__, 3) . "/");
+define("ROOT_PATH", dirname(ZERO_ROOT) . "/");
 define("VIEW_PATH", ZERO_ROOT . "app/frontend/frame/");
 define("MODULE_PATH", ZERO_ROOT . "modules/");
 

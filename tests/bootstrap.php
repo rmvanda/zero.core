@@ -45,3 +45,15 @@ spl_autoload_register(static function (string $class): void {
         require_once $file;
     }
 });
+
+/**
+ * Point Modules at the real tree, as Application::registerAutoloaders() does at
+ * request time. Tests that configure throwaway trees call this to put it back.
+ */
+function zeroTestConfigureModules(): void
+{
+    $root = dirname(__DIR__, 2) . '/';
+    \Zero\Core\Modules::configure([$root . 'modules/', $root . 'core/modules/'], $root . 'app/modules.ini');
+}
+
+zeroTestConfigureModules();

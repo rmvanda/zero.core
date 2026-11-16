@@ -64,12 +64,12 @@ class Response
     protected function defineBasePaths(){
         //$class_info = new \ReflectionClass(get_class($this));
         //$dirname    = dirname($class_info->getFileName())."/";
-        $dirname = MODULE_PATH.Request::$Module."/";
+        $dirname = self::moduleDir(Request::$Module);
 
 
         foreach($this->paths as $path){
             $pathString = $path."Path";
-            if(!$this->$pathString && is_dir($dirname.$path)){
+            if(!$this->$pathString && $dirname !== null && is_dir($dirname.$path)){
 // Paths resolve per request and are not persisted. Error pages need no help
 // here: renderError() runs on the live module instance, whose framePath this
 // method has already set. Cross-request frame inheritance, for shared modules
@@ -150,22 +150,45 @@ class Response
             return false;
         }
 
-        // Same dash-to-camel rule routing applies, so /access-request/ resolves
-        // to AccessRequest here exactly as it does in Request::__construct().
-        // Inlined rather than shared because Request::friendlyURLConverter() is
-        // private and non-static; if that ever changes, delegate to it instead.
-        $module = str_contains($segment, "-")
-            ? str_replace(" ", "", ucwords(str_replace("-", " ", $segment)))
-            : $segment;
-        $module = ucfirst($module);
-
-        $frame = MODULE_PATH . $module . "/frame/";
-        if(!is_dir($frame)){
+        // Modules::path() reads every spelling routing does, so /access-request/
+        // resolves to AccessRequest here exactly as it does in
+        // Request::__construct(). A module that is switched off has no frame
+        // to lend.
+        $dir = self::moduleDir($segment);
+        $frame = $dir === null ? null : $dir . "frame/";
+        if($frame === null || !is_dir($frame)){
             return false;
         }
 
         $this->framePath = $frame;
         return true;
+    }
+
+    /**
+     * The directory (trailing slash) of a module that exists and is switched
+     * on, in any spelling, or null. A module that is off is answered exactly
+     * as one that does not exist.
+     */
+    protected static function moduleDir(?string $module): ?string
+    {
+        return $module === null ? null : Modules::routablePath($module);
+    }
+
+    /**
+     * The view file $file.php of a module that exists and is switched on, or
+     * null. $file is one URL segment: anything holding a path separator finds
+     * nothing.
+     */
+    public static function findModuleView(?string $module, ?string $file): ?string
+    {
+        if ($file === null || $file === "" || str_contains($file, "/") || str_contains($file, "\\")) {
+            return null;
+        }
+        $dir = self::moduleDir($module);
+        if ($dir !== null && file_exists($view = $dir . "view/" . $file . ".php")) {
+            return $view;
+        }
+        return null;
     }
 
     public function __call($func, $args)
@@ -186,31 +209,10 @@ class Response
         // 1 still beats 2: a real module's own view is a better answer for
         // /module/endpoint than a same-named standalone page in Index.
         // TODO - CLAUDE - let's put this in a loop or some such.
-        if (file_exists($view = MODULE_PATH .
-                        ucfirst(Request::$module) .
-                        "/view/" .
-                        Request::$endpoint .
-                        ".php"
-                    )
-        || file_exists($view = MODULE_PATH .
-                        ucfirst(Request::$module) .
-                        "/view/" .
-                        Request::$endpointOrig .
-                        ".php"
-                    )
-
-        || file_exists($view = MODULE_PATH .
-                        ucfirst(Request::$moduleOrig) .
-                        "/view/" .
-                        Request::$endpoint .
-                        ".php"
-                    )
-        || file_exists($view = MODULE_PATH .
-                        ucfirst(Request::$moduleOrig) .
-                        "/view/" .
-                        Request::$endpointOrig .
-                        ".php"
-                    )
+        if ($view = self::findModuleView(Request::$module, Request::$endpoint)
+                 ?? self::findModuleView(Request::$module, Request::$endpointOrig)
+                 ?? self::findModuleView(Request::$moduleOrig, Request::$endpoint)
+                 ?? self::findModuleView(Request::$moduleOrig, Request::$endpointOrig)
        ){
             $this->build($view);
 
@@ -240,16 +242,8 @@ class Response
 
             $index->{$method}();
 
-        } else if (file_exists($view = MODULE_PATH .
-                        "Index/view/" .
-                        Request::$module .
-                        ".php"
-                    )
-        || file_exists($view = MODULE_PATH .
-                        "Index/view/" .
-                        Request::$moduleOrig .
-                        ".php"
-                    )
+        } else if ($view = self::findIndexView(Request::$module)
+                        ?? self::findIndexView(Request::$moduleOrig)
        ){
             // TODO- this solution isn't great, but since
             // "standalone" pages ultimately belong to the Index module, it means
@@ -262,6 +256,14 @@ class Response
             throw new HTTPError(404, $func, $args);
             // TODO: surface Request::$moduleOrig path detail in renderError
         }
+    }
+
+    /**
+     * The view file Index/view/{name}.php of a standalone page, or null.
+     */
+    private static function findIndexView(?string $name): ?string
+    {
+        return self::findModuleView("Index", $name);
     }
 
     /**
@@ -287,7 +289,7 @@ class Response
         // framework autoloader cannot resolve module classes — that is what
         // Application::isModule() exists for — so load it by path or give up.
         if (!class_exists('\Zero\Module\Index', false)) {
-            if (!file_exists($file = MODULE_PATH . "Index/Index.php")) {
+            if (($file = Application::controllerFile("Index")) === null) {
                 return null;
             }
             require_once $file;
@@ -410,14 +412,30 @@ class Response
             return;
         }
         $this->included[$piece] = true;
-        if(file_exists($path = $this->framePath.$piece.".php")
-        || file_exists($path = $this->viewPath .$piece.".php")
-        || file_exists($path = VIEW_PATH.$piece.".php")
-        ){
+        $path = self::framePieceFile($piece, [$this->framePath, $this->viewPath, VIEW_PATH]);
+        if($path !== null){
             Console::debug("Using $path for $piece"); 
             return include_once $path; 
         } 
         Console::warn("Could not find $piece to add to response"); 
+    }
+
+    /**
+     * The file for a frame piece (head, header, sideNav, footer): the first
+     * of $dirs that has it, then core's own copy in core/skeleton/frontend/frame/.
+     * A site overrides a piece by having the file. Null when nowhere has it.
+     *
+     * @param string[] $dirs directories with a trailing slash, in lookup order
+     */
+    public static function framePieceFile(string $piece, array $dirs): ?string
+    {
+        $dirs[] = __DIR__ . "/skeleton/frontend/frame/";
+        foreach($dirs as $dir){
+            if(file_exists($path = $dir.$piece.".php")){
+                return $path;
+            }
+        }
+        return null;
     }
 
     /**
@@ -461,14 +479,16 @@ class Response
     protected function getComponents()
     {
         $globalComponentDir = ZERO_ROOT . 'app/frontend/www/shadow-component/components/';
-        $moduleComponentDir = ($this->moduleAssetDir ?? MODULE_PATH . Request::$Module . "/assets/") . "component/";
+        $ownDir = self::moduleDir(Request::$Module);
+        $moduleAssets = $this->moduleAssetDir ?? ($ownDir === null ? null : $ownDir . "assets/");
+        $moduleComponentDir = $moduleAssets === null ? null : $moduleAssets . "component/";
 
         // Load global components first
         $this->getComponentsInDirectory($globalComponentDir, 'global');
 
         // Then load module-specific components
         $componentLabel = $this->moduleName ?? Request::$module;
-        if(is_dir($moduleComponentDir)){
+        if($moduleComponentDir !== null && is_dir($moduleComponentDir)){
             $this->getComponentsInDirectory($moduleComponentDir, $componentLabel);
         } else {
             Console::debug("No component directory for " . $componentLabel . " module");

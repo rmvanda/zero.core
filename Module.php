@@ -37,16 +37,44 @@ class Module extends Response {
         $target = $classDir . "/assets";
         $linknm = WEB_ROOT . "/assets/" . $urlPath;
 
-        if(is_dir($target) && !is_link($linknm) && !is_dir($linknm)){
+        self::linkAssets($this->ownModuleName(), $target, $linknm);
+
+        // Wording defaults of the top-level module this class belongs to; a
+        // submodule shares its parent's strings.
+        Strings::loadModule($this->ownModuleName());
+
+        parent::__construct($altconfig);
+    }
+
+    /**
+     * Create the public link $link to a module's assets folder $target, unless
+     * something is already there or the module is not enabled: a module that
+     * is off has no public asset link. Returns whether a link was created.
+     */
+    public static function linkAssets(string $moduleName, string $target, string $link): bool
+    {
+        if (!Modules::enabled($moduleName)) {
+            return false;
+        }
+        if(is_dir($target) && !is_link($link) && !is_dir($link)){
             // Create parent directories if needed for nested submodules
-            $parentDir = dirname($linknm);
+            $parentDir = dirname($link);
             if (!is_dir($parentDir)) {
                 mkdir($parentDir, 0755, true);
             }
-            symlink($target, $linknm);
+            return symlink($target, $link);
         }
+        return false;
+    }
 
-        parent::__construct($altconfig);
+    /**
+     * The directory name of the module this class belongs to: the first
+     * segment after Zero\Module\ (Zero\Module\Ttrpg\Hexmap is Ttrpg's).
+     */
+    private function ownModuleName(): string
+    {
+        $rest = substr(get_class($this), strlen('Zero\\Module\\'));
+        return strstr($rest, '\\', true) ?: $rest;
     }
 
     /**
@@ -74,12 +102,14 @@ class Module extends Response {
             // For frame, walk up directory tree to find parent frame
             if ($path === 'frame') {
                 $currentDir = rtrim($dirname, '/');
-                $modulePathBase = rtrim(MODULE_PATH, '/');
+                // The folder holding this module's folder, the walk's ceiling
+                $own = Modules::path($this->ownModuleName());
+                $modulePathBase = $own === null ? rtrim($dirname, '/') : dirname(rtrim($own, '/'));
 
                 while ($currentDir && strlen($currentDir) > strlen($modulePathBase)) {
                     $parentDir = dirname($currentDir);
 
-                    // Stop if we've gone above MODULE_PATH
+                    // Stop if we've gone above the folder holding the module
                     if (strlen($parentDir) < strlen($modulePathBase)) {
                         break;
                     }
@@ -112,9 +142,10 @@ class Module extends Response {
      * Include an auxiliary file from the current module's aux/ directory
      */
     public function getAuxiliary(string $file){
-        $auxFile = MODULE_PATH . Request::$Module . "/aux/" . $file . ".php";
+        $dir = self::moduleDir(Request::$Module);
+        $auxFile = ($dir ?? "") . "aux/" . $file . ".php";
         Console::debug("Looking for aux file in $auxFile"); 
-        if(file_exists($auxFile)){
+        if($dir !== null && file_exists($auxFile)){
             include $auxFile;
         }
     }
