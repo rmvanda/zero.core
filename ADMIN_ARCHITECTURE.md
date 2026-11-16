@@ -75,9 +75,13 @@ Main admin hub. Extends `AdminResponse`. Handles user and group management, and 
 /admin/links/edit/5       → Admin::__call('links', ...) → LinksAdmin::edit(5)
 ```
 
-The `/admin` dashboard has two sections. "Users and access" holds the Users, Groups and Firewall cards, the only links written into the view. "Modules" holds one card per offering that `getAdminModules()` discovers (a module that is switched off has no card). A module's feature screens appear there with no change to Admin.
+The `/admin` dashboard has two sections. "Users and access" holds the Users, Groups, Modules and Firewall cards, the only links written into the view. "Modules" holds one card per offering that `getAdminModules()` discovers (a module that is switched off has no card). A module's feature screens appear there with no change to Admin.
 
 ---
+
+## The modules screen
+
+`/admin/manage/modules` (`manage('modules')`, assets `manage-modules.css` and `manage-modules.js`) lists `Modules::all()` ordered by tier (required, optional, example, site) then name: the real folder name, tier, where it lives (`core` under `core/modules/`, otherwise `site`), on or off, whether that is the default or a departure, and the order. A required module shows no switch, and a module whose name is an INI keyword (`On`, `Off`, `Yes`, `No`, `True`, `False`, `None`, `Null`) shows no controls and a note, because its name cannot be a key in `app/modules.ini`. Each row's form carries the hash of `app/modules.ini` as the screen was drawn. `POST /admin/set-module` (`#[AuditLog('module_setting_change')]`, POST only, `module` and `hash` required) answers 409 with the reload text when the file no longer has that hash, so a screen left open never overwrites another admin's change; otherwise it validates the POST (400, or 404 for a module that does not exist) and hands it to `Zero\Core\ModulesIni`, the only writer of `app/modules.ini`. `ModulesIni` refuses (500, with the path in the error text) when it cannot write, and it checks that `Modules` reads its text back as the intended entries before it replaces the file. The write is a temp file in the file's folder renamed over the file, so the FOLDER must be writable by the web server user; an existing file keeps its permission bits, a new one is 0664, and a file with no write bit at all is treated as deliberately read-only and refused. A save changes `app/modules.ini`, which a site tracks in git; the site commits the change. The lock file `modules.ini.lock` and the `.modules.ini.*.tmp` temp files are git-ignored. After a form post without JavaScript the screen shows a "Saved" line (`?saved=1`). The wording of the screen's sentences is in `core/modules/Admin/strings/admin.ini` (`ADMIN_MODULES_*`).
 
 ## Module Admin Structure
 

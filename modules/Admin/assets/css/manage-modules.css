@@ -1,0 +1,31 @@
+/* Manage Modules - status line, state note and the per-row form */
+.modules-error {
+    border-left: 4px solid var(--color-error, #dc2626);
+}
+
+.modules-table .module-form {
+    margin: 0;
+}
+
+.modules-table .module-state {
+    margin-left: 0.5rem;
+    font-size: 0.85em;
+    opacity: 0.75;
+}
+
+.modules-table .module-always-on {
+    margin-right: 0.5rem;
+    opacity: 0.75;
+}
+
+.modules-table .actions-cell {
+    white-space: nowrap;
+}
+
+.modules-saved {
+    border-left: 4px solid var(--color-success, #16a34a);
+}
+
+.modules-table .module-note {
+    opacity: 0.75;
+}

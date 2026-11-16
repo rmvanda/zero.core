@@ -9,6 +9,8 @@ namespace Zero\Tests\Core;
  */
 final class SkeletonSiteTest extends ZeroTestCase
 {
+    use SiteHarness;
+
     private string $tmp;
     private string $site;
     private static string $core;
@@ -29,32 +31,6 @@ final class SkeletonSiteTest extends ZeroTestCase
     {
         $this->wipe($this->tmp);
         parent::tearDown();
-    }
-
-    private function wipe(string $path): void
-    {
-        if (is_link($path) || is_file($path)) {
-            unlink($path);
-            return;
-        }
-        if (!is_dir($path)) {
-            return;
-        }
-        foreach (array_diff(scandir($path), ['.', '..']) as $entry) {
-            $this->wipe($path . '/' . $entry);
-        }
-        rmdir($path);
-    }
-
-    /** @return array{0:int,1:string} exit code and combined output */
-    private function init(array $args = []): array
-    {
-        $cmd = escapeshellarg($this->site . '/core/skeleton/zero-init.sh');
-        foreach ($args as $a) {
-            $cmd .= ' ' . escapeshellarg($a);
-        }
-        exec($cmd . ' 2>&1', $out, $code);
-        return [$code, implode("\n", $out)];
     }
 
     private function files(string $dir): array
@@ -150,6 +126,16 @@ final class SkeletonSiteTest extends ZeroTestCase
         $this->assertFileDoesNotExist($this->site . '/app/frontend/www/shadow-component');
     }
 
+    public function testTheModulesScreensLockAndTempFilesAreIgnoredOnceNotTheIniItself(): void
+    {
+        $this->init();
+        $this->init();
+        $lines = file($this->site . '/app/.gitignore', FILE_IGNORE_NEW_LINES);
+        $this->assertSame(1, count(array_keys($lines, 'modules.ini.lock', true)));
+        $this->assertSame(1, count(array_keys($lines, '.modules.ini.*.tmp', true)));
+        $this->assertNotContains('modules.ini', $lines);
+    }
+
     public function testSecondRunKeepsWhatTheSiteEdited(): void
     {
         $this->init();
@@ -236,11 +222,6 @@ PHP);
         $lines = is_file($log) ? file($log, FILE_IGNORE_NEW_LINES) : [];
         $own = '~ in (\S*/skeleton/\S*|' . preg_quote($this->site, '~') . '/(app|modules)/\S*) on line~';
         return array_values(array_filter($lines, fn($l) => preg_match($own, $l) === 1));
-    }
-
-    private function q(string $s): string
-    {
-        return var_export($s, true);
     }
 
     public function testTheHomePageRendersTheFramesAndTheIndexView(): void

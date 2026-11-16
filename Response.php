@@ -43,7 +43,7 @@ class Response
 
     public function __destruct(){
         if(!static::$built){
-            $this->build($this->body);
+            $this->build($this->body ?? "");
         }
     }
 

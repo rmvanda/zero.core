@@ -34,6 +34,7 @@ class Modules
     private static ?array $all = null;
     private static ?array $listing = null;
     private static ?array $ini = null;
+    private static string $iniHash = 'absent';
 
     /**
      * Set the roots (priority order, site first) and the ini file, and reset
@@ -59,8 +60,10 @@ class Modules
 
     /**
      * Every module directory in every root, enabled or not, keyed by
-     * directory name. A directory is a module when its name starts with an
-     * uppercase letter. When two roots hold the same name the earlier root wins.
+     * directory name. A directory is a module when its name is an uppercase
+     * letter followed by letters and digits (^[A-Z][A-Za-z0-9]*$), the names
+     * the router serves and app/modules.ini can hold. When two roots hold the
+     * same name the earlier root wins.
      *
      * @return array<string,string> name => absolute path with trailing slash
      */
@@ -72,7 +75,7 @@ class Modules
 
         $found = [];
         foreach (self::listing() as [$root, $entry]) {
-            if (ctype_upper($entry[0]) && !isset($found[$entry])) {
+            if (self::isModuleDirName($entry) && !isset($found[$entry])) {
                 $found[$entry] = $root . $entry . '/';
             }
         }
@@ -186,7 +189,7 @@ class Modules
             $key = self::fold($entry);
             if (isset($seen[$key])) {
                 [$first, $firstEntry] = $seen[$key];
-                if (ctype_upper($entry[0]) || ctype_upper($firstEntry[0])) {
+                if (self::isModuleDirName($entry) || self::isModuleDirName($firstEntry)) {
                     throw new \RuntimeException(
                         "Module name clash: {$first}{$firstEntry}/ and {$root}{$entry}/ are the same module name"
                     );
@@ -344,6 +347,14 @@ class Modules
     }
 
     /**
+     * Whether a directory name is a module name.
+     */
+    private static function isModuleDirName(string $name): bool
+    {
+        return preg_match('/^[A-Z][A-Za-z0-9]*$/D', $name) === 1;
+    }
+
+    /**
      * Lowercase with hyphens removed, the form every spelling is compared in.
      */
     private static function fold(string $name): string
@@ -367,6 +378,10 @@ class Modules
         foreach (self::$roots as $root) {
             foreach (self::entries($root) as $entry) {
                 $listing[] = [$root, $entry];
+                // The listing is cached: this logs once per request.
+                if (ctype_upper($entry[0]) && !self::isModuleDirName($entry)) {
+                    Console::warn("{$root}{$entry}/ is not a module: a module's folder name matches ^[A-Z][A-Za-z0-9]*\$");
+                }
             }
         }
 
@@ -391,6 +406,42 @@ class Modules
     }
 
     /**
+     * The sections of an ini file as Modules reads them (typed scanner), or
+     * null when the file does not parse. ModulesIni checks what it is about to
+     * write with this same call.
+     */
+    public static function parseIniFile(string $file): ?array
+    {
+        $text = @file_get_contents($file);
+
+        return $text === false ? null : self::parseIniString($text);
+    }
+
+    /**
+     * The sections of ini text as Modules reads them (typed scanner), or null
+     * when it does not parse.
+     */
+    public static function parseIniString(string $text): ?array
+    {
+        $parsed = @parse_ini_string($text, true, INI_SCANNER_TYPED);
+
+        return $parsed === false ? null : $parsed;
+    }
+
+    /**
+     * The hash of the exact text of app/modules.ini that the answers of this
+     * class were read from (sha1 of the text; 'absent' when there is no file).
+     * It is the same value ModulesIni::hash() has for the same content, so a
+     * screen drawn from this class carries the hash of what it shows.
+     */
+    public static function iniHash(): string
+    {
+        self::ini();
+
+        return self::$iniHash;
+    }
+
+    /**
      * @return array{enabled: array, order: array}
      */
     private static function ini(): array
@@ -400,8 +451,19 @@ class Modules
         }
 
         $parsed = [];
+        self::$iniHash = 'absent';
         if (self::$iniFile !== null && is_file(self::$iniFile)) {
-            $parsed = @parse_ini_file(self::$iniFile, true, INI_SCANNER_TYPED) ?: [];
+            // One read: the hash and the parse are of the same bytes.
+            $text = @file_get_contents(self::$iniFile);
+            $parsed = $text === false ? null : self::parseIniString($text);
+            if ($text !== false) {
+                self::$iniHash = sha1($text);
+            }
+            if ($parsed === null) {
+                // Cached with the rest of the ini: this logs once per request.
+                Console::warn(self::$iniFile . ' exists but does not parse; every module is at its default');
+                $parsed = [];
+            }
         }
 
         return self::$ini = [

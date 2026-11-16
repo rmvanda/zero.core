@@ -126,6 +126,11 @@ copy_tree "$SKEL/frontend" "$SITE_DIR/app/frontend"
 copy_tree "$SKEL/strings"  "$SITE_DIR/app/strings"
 STRINGS_NEW="$COPIED"
 copy_file "$SKEL/modules.ini" "$SITE_DIR/app/modules.ini"
+# The Admin modules screen writes a lock file and temp files beside app/modules.ini;
+# app/modules.ini itself is the site's committed choice.
+for PATTERN in 'modules.ini.lock' '.modules.ini.*.tmp'; do
+    grep -qxF -- "$PATTERN" "$SITE_DIR/app/.gitignore" 2>/dev/null || printf '%s\n' "$PATTERN" >> "$SITE_DIR/app/.gitignore"
+done
 
 # Blank templates, committed; the editable copy in app/config/ is never committed.
 for TPL in "$SKEL/_config_templates/"*.ini; do

@@ -276,6 +276,113 @@ class ModulesTest extends TestCase
         $this->assertFalse(is_link($web . '/assets/gone'));
     }
 
+    public function testOnlyNamesTheRouterServesAreModules(): void
+    {
+        $this->make($this->site, 'Lists', 'Links (old)', 'Evil&Co', 'Api-Config', 'Api.Config', 'lowercase', '9Lives', 'Under_score', 'A', 'Index0');
+        $this->configure();
+
+        $names = array_keys(Modules::all());
+        sort($names);
+        $this->assertSame(['A', 'Index0', 'Lists'], $names);
+        foreach (['Links (old)', 'Evil&Co', 'Api-Config', 'Api.Config', 'lowercase', '9Lives', 'Under_score'] as $name) {
+            $this->assertArrayNotHasKey($name, Modules::all(), $name);
+        }
+        $this->assertNull(Modules::path('Evil&Co'));
+    }
+
+    public function testAFolderThatIsNotAModuleNameNeverClashes(): void
+    {
+        $this->make($this->site, 'Links (old)');
+        $this->make($this->bundled, 'Links (old)');
+        $this->configure();
+        Modules::assertNoClash();
+        $this->assertTrue(true);
+    }
+
+    public function testAnUnparseableIniWarnsOncePerRequest(): void
+    {
+        $this->make($this->site, 'Lists');
+        $this->writeIni("[enabled\nLists = = off\n");
+        $this->configure($this->ini);
+
+        \Zero\Core\Console::clearMessages();
+        Modules::enabled('Lists');
+        Modules::enabled('Lists');
+        Modules::order('Lists');
+
+        $warnings = array_values(array_filter(\Zero\Core\Console::getMessages(), fn($m) => $m['level'] === 'WARN'));
+        $this->assertCount(1, $warnings);
+        $this->assertStringContainsString($this->ini, $warnings[0]['message']);
+    }
+
+    public function testAParseableIniDoesNotWarn(): void
+    {
+        $this->make($this->site, 'Lists');
+        $this->writeIni("[enabled]\nLists = off\n");
+        $this->configure($this->ini);
+
+        \Zero\Core\Console::clearMessages();
+        Modules::enabled('Lists');
+        $this->assertSame([], array_filter(\Zero\Core\Console::getMessages(), fn($m) => $m['level'] === 'WARN'));
+    }
+
+    public function testAFolderThatStartsUppercaseButBreaksTheRuleWarnsOncePerRequest(): void
+    {
+        $this->make($this->site, 'Lists', 'Foo_Bar', '.Hidden', 'lowercase', 'Links (old)');
+        $this->configure();
+
+        \Zero\Core\Console::clearMessages();
+        Modules::all();
+        Modules::all();
+        Modules::path('Lists');
+        Modules::assertNoClash();
+
+        $warnings = array_column(array_filter(\Zero\Core\Console::getMessages(), fn($m) => $m['level'] === 'WARN'), 'message');
+        sort($warnings);
+        $this->assertCount(2, $warnings);
+        $this->assertStringContainsString('Foo_Bar', $warnings[0]);
+        $this->assertStringContainsString('^[A-Z][A-Za-z0-9]*$', $warnings[0]);
+        $this->assertStringContainsString('Links (old)', $warnings[1]);
+        $this->assertArrayNotHasKey('Foo_Bar', Modules::all());
+    }
+
+    public function testIniHashIsTheHashModulesIniHasForTheSameContent(): void
+    {
+        $this->make($this->site, 'Lists');
+        foreach ([null, '', "[enabled]\nLists = off\n\n[order]\nLists = 3\n"] as $content) {
+            @unlink($this->ini);
+            if ($content !== null) {
+                $this->writeIni($content);
+            }
+            $this->configure($this->ini);
+            $this->assertSame((new \Zero\Core\ModulesIni($this->ini))->hash(), Modules::iniHash(), var_export($content, true));
+        }
+        $this->configure(null);
+        $this->assertSame('absent', Modules::iniHash());
+    }
+
+    public function testIniHashIsOfTheTextTheAnswersCameFrom(): void
+    {
+        $this->make($this->site, 'Lists');
+        $this->writeIni("[enabled]\nLists = off\n");
+        $this->configure($this->ini);
+        $this->assertFalse(Modules::enabled('Lists'));
+
+        $this->writeIni("[enabled]\nLists = on\n");
+        $this->assertFalse(Modules::enabled('Lists'), 'cached for the request');
+        $this->assertSame(sha1("[enabled]\nLists = off\n"), Modules::iniHash());
+    }
+
+    public function testTheTextParsesTheSameAsTheFile(): void
+    {
+        $text = "; Only departures from the defaults.\n[enabled]\nModule = on\nTest = off\n\n[order]\nLinks = 10\nAuth = 20\n";
+        $this->writeIni($text);
+        $this->assertSame(@parse_ini_file($this->ini, true, INI_SCANNER_TYPED), Modules::parseIniString($text));
+        $this->assertSame(Modules::parseIniString($text), Modules::parseIniFile($this->ini));
+        $this->assertNull(Modules::parseIniString("[enabled\nLists = = off\n"));
+        $this->assertNull(Modules::parseIniFile($this->base . '/missing.ini'));
+    }
+
     public function testMalformedIniDegradesToDefaults(): void
     {
         $this->make($this->site, 'Lists');

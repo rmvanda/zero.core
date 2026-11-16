@@ -12,6 +12,10 @@
             <span class="material-symbols-outlined icon-lg">groups</span>
             <span class="admin-card-title">Group Management</span>
         </a>
+        <a href="/admin/manage/modules" class="btn-primary admin-card">
+            <span class="material-symbols-outlined icon-lg">extension</span>
+            <span class="admin-card-title">Module Management</span>
+        </a>
         <a href="/admin/firewall" class="btn-primary admin-card">
             <span class="material-symbols-outlined icon-lg">security</span>
             <span class="admin-card-title">Firewall</span>

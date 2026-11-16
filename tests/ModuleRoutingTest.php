@@ -238,11 +238,12 @@ class ModuleRoutingTest extends TestCase
 
     public function testAdminRejectsANameThatIsNotAClassName(): void
     {
-        // Modules::routable() accepts this name (the folder exists and is on),
-        // so the isModuleName() check is what refuses it; PHP's own class_exists()
-        // would also refuse to autoload it, so the helper is asserted directly.
+        // Modules::all() lists only folders named ^[A-Z][A-Za-z0-9]*$, so Modules
+        // does not route this name; the isModuleName() check refuses it too, and
+        // PHP's own class_exists() would also refuse to autoload it, so the
+        // helper is asserted directly.
         $this->writeOffering($this->site, 'Zerotest.Odd');
-        $this->assertTrue(Modules::routable('Zerotest.Odd'));
+        $this->assertFalse(Modules::routable('Zerotest.Odd'));
         $this->assertFalse(Application::isModuleName('Zerotest.Odd'));
 
         try {

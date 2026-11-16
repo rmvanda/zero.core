@@ -6,7 +6,7 @@ use PHPUnit\Framework\TestCase;
 use Zero\Core\AdminResponse;
 
 /**
- * The Admin dashboard lists what discovery finds. Users, Groups and Firewall are the
+ * The Admin dashboard lists what discovery finds. Users, Groups, Modules and Firewall are the
  * only links written into the view; every feature screen is another module's offering.
  */
 class AdminDashboardTest extends TestCase
@@ -34,9 +34,9 @@ class AdminDashboardTest extends TestCase
         $hardCoded = array_values(array_filter($links[1], fn($href) => !str_contains($href, '<?')));
         sort($hardCoded);
         $this->assertSame(
-            ['/admin/firewall', '/admin/manage/groups', '/admin/manage/users'],
+            ['/admin/firewall', '/admin/manage/groups', '/admin/manage/modules', '/admin/manage/users'],
             $hardCoded,
-            'Users, Groups and Firewall are the only hard-coded dashboard links'
+            'Users, Groups, Modules and Firewall are the only hard-coded dashboard links'
         );
     }
 

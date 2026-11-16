@@ -34,8 +34,14 @@ class Mail {
             $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
         }
 
-        // Send email
-        $success = mail($to, $subject, $message, $headers);
+        // Send email, or write it to a file when MAIL_CAPTURE_DIR is set
+        $file = null;
+        $dir = self::captureDir();
+        if ($dir !== null) {
+            $success = self::writeCaptured($dir, $to, $subject, $headers, $message, $file);
+        } else {
+            $success = mail($to, $subject, $message, $headers);
+        }
 
         // Log the email event
         $detail = json_encode([
@@ -45,7 +51,7 @@ class Mail {
             'reply_to' => $replyTo,
             'success' => $success,
             'message_length' => strlen($message)
-        ], JSON_UNESCAPED_SLASHES);
+        ] + ($dir !== null ? ['captured' => true, 'sent' => false] : []), JSON_UNESCAPED_SLASHES);
 
         new Event([
             'event' => 'Mail Sent',
@@ -53,6 +59,60 @@ class Mail {
         ]);
 
         return $success;
+    }
+
+    /**
+     * The folder mail is captured into, or null when capture is off. Capture
+     * is on when the constant MAIL_CAPTURE_DIR names a folder (absolute, or
+     * relative to ZERO_ROOT); undefined or blank, which is the default, sends.
+     */
+    private static function captureDir(): ?string {
+        if (!defined('MAIL_CAPTURE_DIR') || trim((string) MAIL_CAPTURE_DIR) === '') {
+            return null;
+        }
+        $dir = trim((string) MAIL_CAPTURE_DIR);
+        if ($dir[0] !== '/' && defined('ZERO_ROOT')) {
+            $dir = ZERO_ROOT . $dir;
+        }
+        return $dir;
+    }
+
+    /**
+     * Write the message to a file in $dir instead of sending it. A site that
+     * must not send mail (a test, a staging copy) turns capture on in
+     * app/config/config.ini. The file holds the headers, a blank line and the
+     * body, exactly what mail() would have been given, plus To and Subject.
+     * A captured message holds live sign-in links, so the folder is created
+     * 0700 and each file is 0600. Capturing is never silent: it is logged, and
+     * the "Mail Sent" event records it as captured, not sent.
+     *
+     * An unusable folder fails closed: nothing is written, nothing is sent,
+     * an error is logged and false comes back, with no PHP warning.
+     *
+     * @param string|null $file Set to the path written, or null when nothing was
+     * @return bool True when written, false when the folder is unusable
+     */
+    public static function writeCaptured(string $dir, string $to, string $subject, string $headers, string $message, ?string &$file = null): bool {
+        $file = null;
+        $dir = rtrim($dir, '/');
+        if (!is_dir($dir)) {
+            if (!@mkdir($dir, 0700, true) || !@chmod($dir, 0700)) {
+                if (!is_dir($dir)) {
+                    \Zero\Core\Console::error("Mail capture folder $dir cannot be created; the message to $to was not captured and not sent");
+                    return false;
+                }
+            }
+        }
+        $path = $dir . '/' . date('YmdHis') . '-' . bin2hex(random_bytes(4)) . '.eml';
+        $text = "To: $to\r\nSubject: $subject\r\n" . $headers . "\r\n" . $message;
+        if (@file_put_contents($path, $text) === false) {
+            \Zero\Core\Console::error("Mail capture file $path cannot be written; the message to $to was not captured and not sent");
+            return false;
+        }
+        @chmod($path, 0600);
+        $file = $path;
+        \Zero\Core\Console::warn("Mail to $to captured in $path, not sent (MAIL_CAPTURE_DIR is set)");
+        return true;
     }
 
     /**
