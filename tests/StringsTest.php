@@ -318,4 +318,43 @@ INI;
             . 'echo SITE_NAME, "|", SITE_SHORT_NAME;';
         return trim((string) shell_exec(escapeshellarg(PHP_BINARY) . ' -r ' . escapeshellarg($code) . ' 2>&1'));
     }
+
+    public function testCoreDefaultsFillWhatTheSiteLeftOutAndNeverOverrideIt(): void
+    {
+        $core = $this->base . '/coredefaults/';
+        mkdir($core);
+        file_put_contents($core . 'site.ini', "ZEROTEST_STR_CORE_OWN=\"core's\"\nZEROTEST_STR_CORE_DEFAULT=\"English\"\n");
+        file_put_contents($this->site . 'site.ini', "ZEROTEST_STR_CORE_OWN=\"the site's\"\n");
+        Console::clearMessages();
+
+        Strings::loadSite($this->site);
+        Strings::loadDefaults($core);
+
+        $this->assertSame("the site's", ZEROTEST_STR_CORE_OWN);
+        $this->assertSame('English', ZEROTEST_STR_CORE_DEFAULT);
+        $this->assertSame([], $this->warnings(), 'a site value over a core default is the normal override');
+    }
+
+    public function testCoreDefaultsKeyThatSomethingElseDefinedIsSkippedQuietly(): void
+    {
+        $core = $this->base . '/coredefaults/';
+        mkdir($core);
+        file_put_contents($core . 'site.ini', "ZEROTEST_STR_CORE_CONFIG=\"English\"\n");
+        define('ZEROTEST_STR_CORE_CONFIG', 'from a config file');
+        Console::clearMessages();
+
+        Strings::loadDefaults($core);
+
+        $this->assertSame('from a config file', ZEROTEST_STR_CORE_CONFIG);
+        $this->assertSame([], $this->warnings());
+    }
+
+    public function testCoreShipsItsDefaultWording(): void
+    {
+        $file = dirname(__DIR__) . '/skeleton/strings/site.ini';
+        $values = parse_ini_file($file, false, INI_SCANNER_RAW);
+        foreach (['SITE_HOME', 'SITE_SIGN_IN', 'SITE_SIGN_OUT', 'SITE_ADMIN', 'SITE_SKIP_TO_CONTENT', 'SITE_OR', 'SITE_SIGN_IN_WITH'] as $key) {
+            $this->assertArrayHasKey($key, $values);
+        }
+    }
 }

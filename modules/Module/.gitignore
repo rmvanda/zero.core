@@ -1,0 +1,14 @@
+# Editor swap files.
+*swp
+# Site configuration and secrets stay on the server. config-tmpl/ holds a
+# blank copy of each config file, and that is what is committed.
+config/
+config.ini
+!**/config-tmpl/config.ini
+# MKMOD:SKELETON-ONLY-START
+
+# The skeleton module ships config examples on purpose.
+# Real modules' config stays ignored by the rules above.
+!/config/
+!/config.ini
+# MKMOD:SKELETON-ONLY-END

@@ -13,7 +13,7 @@ class AdminAssetResolverTest extends TestCase
 {
     protected function setUp(): void
     {
-        Modules::configure([dirname(__DIR__, 2) . '/modules/'], null);
+        Modules::configure([dirname(__DIR__, 2) . '/modules/', dirname(__DIR__, 2) . '/core/modules/'], null);
     }
 
     protected function tearDown(): void

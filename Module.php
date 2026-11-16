@@ -49,12 +49,20 @@ class Module extends Response {
     /**
      * Create the public link $link to a module's assets folder $target, unless
      * something is already there or the module is not enabled: a module that
-     * is off has no public asset link. Returns whether a link was created.
+     * is off has no public asset link. A link whose target no longer exists
+     * (a module that moved folders) is replaced; a link to a live target, a
+     * real directory and a real file stay. Returns whether a link was created.
      */
     public static function linkAssets(string $moduleName, string $target, string $link): bool
     {
         if (!Modules::enabled($moduleName)) {
             return false;
+        }
+        if (is_dir($target) && is_link($link) && !file_exists($link)) {
+            // is_link() is true for a dangling link, file_exists() follows it
+            if (!@unlink($link)) {
+                return false;
+            }
         }
         if(is_dir($target) && !is_link($link) && !is_dir($link)){
             // Create parent directories if needed for nested submodules

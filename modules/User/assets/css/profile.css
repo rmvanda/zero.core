@@ -1,0 +1,452 @@
+/* ===== USER PROFILE PAGE =====
+   Inherits the main.css design system (dark greenish glassmorphism, cyan accent).
+   Semantic success/danger tints are derived here as RGB triples from main.css's
+   --color-success (#00ff88) / --color-error (#ff4444) so we can tint them at low
+   opacity with the same rgba(var(--x-rgb), a) pattern the rest of the file uses,
+   without editing the global token file. */
+.profile-page {
+    --success-rgb: 0, 255, 136;   /* = --color-success #00ff88 */
+    --danger-rgb: 255, 68, 68;    /* = --color-error  #ff4444 */
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 1.75rem 2rem 4rem;
+}
+
+/* --- Card shell --- */
+.profile-card {
+    background: rgba(var(--surface-bg-rgb), var(--surface-opacity-light));
+    backdrop-filter: blur(var(--surface-blur));
+    -webkit-backdrop-filter: blur(var(--surface-blur));
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+}
+
+/* --- Identity hero (top card) --- */
+.profile-identity {
+    display: flex;
+    align-items: center;
+    gap: 1.75rem;
+    padding: 2rem 2.25rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Subtle accent wash so the hero reads as the anchor of the page. */
+.profile-identity::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, rgba(var(--accent-primary-rgb), 0.10), transparent 42%);
+    pointer-events: none;
+}
+
+.profile-avatar {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 2px solid rgba(var(--accent-primary-rgb), 0.5);
+    box-shadow: 0 0 0 4px rgba(var(--accent-primary-rgb), 0.10);
+}
+
+.profile-avatar-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(var(--accent-primary-rgb), 0.15);
+}
+
+.profile-avatar-fallback .material-symbols-outlined {
+    font-size: 44px;
+    color: var(--accent-primary);
+}
+
+.profile-identity-info {
+    position: relative;
+    min-width: 0;
+}
+
+.profile-name {
+    margin: 0 0 0.35rem;
+    font-size: 2rem;
+    font-weight: 250;
+    letter-spacing: 0.01em;
+    color: var(--text-bright);
+    text-wrap: balance;
+}
+
+.profile-email {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 1rem;
+}
+
+.profile-email .material-symbols-outlined {
+    font-size: 19px;
+    opacity: 0.6;
+}
+
+/* Verified — a compact green pill rather than a lone icon. */
+.profile-badge-verified {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: 0.4rem;
+    padding: 0.12rem 0.55rem 0.12rem 0.4rem;
+    border-radius: 999px;
+    background: rgba(var(--success-rgb), 0.14);
+    color: var(--color-success);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.profile-badge-verified .material-symbols-outlined {
+    font-size: 15px;
+}
+
+/* --- Card grid --- */
+.profile-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+}
+
+/* Settings card spans full width if it lands as an odd last child. */
+.profile-grid .profile-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+}
+
+/* Card titles read as letter-spaced eyebrows, not headings. */
+.profile-card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0;
+    padding: 1.1rem 1.5rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-primary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.profile-card-title .material-symbols-outlined {
+    font-size: 20px;
+}
+
+/* Right-aligned summary in a card title (e.g. "2 of 4 connected"). */
+.profile-card-title .count {
+    margin-left: auto;
+    color: var(--text-dimmed);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    font-variant-numeric: tabular-nums;
+}
+
+/* --- Detail rows (key/value) --- */
+.profile-details {
+    padding: 0.5rem 0;
+    margin: 0;
+}
+
+.profile-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.7rem 1.5rem;
+    transition: background 0.15s ease;
+}
+
+.profile-detail-row:hover {
+    background: rgba(var(--accent-primary-rgb), 0.04);
+}
+
+.profile-detail-row dt {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+.profile-detail-row dd {
+    margin: 0;
+    color: var(--text-bright);
+    font-size: 0.95rem;
+    text-align: right;
+}
+
+.profile-detail-row code {
+    background: rgba(var(--surface-bg-rgb), var(--surface-opacity-medium));
+    border: 1px solid var(--border-color);
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--accent-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* --- Permissions as granted/denied chips --- */
+.profile-permissions {
+    list-style: none;
+    padding: 0.9rem 1.5rem 1.1rem;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.profile-permission-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    font-size: 0.82rem;
+}
+
+.profile-permission-item .material-symbols-outlined {
+    font-size: 15px;
+    flex-shrink: 0;
+}
+
+.profile-permission-item.granted {
+    color: var(--color-success);
+    border-color: rgba(var(--success-rgb), 0.35);
+    background: rgba(var(--success-rgb), 0.10);
+}
+
+.profile-permission-item.denied {
+    color: var(--text-dimmed);
+}
+
+.profile-permission-label {
+    color: inherit;
+}
+
+/* --- Token link --- */
+.profile-tokens-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--accent-primary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: opacity 0.2s ease;
+}
+
+.profile-tokens-link:hover {
+    text-decoration: underline;
+}
+
+/* --- Empty state --- */
+.profile-empty {
+    padding: 1.5rem;
+    margin: 0;
+    color: var(--text-dimmed);
+    font-style: italic;
+    font-size: 0.95rem;
+}
+
+/* ===== Connected Accounts (OAuth providers) ===== */
+.profile-oauth {
+    margin-top: 1.5rem;
+}
+
+.oauth-provider-intro {
+    margin: 0;
+    padding: 1rem 1.5rem 0.25rem;
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    max-width: 62ch;
+    line-height: 1.5;
+}
+
+.oauth-provider-list {
+    list-style: none;
+    padding: 0.75rem;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.oauth-provider-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 0.9rem;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.oauth-provider-row:hover {
+    background: rgba(var(--surface-bg-rgb), var(--surface-opacity-medium));
+}
+
+/* Connected rows carry a soft green wash + border so linked accounts read at a glance. */
+.oauth-provider-row.is-connected {
+    background: rgba(var(--success-rgb), 0.06);
+    border-color: rgba(var(--success-rgb), 0.22);
+}
+
+/* Logo sits in a consistent rounded tile regardless of the logo's own shape. */
+.oauth-provider-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: 11px;
+    background: rgba(var(--surface-bg-rgb), var(--surface-opacity-medium));
+    border: 1px solid var(--border-color);
+}
+
+.oauth-provider-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+.oauth-provider-icon .material-symbols-outlined {
+    font-size: 24px;
+    color: var(--text-secondary);
+}
+
+.oauth-provider-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.oauth-provider-name {
+    color: var(--text-bright);
+    font-size: 1.02rem;
+    font-weight: 500;
+}
+
+.oauth-provider-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    color: var(--text-dimmed);
+}
+
+.oauth-provider-status .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+}
+
+.oauth-provider-status.is-connected {
+    color: var(--color-success);
+}
+
+.oauth-provider-status .since {
+    color: var(--text-dimmed);
+}
+
+.oauth-provider-action {
+    flex-shrink: 0;
+}
+
+/* The connect button reuses the global branded .oauth-btn--{slug} look, but the
+   global .oauth-btn is full-width — size it down to a compact inline action.
+   profile.css loads before widgets.css, so this needs > .oauth-btn specificity. */
+.oauth-provider-action .oauth-connect-btn {
+    width: auto;
+    padding: 0.5rem 1.05rem;
+    font-size: 0.85rem;
+    gap: 0.45rem;
+}
+
+/* Neutral brand for providers without a dedicated brand colour (fallback). */
+.oauth-btn--generic {
+    background: rgba(var(--surface-bg-rgb), var(--surface-opacity-medium));
+    color: var(--text-bright);
+    border-color: var(--border-color);
+}
+
+.oauth-btn--generic:hover {
+    background: rgba(var(--accent-primary-rgb), 0.15);
+}
+
+/* Disconnect is destructive, so it stays a quiet ghost until hovered. */
+.oauth-disconnect-form {
+    margin: 0;
+}
+
+.oauth-disconnect-btn {
+    background: transparent;
+    color: var(--text-dimmed);
+    border: 1px solid var(--border-color);
+    border-radius: 9px;
+    padding: 0.5rem 1.05rem;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.oauth-disconnect-btn:hover {
+    color: var(--color-error);
+    border-color: rgba(var(--danger-rgb), 0.6);
+    background: rgba(var(--danger-rgb), 0.08);
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+    .profile-page {
+        padding: 1.25rem 1rem 3rem;
+    }
+
+    .profile-identity {
+        flex-direction: column;
+        text-align: center;
+        padding: 2rem 1.5rem;
+    }
+
+    .profile-email {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .profile-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-name {
+        font-size: 1.8rem;
+    }
+
+    .oauth-provider-row {
+        flex-wrap: wrap;
+    }
+
+    .oauth-provider-action {
+        width: 100%;
+    }
+
+    .oauth-provider-action .oauth-connect-btn,
+    .oauth-disconnect-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}

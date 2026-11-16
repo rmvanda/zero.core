@@ -1,0 +1,21 @@
+/* Filename matches the LEAF submodule name, so it loads on every endpoint of
+   this submodule. Symlinked to /assets/{parent-module}/{submodule}/.
+
+   Asset directories are NOT inherited from the parent module: Response::
+   getStylesheets() keys off $this->assetUrlPath, and only a real assets/ dir
+   here produces the symlink. A submodule that reuses a parent CSS class
+   without shipping its own stylesheet renders unstyled. */
+
+.example-page {
+    max-width: 70ch;
+    margin: 0 auto;
+    padding: 1.5rem;
+}
+
+.example-page code {
+    background: rgba(var(--surface-bg-rgb), var(--surface-opacity-medium));
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    padding: 0.1em 0.35em;
+    font-family: var(--font-mono);
+}

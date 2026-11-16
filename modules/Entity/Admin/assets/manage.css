@@ -1,0 +1,33 @@
+/* Manage Entity */
+
+/* Create new entity form box */
+.admin-info-box.entity-create-box {
+    margin-bottom: 2rem;
+}
+
+.admin-info-box.entity-create-box h3 {
+    margin-top: 0;
+}
+
+/* Full-width form submit row */
+.entity-form-submit-row {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+/* Fixed width column for checkbox */
+.admin-table .col-checkbox {
+    width: 40px;
+}
+
+/* Fixed width column for actions */
+.admin-table .col-actions {
+    width: 80px;
+}
+
+/* Bulk delete margin */
+.bulk-delete-bar {
+    margin-bottom: 1rem;
+}

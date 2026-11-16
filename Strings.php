@@ -14,6 +14,10 @@ namespace Zero\Core;
  * Files are parsed with INI_SCANNER_RAW: a value is taken literally. Wrap a
  * value in double quotes; inside them a single quote, =, ; and further double
  * quotes need no escaping. Without the wrapping, ; starts a comment.
+ *
+ * core/skeleton/strings/*.ini holds core's own wording (what the skeleton's
+ * frames say). loadDefaults() defines those keys last, only where nothing has
+ * defined them, the way core/skeleton/config/ is the default for config.
  */
 class Strings
 {
@@ -38,6 +42,17 @@ class Strings
     public static function loadSite(string $dir): void
     {
         self::loadDir($dir);
+    }
+
+    /**
+     * Define core's default wording (core/skeleton/strings/*.ini, or $dir) for
+     * every key nothing has defined yet. Called after the site's strings and
+     * config are read, so a site value always wins; a key that is already
+     * defined is the normal override and is skipped without a log line.
+     */
+    public static function loadDefaults(?string $dir = null): void
+    {
+        self::loadDir($dir ?? __DIR__ . '/skeleton/strings/', true);
     }
 
     /**
@@ -68,7 +83,7 @@ class Strings
         }
     }
 
-    private static function loadDir(string $dir): void
+    private static function loadDir(string $dir, bool $quiet = false): void
     {
         if (!is_dir($dir)) {
             return;
@@ -88,6 +103,9 @@ class Strings
                     continue;
                 }
                 if (defined($key)) {
+                    if ($quiet) {
+                        continue;
+                    }
                     // A key an earlier strings file defined is the normal
                     // override (the site over a module default); anything else
                     // that holds the name is worth a log line.

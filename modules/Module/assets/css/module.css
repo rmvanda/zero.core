@@ -1,0 +1,21 @@
+/* module.css — filename matches the module name, so this loads on every
+   endpoint of this module. Inherit from main.css variables. */
+
+.skeleton-page {
+    max-width: 70ch;
+    margin: 0 auto;
+    padding: 1.5rem;
+}
+
+.skeleton-page code {
+    background: rgba(var(--surface-bg-rgb), var(--surface-opacity-medium));
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    padding: 0.1em 0.35em;
+    font-family: var(--font-mono);
+}
+
+.skeleton-detail {
+    color: var(--text-dimmed);
+    font-size: var(--font-size-sm);
+}

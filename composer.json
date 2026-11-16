@@ -1,0 +1,12 @@
+{
+    "name": "rmvanda/zero-core",
+    "description": "Zero Framework core: PHP MVC with URL-to-class routing, the bundled modules, libraries and entity framework. Documents the packages a site installs; nothing reads this file at runtime.",
+    "type": "library",
+    "require": {
+        "php": ">=8.0",
+        "minishlink/web-push": "^8.0"
+    },
+    "suggest": {
+        "google/apiclient": "^2.18: needed by the Auth module's GoogleAdapter to sign users in with Google"
+    }
+}

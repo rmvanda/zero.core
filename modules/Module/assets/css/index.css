@@ -1,0 +1,7 @@
+/* index.css — filename matches the endpoint name (index), so this loads only
+   on /module/ and not on /module/ping. */
+
+.skeleton-echo {
+    border-left: 3px solid var(--accent-primary);
+    padding-left: 0.5rem;
+}

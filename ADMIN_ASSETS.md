@@ -34,7 +34,7 @@ When an admin view is rendered through the normal frame, `AdminResponse::getStyl
 
 And searches these directories, in order:
 
-1. `modules/Admin/assets/{css|js}/` — shared base styles/scripts
+1. `core/modules/Admin/assets/{css|js}/` — shared base styles/scripts
 2. `{current module}/Admin/assets/{css|js}/` — module-specific (via `$this->moduleAssetDir`)
 
 Each matching file is emitted inside a single `<style>` or `<script>` block (with a filename comment for debuggability):
@@ -49,7 +49,7 @@ Each matching file is emitted inside a single `<style>` or `<script>` block (wit
 ```
 
 **Example:** request to `/admin/links/edit/5`, controller `LinksAdmin`:
-- `modules/Admin/assets/css/admin.css` → loaded (shared base)
+- `core/modules/Admin/assets/css/admin.css` → loaded (shared base)
 - `modules/Links/Admin/assets/css/links.css` → loaded (module match)
 - `modules/Links/Admin/assets/css/edit.css` → loaded (endpoint match)
 
@@ -78,7 +78,7 @@ For views that need to load everything in a module's admin assets dir (bypassing
 ## File layout
 
 ```
-modules/Admin/
+core/modules/Admin/
 └── assets/
     ├── css/
     │   ├── admin.css              # shared base — auto-loaded on every admin page

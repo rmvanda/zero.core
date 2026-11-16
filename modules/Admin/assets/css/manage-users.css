@@ -1,0 +1,6 @@
+/* Manage Users - Row removal animation */
+.row-removing {
+    transition: all 0.3s ease;
+    opacity: 0;
+    transform: translateX(-20px);
+}

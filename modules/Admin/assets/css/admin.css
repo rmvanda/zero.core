@@ -1,0 +1,773 @@
+/* Admin Module Table Styling */
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: rgba(var(--surface-bg-rgb), 0.1);
+    backdrop-filter: blur(var(--surface-blur));
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.admin-table thead {
+    background: rgba(var(--surface-bg-rgb), 0.3);
+}
+
+.admin-table th,
+.admin-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.admin-table th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+}
+
+.admin-table tbody tr {
+    transition: background 0.2s ease;
+}
+
+.admin-table tbody tr:hover {
+    background: rgba(var(--accent-primary-rgb), 0.1);
+}
+
+.admin-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Permission Item Styling */
+.permission-item {
+    background: rgba(var(--surface-bg-rgb), 0.1);
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.2s ease;
+}
+
+.permission-item:hover {
+    background: rgba(var(--surface-bg-rgb), 0.15);
+    border-color: rgba(var(--accent-primary-rgb), 0.3);
+}
+
+.permission-item-info {
+    flex: 1;
+}
+
+.permission-item-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* Form Styling */
+.admin-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 1rem;
+    align-items: start;
+}
+
+.admin-form-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.admin-form-field label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.admin-form-field input,
+.admin-form-field select {
+    width: 100%;
+    padding: 0.5rem;
+    background: rgba(var(--surface-bg-rgb), 0.3);
+    border: 1px solid var(--border-color);
+    color: inherit;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.admin-form-field input:focus,
+.admin-form-field select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.admin-form-field small {
+    opacity: 0.7;
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+}
+
+/* Button Overrides for Admin */
+.admin-action-btn {
+    padding: 8px 16px;
+    display: inline-block;
+}
+
+.admin-btn-delete {
+    padding: 8px 16px;
+    background: rgba(255, 0, 0, 0.2);
+    border: 1px solid rgba(255, 0, 0, 0.5);
+    color: inherit;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.admin-btn-delete:hover {
+    background: rgba(255, 0, 0, 0.4);
+    border-color: rgba(255, 0, 0, 0.8);
+}
+
+/* Info Box */
+.admin-info-box {
+    background: rgba(var(--surface-bg-rgb), 0.2);
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    margin: 2rem 0;
+}
+
+/* Filter Controls */
+.filter-container {
+    background: rgba(var(--surface-bg-rgb), 0.2);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    margin-bottom: 2rem;
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 2rem;
+    padding: 1rem;
+    background: rgba(var(--surface-bg-rgb), 0.1);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.pagination-info {
+    opacity: 0.8;
+}
+
+.pagination-controls {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.pagination-btn {
+    padding: 8px 16px;
+    background: rgba(var(--surface-bg-rgb), 0.3);
+    border: 1px solid var(--border-color);
+    color: inherit;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background: rgba(var(--accent-primary-rgb), 0.2);
+    border-color: var(--accent-primary);
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-current {
+    padding: 8px 16px;
+}
+
+/* Table cell alignment helpers */
+.admin-table .text-center {
+    text-align: center;
+}
+
+.admin-table .text-right {
+    text-align: right;
+}
+
+.admin-table .nowrap {
+    white-space: nowrap;
+}
+
+/* Empty state cell */
+.admin-table .empty-state-cell {
+    text-align: center;
+    padding: 2rem;
+}
+
+/* Inline form wrapper */
+.form-inline {
+    display: inline;
+}
+
+/* Badge styling */
+.event-badge,
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    background: rgba(var(--accent-primary-rgb), 0.2);
+    border: 1px solid rgba(var(--accent-primary-rgb), 0.4);
+}
+
+.status-badge.status-active {
+    background: rgba(0, 200, 0, 0.2);
+    color: #00ff00;
+    border-color: rgba(0, 200, 0, 0.4);
+}
+
+.status-badge.status-inactive {
+    background: rgba(150, 150, 150, 0.2);
+    color: #aaa;
+    border-color: rgba(150, 150, 150, 0.4);
+}
+
+/* Admin Dashboard Cards */
+.admin-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+/* Override btn-primary styles to create card layout */
+.btn-primary.admin-card {
+    padding: 32px;
+    text-align: center;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.admin-card-title {
+    font-size: 1.2rem;
+}
+
+.admin-card-desc {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    text-align: center;
+    line-height: 1.4;
+}
+
+/* User Avatar */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Form inputs with consistent styling */
+.admin-input {
+    width: 100%;
+    padding: 0.5rem;
+    background: rgba(var(--surface-bg-rgb), 0.3);
+    border: 1px solid var(--border-color);
+    color: inherit;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.admin-input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.admin-input-narrow {
+    width: 100px;
+}
+
+.admin-input-medium {
+    width: 200px;
+}
+
+/* Checkbox label */
+.admin-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Select dropdown */
+.admin-select {
+    width: 100px;
+    padding: 0.5rem;
+    background: rgba(var(--surface-bg-rgb), 0.3);
+    border: 1px solid var(--border-color);
+    color: inherit;
+    border-radius: 4px;
+}
+
+/* Permission meta info */
+.permission-meta {
+    opacity: 0.7;
+}
+
+/* Unset permission styling */
+.permission-item-unset {
+    opacity: 0.7;
+    background: rgba(var(--surface-bg-rgb), 0.05);
+}
+
+.permission-item-unset:hover {
+    opacity: 0.85;
+    background: rgba(var(--surface-bg-rgb), 0.1);
+}
+
+.permission-badge-unset {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: rgba(255, 165, 0, 0.2);
+    border: 1px solid rgba(255, 165, 0, 0.4);
+    margin-left: 0.5rem;
+}
+
+/* Small button styling */
+.btn-small {
+    padding: 8px 16px;
+    font-size: 0.875rem;
+    text-decoration: none;
+    background: rgba(var(--accent-primary-rgb), 0.1);
+    color: var(--accent-primary);
+    border: 1px solid rgba(var(--accent-primary-rgb), 0.3);
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-block;
+    font-family: inherit;
+    transition: all 0.2s ease;
+}
+
+.btn-small:hover {
+    background: rgba(var(--accent-primary-rgb), 0.2);
+}
+
+.btn-small.btn-danger {
+    background: rgba(244, 67, 54, 0.1);
+    color: #f44336;
+    border-color: rgba(244, 67, 54, 0.3);
+}
+
+.btn-small.btn-danger:hover {
+    background: rgba(244, 67, 54, 0.2);
+}
+
+.btn-small + .btn-small {
+    margin-left: 0.5rem;
+}
+
+/* Expandable table styles */
+.expandable-table .expand-icon {
+    font-family: "Material Symbols Outlined";
+    font-size: 1.25rem;
+    transition: transform 0.2s ease;
+    user-select: none;
+}
+
+.expandable-table .main-row {
+    cursor: pointer;
+}
+
+.expandable-table .main-row:hover {
+    background: rgba(var(--accent-primary-rgb), 0.05);
+}
+
+.expandable-table .details-row {
+    display: none;
+}
+
+.expandable-table .details-row.expanded {
+    display: table-row;
+}
+
+.expandable-table td.details-cell {
+    padding: 0;
+}
+
+.expandable-table .details-content {
+    padding: 1.5rem 2rem;
+    background: rgba(var(--surface-bg-rgb), 0.15);
+    border-top: 1px solid rgba(var(--border-color), 0.5);
+}
+
+.expandable-table .details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.expandable-table .detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.expandable-table .detail-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.6;
+    font-weight: 600;
+}
+
+.expandable-table .detail-value {
+    font-size: 0.95rem;
+}
+
+.expandable-table .actions-row {
+    padding-top: 1rem;
+    border-top: 1px solid rgba(var(--border-color), 0.5);
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Force 3-column layout for group details */
+.expandable-table .details-grid-3col {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+/* Actions cell with multiple buttons */
+.admin-table .actions-cell {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+/* Group members list in expandable details */
+.group-members-list {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(var(--border-color), 0.3);
+}
+
+.group-members-list .detail-label {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.6;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.members-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.member-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 1rem;
+    font-size: 0.85rem;
+    background: rgba(var(--accent-primary-rgb), 0.1);
+    border: 1px solid rgba(var(--accent-primary-rgb), 0.2);
+}
+
+.member-chip .material-symbols-outlined {
+    font-size: 1rem;
+    opacity: 0.7;
+}
+
+.member-role {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    padding: 0.1rem 0.4rem;
+    border-radius: 0.5rem;
+    background: rgba(var(--accent-primary-rgb), 0.2);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+}
+
+/* Push Notifications Page */
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.stat-card {
+    background: rgba(var(--surface-bg-rgb), 0.2);
+    backdrop-filter: blur(var(--surface-blur));
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+    background: rgba(var(--surface-bg-rgb), 0.3);
+    border-color: rgba(var(--accent-primary-rgb), 0.5);
+    transform: translateY(-2px);
+}
+
+.stat-card .material-symbols-outlined {
+    font-size: 48px;
+    color: var(--accent-primary);
+    opacity: 0.8;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--text-bright);
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    margin-top: 0.25rem;
+}
+
+/* Form Styles */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--text-bright);
+}
+
+.form-group input[type="text"],
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 0.75rem;
+    background: rgba(var(--surface-bg-rgb), 0.3);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+    transition: all 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    background: rgba(var(--surface-bg-rgb), 0.4);
+}
+
+.form-group small {
+    display: block;
+    margin-top: 0.5rem;
+    opacity: 0.7;
+    font-size: 0.875rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+/* Button with Icon Alignment */
+.btn-primary,
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.btn-primary .material-symbols-outlined,
+.btn-secondary .material-symbols-outlined {
+    font-size: 20px;
+    line-height: 1;
+}
+
+/* Badges */
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border: 1px solid;
+}
+
+.badge-primary {
+    background: rgba(var(--accent-primary-rgb), 0.2);
+    color: var(--accent-primary);
+    border-color: rgba(var(--accent-primary-rgb), 0.4);
+}
+
+.badge-secondary {
+    background: rgba(150, 150, 150, 0.2);
+    color: #aaa;
+    border-color: rgba(150, 150, 150, 0.4);
+}
+
+/* Utility Classes */
+.text-truncate {
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mt-2 {
+    margin-top: 2rem;
+}
+
+/* Success Toast */
+.success-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #4CAF50;
+    color: white;
+    padding: 1rem 2rem;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    z-index: 1000;
+    transition: opacity 0.3s;
+}
+
+.success-toast.fading {
+    opacity: 0;
+}
+
+/* Editable cells (from admin-tables) */
+.editable-cell {
+    cursor: pointer;
+    position: relative;
+    transition: background-color 0.2s;
+}
+
+.editable-cell:hover {
+    background: rgba(var(--accent-primary-rgb), var(--highlight-opacity));
+}
+
+.editable-cell:hover::after {
+    content: '✎';
+    position: absolute;
+    right: 0.5rem;
+    opacity: 0.5;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+/* Inline edit input - inherits from main.css input[type="text"] styles */
+.inline-edit-input {
+    width: 100%;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .admin-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-table th,
+    .admin-table td {
+        padding: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .permission-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .permission-item-controls {
+        justify-content: space-between;
+    }
+
+    .filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .pagination {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .pagination-controls {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .admin-card-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .expandable-table .details-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .expandable-table .details-content {
+        padding: 1rem;
+    }
+
+    .stats-row {
+        grid-template-columns: 1fr;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .text-truncate {
+        max-width: 150px;
+    }
+}

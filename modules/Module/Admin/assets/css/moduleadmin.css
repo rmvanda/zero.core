@@ -1,0 +1,8 @@
+/* Inlined automatically by AdminResponse::getStylesheets() -> inlineAdminAssets('css'),
+   which matches {moduleName}.css where moduleName is strtolower(class basename).
+   Admin assets are never symlinked into the web root, and there is no manual
+   loading step to call from a view. */
+
+.skeleton-admin-note {
+    color: var(--text-dimmed);
+}

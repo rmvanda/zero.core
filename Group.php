@@ -3,7 +3,7 @@ namespace Zero\Core;
 
 /**
  * A user group: the row gateway for `user_group`, and the group's members in
- * `user_group_member` (schema in core/group.sql).
+ * `user_group_member` (schema in core/sql/migrations/group.sql).
  *
  * This is the only class that reads or writes those tables. Modules that
  * share by group ask it for a user's groups; the Admin module's group screens

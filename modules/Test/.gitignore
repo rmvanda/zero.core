@@ -1,0 +1,10 @@
+# Editor swap files.
+*swp
+# Site configuration and secrets stay on the server. config-tmpl/ holds a
+# blank copy of each config file, and that is what is committed.
+config/
+config.ini
+!**/config-tmpl/config.ini
+# The public asset link for the Success submodule that Module::linkAssets() creates
+# inside the Route assets folder when /test/route/success is visited.
+/submodule/Route/assets/success

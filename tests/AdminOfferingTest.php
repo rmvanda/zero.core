@@ -24,15 +24,31 @@ class AdminOfferingTest extends TestCase
     {
         zeroTestConfigureModules();
         @unlink($this->tmp . '/modules.ini');
-        @rmdir($this->tmp . '/Ttrpgish/Admin/view');
-        @rmdir($this->tmp . '/Ttrpgish/Admin');
-        @rmdir($this->tmp . '/Ttrpgish');
-        @rmdir($this->tmp);
+        exec('rm -rf ' . escapeshellarg($this->tmp));
     }
 
+    /**
+     * A throwaway module root with five offerings: FixA..FixE, each an
+     * AdminResponse in its own namespace. FixC needs allow.fix.read besides
+     * allow.admin. Returns the root with a trailing slash.
+     */
     private function modulesDir(): string
     {
-        return dirname(__DIR__, 2) . '/modules/';
+        $root = $this->tmp . '/fixtures/';
+        foreach (['FixA', 'FixB', 'FixC', 'FixD', 'FixE'] as $name) {
+            $dir = $root . $name . '/Admin/';
+            if (!is_dir($dir)) {
+                mkdir($dir, 0777, true);
+            }
+            $permissions = $name === 'FixC' ? "['allow.admin', 'allow.fix.read']" : "['allow.admin']";
+            file_put_contents($dir . "{$name}Admin.php", "<?php\nnamespace Zero\\Module\\{$name}\\Admin;\n"
+                . "#[\\Zero\\Core\\Attribute\\RequirePermission('allow.admin')]\n"
+                . "class {$name}Admin extends \\Zero\\Core\\AdminResponse {\n"
+                . "    public function index() {}\n    public function getThing() {}\n}\n");
+            file_put_contents($dir . 'admin-config.php', "<?php\nreturn ['label' => '$name', 'permissions' => $permissions];\n");
+            require_once $dir . "{$name}Admin.php";
+        }
+        return $root;
     }
 
     /** Modules over the given root, with an ini written from $ini. */
@@ -67,7 +83,7 @@ class AdminOfferingTest extends TestCase
     {
         $this->modules($this->modulesDir());
         $names = array_column($this->admin()->discovered(), 'name');
-        $this->assertContains('Links', $names);
+        $this->assertContains('FixA', $names);
     }
 
     public function testAnOfferingThatThrowsOnLoadIsSkippedNotFatal(): void
@@ -86,13 +102,10 @@ class AdminOfferingTest extends TestCase
             $names = array_column($this->admin()->discovered(), 'name');
             $this->assertNotContains('Boom', $names);
             $this->modules($this->modulesDir());
-            $links = array_column($this->admin()->discovered(), 'name');
-            $this->assertContains('Links', $links);
+            $listed = array_column($this->admin()->discovered(), 'name');
+            $this->assertContains('FixA', $listed);
         } finally {
             spl_autoload_unregister($loader);
-            @unlink($file);
-            @rmdir($this->tmp . '/Boom/Admin');
-            @rmdir($this->tmp . '/Boom');
         }
     }
 
@@ -100,63 +113,58 @@ class AdminOfferingTest extends TestCase
     {
         $this->modules($this->modulesDir());
         $without = array_column($this->admin(['allow.admin'])->discovered(), 'name');
-        $this->assertNotContains('Billing', $without);
-        $this->assertContains('Links', $without);
+        $this->assertNotContains('FixC', $without);
+        $this->assertContains('FixA', $without);
 
-        $with = array_column($this->admin(['allow.admin', 'allow.aws.bill.read'])->discovered(), 'name');
-        $this->assertContains('Billing', $with);
+        $with = array_column($this->admin(['allow.admin', 'allow.fix.read'])->discovered(), 'name');
+        $this->assertContains('FixC', $with);
     }
 
     public function testADisabledModuleHasNoCard(): void
     {
-        $this->modules($this->modulesDir(), "[enabled]\nLinks = off\n");
+        $this->modules($this->modulesDir(), "[enabled]\nFixA = off\n");
         $names = array_column($this->admin()->discovered(), 'name');
-        $this->assertNotContains('Links', $names);
-        $this->assertContains('Issue', $names);
+        $this->assertNotContains('FixA', $names);
+        $this->assertContains('FixB', $names);
     }
 
     public function testCardsFollowTheOrderSectionThenTheName(): void
     {
-        // Links and Issue tie on 2, and Links is found first when the roots
-        // are listed with a folder of its own ahead of the real tree.
-        $first = $this->tmp . '/first/';
-        mkdir($first . 'Links/Admin', 0777, true);
-        $this->modules($this->modulesDir(), "[order]\nS = 1\nLinks = 2\nIssue = 2\n");
-        Modules::configure([$first, $this->modulesDir()], $this->tmp . '/modules.ini');
-        $names = array_column($this->admin()->discovered(), 'name');
-        $this->assertSame(['S', 'Issue', 'Links'], array_slice($names, 0, 3));
-        @rmdir($first . 'Links/Admin');
-        @rmdir($first . 'Links');
-        @rmdir($first);
+        $this->modules($this->modulesDir(), "[order]\nFixE = 1\nFixB = 2\nFixA = 2\n");
+        $names = array_column($this->admin(['allow.admin', 'allow.fix.read'])->discovered(), 'name');
+        $this->assertSame(['FixE', 'FixA', 'FixB'], array_slice($names, 0, 3));
 
         $rest = array_slice($names, 3);
         $sorted = $rest;
         sort($sorted);
         $this->assertSame($sorted, $rest, 'modules without an order come last, by name');
+        $this->assertContains('FixC', $rest);
+        $this->assertContains('FixD', $rest);
     }
 
     public function testCardsNoLongerReadEnabledOrOrderFromAdminConfig(): void
     {
-        foreach (glob($this->modulesDir() . '*/Admin/admin-config.php') as $file) {
+        zeroTestConfigureModules();
+        $files = [];
+        foreach (Modules::all() as $dir) {
+            if (is_file($dir . 'Admin/admin-config.php')) {
+                $files[] = $dir . 'Admin/admin-config.php';
+            }
+        }
+        $this->assertNotEmpty($files);
+        foreach ($files as $file) {
             $config = include $file;
             $this->assertArrayNotHasKey('enabled', $config, $file);
             $this->assertArrayNotHasKey('order', $config, $file);
         }
     }
 
-    public function testBillingCardListsWhatGatesTheClass(): void
-    {
-        $class = new \ReflectionClass(\Zero\Module\Billing\Admin\BillingAdmin::class);
-        $gate = $class->getAttributes(\Zero\Core\Attribute\RequirePermission::class)[0]->getArguments();
-        $config = include $this->modulesDir() . 'Billing/Admin/admin-config.php';
-        $this->assertSame($gate, $config['permissions']);
-    }
-
     public function testOnlyAnOfferingsOwnPublicEndpointsRoute(): void
     {
-        $admin = \Zero\Module\Billing\Admin\BillingAdmin::class;
+        $this->modulesDir();
+        $admin = \Zero\Module\FixA\Admin\FixAAdmin::class;
         $this->assertTrue($this->admin()::routable($admin, 'index'));
-        $this->assertTrue($this->admin()::routable($admin, 'getCurrentBilling'));
+        $this->assertTrue($this->admin()::routable($admin, 'getThing'));
 
         foreach (['loadConfig', 'loadInlineAsset', '__construct', '__call', 'getAuxiliary', 'renderError', 'noSuchMethod'] as $method) {
             $this->assertFalse($this->admin()::routable($admin, $method), $method);

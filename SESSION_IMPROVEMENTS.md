@@ -118,7 +118,7 @@ public function handler() {
 
 `RequireAuthLevel` and `RequirePermission` should get the same treatment (or, cleaner: have them all delegate the "is there a logged-in user" check to one place).
 
-### 3. `modules/Auth/Auth.php`
+### 3. `core/modules/Auth/Auth.php`
 
 Two changes:
 
@@ -128,7 +128,7 @@ Two changes:
 
 **c. In `logout()`, call `RememberToken::revokeCurrent()` before destroying the session.**
 
-### 4. `modules/Push/Push.php`
+### 4. `core/modules/Push/Push.php`
 
 Currently uses `$_COOKIE['unisolu_user_id']` as a fallback identifier in four places. Two options, in order of preference:
 

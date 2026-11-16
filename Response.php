@@ -25,6 +25,13 @@ class Response
 
     protected $included = array(); 
 
+    // The folders views, frames, components and models are read from.
+    // defineBasePaths() fills them; null until then.
+    public $framePath = null;
+    public $viewPath = null;
+    public $componentPath = null;
+    public $modelPath = null;
+
     protected static $built = false; 
 
     public $paths = ["frame", "view", "component", "model"];
@@ -408,16 +415,28 @@ class Response
     }
 
     private function add(string $piece){
-        if($this->included[$piece] || Request::$madeWithAJAX){
+        if(($this->included[$piece] ?? false) || Request::$madeWithAJAX){
             return;
         }
         $this->included[$piece] = true;
-        $path = self::framePieceFile($piece, [$this->framePath, $this->viewPath, VIEW_PATH]);
+        $path = $this->framePiecePath($piece);
         if($path !== null){
             Console::debug("Using $path for $piece"); 
             return include_once $path; 
         } 
         Console::warn("Could not find $piece to add to response"); 
+    }
+
+    /**
+     * The file for a frame piece (head, header, sideNav, footer, or a partial a
+     * view loads such as _oauth-brand) as this response finds it: the module's
+     * frame, its view folder, the site's frame folder (VIEW_PATH), then core's
+     * own copy in core/skeleton/frontend/frame/. Null when nowhere has it, so a
+     * view includes the result only when there is one.
+     */
+    public function framePiecePath(string $name): ?string
+    {
+        return self::framePieceFile($name, [$this->framePath, $this->viewPath, VIEW_PATH]);
     }
 
     /**

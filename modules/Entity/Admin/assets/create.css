@@ -1,0 +1,183 @@
+/* Entity Creation Form Styling */
+
+.entity-form {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* Help text info box */
+.entity-help-text {
+    background: rgba(var(--accent-secondary-rgb), 0.1);
+    padding: 1rem;
+    border-left: 4px solid var(--accent-secondary);
+    margin-bottom: 2rem;
+    border-radius: 4px;
+}
+
+.entity-help-text ul {
+    margin: 0.5rem 0 0 1.5rem;
+}
+
+/* Attributes container */
+.attributes-container {
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 1.5rem;
+    background: rgba(var(--surface-bg-rgb), 0.15);
+}
+
+/* Column headers */
+.attribute-headers {
+    display: grid;
+    grid-template-columns: 2fr 1.5fr 1fr 80px 40px;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.8;
+}
+
+/* Attribute row grid */
+.attribute-row {
+    display: grid;
+    grid-template-columns: 2fr 1.5fr 1fr 80px 40px;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: rgba(var(--surface-bg-rgb), 0.3);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.attribute-row:hover {
+    background: rgba(var(--surface-bg-rgb), 0.4);
+}
+
+.attribute-row input,
+.attribute-row select {
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    background: rgba(var(--surface-bg-rgb), 0.3);
+    color: inherit;
+    font-family: inherit;
+    width: 100%;
+}
+
+.attribute-row input:focus,
+.attribute-row select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+/* Unique checkbox */
+.unique-checkbox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+.unique-checkbox label {
+    cursor: pointer;
+    user-select: none;
+    font-size: 0.75rem;
+}
+
+/* Remove button */
+.btn-remove {
+    padding: 6px;
+    background: rgba(220, 53, 69, 0.2);
+    color: #dc3545;
+    border: 1px solid rgba(220, 53, 69, 0.4);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-remove:hover {
+    background: rgba(220, 53, 69, 0.3);
+    border-color: rgba(220, 53, 69, 0.6);
+}
+
+/* Add attribute button */
+.btn-add-attribute {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 12px 24px;
+    background: rgba(var(--accent-primary-rgb), 0.2);
+    color: var(--accent-primary);
+    border: 1px solid rgba(var(--accent-primary-rgb), 0.4);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: all 0.2s ease;
+}
+
+.btn-add-attribute:hover {
+    background: rgba(var(--accent-primary-rgb), 0.3);
+    border-color: rgba(var(--accent-primary-rgb), 0.6);
+}
+
+/* Form actions */
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+/* Cancel button link styling */
+.btn-cancel {
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .attribute-headers {
+        display: none;
+    }
+
+    .attribute-row {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .attribute-row > div {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .attribute-row > div::before {
+        content: attr(data-label);
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+        opacity: 0.7;
+    }
+
+    .unique-checkbox {
+        flex-direction: row;
+        justify-content: flex-start;
+    }
+
+    .btn-remove {
+        width: auto;
+        padding: 8px 16px;
+    }
+}

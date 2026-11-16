@@ -1,12 +1,15 @@
+<?php
+// The wording a site can change comes from app/strings/*.ini; a site that has
+// not copied core's strings/site.ini still gets core's defaults.
+$siteName = SITE_NAME;
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title><?= SITE_NAME ?></title>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title><?= htmlspecialchars($siteName) ?></title>
+    <link rel="stylesheet" href="/assets/css/main.css?v=<?= @filemtime(ZERO_ROOT . 'app/frontend/www/assets/css/main.css') ?>">
 <?php $this->getStylesheets() ?>
-    <link rel="stylesheet" href="/assets/css/main.css">
-    <script src="/shadow-component/shadow-component.js"></script>
 </head>
-

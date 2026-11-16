@@ -1,0 +1,177 @@
+Module — the Zero Framework skeleton module
+===========================================
+
+A live, routable reference module at /module/ (it ships in core/modules/ and is
+switched on in app/modules.ini).
+
+Every directory below is a worked example. `mkmod` (in this directory) copies
+from here to scaffold new modules, so this is also the template source. Edit a
+file here and mkmod's output changes with it.
+
+
+Framework-aware — core/ reads these
+-----------------------------------
+
+  Module.php            Controller. Class name must match the directory name.
+                        namespace Zero\Module; extends \Zero\Core\Module.
+
+  view/                 $this->viewPath. Endpoint templates; $this is in scope.
+                        view/errorNNN.php is used by Response::renderError().
+
+  frame/                $this->framePath. Overrides the global head/header/
+                        footer/sideNav. If you override head.php you MUST call
+                        getStylesheets(), getScripts(), and getComponents() or
+                        asset auto-loading silently stops. Submodules with no
+                        frame/ inherit the nearest ancestor's by walking up the
+                        directory tree — this walk-up is unique to frame/;
+                        asset directories are resolved per-module only, with
+                        no such inheritance.
+
+  model/                $this->modelPath. Autoloaded, but ONLY for classes whose
+                        namespace contains \Model\ (see core/Response.php).
+
+  lib/                  Classes other modules call: namespace
+                        Zero\Module\{Name}\Lib, loaded by Application::
+                        classFile() (Lib -> lib/). Other modules use a module's
+                        lib/, never its model/. See "Sharing logic between
+                        modules: lib/" in ZERO.md, the framework internals
+                        doc. This module has none.
+
+  assets/css/           Auto-loaded by filename. {module}.css loads on every
+  assets/js/            endpoint; {endpoint}.css loads on that endpoint only.
+                        Symlinked to /assets/{module}/ on first request.
+
+  assets/component/     ShadowComponent HTML. Response::getComponents() scans
+                        this on every request. NOT a top-level component/ dir.
+                        defineBasePaths() does set $this->componentPath, but
+                        nothing reads it — getComponents() resolves through
+                        moduleAssetDir instead. Don't rely on it.
+
+  config.ini            Module-scope constants, defined for this request only.
+  config/*.ini          Same, one file per concern. Both are parsed by
+                        Application::defineConstants().
+  config-tmpl/          A copy of each config file with the site's values
+                        blanked. config.ini and config/ are never committed;
+                        config-tmpl/ is. Installing a module on a site means
+                        copying these into place and filling them in.
+
+  strings/*.ini         The module's wording defaults: every key becomes a constant
+                        (prefix the module's name in upper snake case: AUTH_,
+                        ACCESS_REQUEST_), defined only if the site's
+                        app/strings/*.ini has not defined it. Use the constant in
+                        views, never the text. Loaded when the module is built
+                        (a submodule loads its parent's) by Strings::loadModule();
+                        code that needs another module's wording calls
+                        Strings::loadModule('Name') first. A module that is off
+                        loads none. strings/ is committed.
+                        Files are read with INI_SCANNER_RAW. Wrap the whole value
+                        in double quotes; inside them ' = ; and " are literal and
+                        need no escaping. Unwrapped, ; starts a comment and
+                        surrounding spaces are dropped.
+                            KEY="We'll email you a link; it says "hi" = done."
+
+  aux/                  aux/name.php is included by $this->getAuxiliary('name').
+                        You do NOT call this yourself: the global frame at
+                        app/frontend/frame/header.php calls getAuxiliary("nav")
+                        for whichever module is handling the request, so simply
+                        creating aux/nav.php injects the fragment into the nav.
+
+  submodule/             Module::__call() resolves these when the parent has no
+                        matching method. Infinitely nestable. The namespace is
+                        the parent's full name, with no "submodule" segment.
+                        A submodule frame/ containing only head.php still gets
+                        the global header/sideNav/footer, via Response::add()'s
+                        VIEW_PATH fallback for the pieces it doesn't override.
+
+  Admin/                AdminResponse::getAdminModules() walks Modules::all().
+                        A module is listed when its {Module}Admin class exists,
+                        the module is switched on (app/modules.ini [enabled])
+                        and the user holds every key in `permissions`.
+                        admin-config.php supplies label/icon/description/
+                        permissions; the card's place comes from the [order]
+                        section of app/modules.ini. Admin assets are inlined,
+                        never symlinked public — auto mode (which inlines this
+                        module's own Admin/assets/*.css automatically) is
+                        preferred over calling loadAdminStyles() by hand.
+                        Each discovered offering is one card in the "Modules"
+                        section of the /admin dashboard. The skeleton is an
+                        example module and is off unless app/modules.ini
+                        turns it on.
+
+
+Convention only — nothing in core/ reads these
+----------------------------------------------
+
+  helper/               Plain classes. Not autoloaded; require them yourself.
+                        Singular. (Ttrpg/helper/ is the working example.)
+
+  tests/                PHPUnit. phpunit.xml globs modules/*/tests (and
+                        core/modules/*/tests for the bundled ones), so anything
+                        here runs in the real suite. Extend Zero\Tests\Core\
+                        ZeroTestCase. Run: vendor/bin/phpunit --testsuite Modules
+
+  docs/                 Module-specific documentation.
+
+  template/             Render fragments that are not endpoint views.
+
+  data/                 Static fixture data shipped with the module.
+
+
+Users, groups and permissions
+-----------------------------
+
+These belong to core, not to a module: Zero\Core\Session (who is making this
+request), Zero\Core\User, Zero\Core\Group and Zero\Core\Permission. A module
+asks Session::userId() who is logged in. A module that shares its things with
+groups or users builds a Permission with its own name and the thing's name,
+
+    new Permission('inventory', 'item')             // key "inventory.item"
+
+and checks "is the owner, or $perm->can($id, $userId, 'update')". It keeps no
+permission table, writes no SQL against the group or permission tables, and
+calls $perm->forget($id) when it deletes the thing. See core/PERMISSIONS.md.
+
+A module never depends on the Admin module. It offers its admin screens in
+Admin/ (above) and the Admin module picks them up if the site has it.
+
+
+Deliberately not shown
+----------------------
+
+Some modules invent their own directories — sql/, storage/, scanner/, pics/,
+bash/, mail-template/, adapters/, service/, archive/. These are one-module
+inventions with no convention behind them. Invent your own freely; just don't
+expect the framework to notice.
+
+
+Creating a module
+-----------------
+
+  ./mkmod --help
+  ./mkmod Inventory                    # minimal: controller, view, css, js, .gitignore
+  ./mkmod Inventory --model --admin    # add model/ and Admin/
+  ./mkmod Inventory --all --dry-run    # show the full tree, write nothing
+  ./mkmod Inventory --submodule=Reorder   # nest a submodule
+  ./mkmod                              # no name: prompt for each directory
+  ./mkmod --selftest                   # verify mkmod against this skeleton
+
+The name must be StudlyCaps. A new module is the site's: mkmod writes it into
+the site's modules/ folder (the folder that holds core/, found from this
+script's own location), never into core/. `--dest <dir>` writes into <dir>
+instead, and `--dry-run` prints the destination. mkmod refuses to overwrite an
+existing module unless you pass --force, refuses the name Module outright, and
+refuses a name a bundled module in core/modules/ already has (compared the way
+Modules::path() compares: case-insensitive, hyphens ignored). So
+`./mkmod Auth` exits 1 — Auth ships in core — and so does a name that is
+already a module in the destination folder.
+
+Every module has its own .gitignore; mkmod copies this directory's. It ignores
+config.ini and config/, so a generated module's config files are not committed
+(mkmod prints a NOTE when this applies). Their blank copies in config-tmpl/
+are. This skeleton keeps its own config examples tracked with negations that
+sit in a MKMOD:SKELETON-ONLY block, so they stay here and a generated module
+gets the plain file.
+
+Run --selftest after editing anything in this directory. mkmod rewrites the
+skeleton using patterns anchored to exact strings in these files; --selftest
+turns a broken anchor into a loud failure rather than a silently wrong module.

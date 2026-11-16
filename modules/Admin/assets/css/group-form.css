@@ -1,0 +1,113 @@
+/* Group Form */
+.form-container {
+    max-width: 700px;
+    background: rgba(var(--surface-bg-rgb), 0.5);
+    backdrop-filter: blur(var(--surface-blur));
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 2rem;
+    margin-top: 1.5rem;
+}
+
+.admin-form-field {
+    margin-bottom: 1.5rem;
+}
+
+.admin-form-field label {
+    display: block;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.admin-form-field input[type="text"],
+.admin-form-field textarea {
+    width: 100%;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(var(--border-color-rgb, 255, 255, 255), 0.3);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-family: inherit;
+}
+
+.admin-form-field input[type="text"]:focus,
+.admin-form-field textarea:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.admin-form-field textarea {
+    resize: vertical;
+}
+
+.admin-form-field small {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 1.25rem;
+    height: 1.25rem;
+    cursor: pointer;
+}
+
+.warning-box {
+    background: rgba(255, 152, 0, 0.1);
+    border: 1px solid rgba(255, 152, 0, 0.3);
+    border-radius: 4px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.warning-box strong {
+    display: block;
+    color: #ff9800;
+    margin-bottom: 0.5rem;
+}
+
+.warning-box p {
+    margin: 0;
+    color: var(--text-secondary);
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(var(--border-color-rgb, 255, 255, 255), 0.2);
+}
+
+.danger-zone {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 2px solid rgba(244, 67, 54, 0.3);
+}
+
+.danger-zone h3 {
+    color: #f44336;
+    margin-bottom: 0.5rem;
+}
+
+.danger-zone p {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+.text-muted {
+    color: var(--text-secondary);
+    font-style: italic;
+}

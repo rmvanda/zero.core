@@ -15,6 +15,8 @@ use Zero\Core\Modules;
  */
 class AutoloadMapTest extends TestCase
 {
+    use AutoloadWalkTrait;
+
     /** Folders that hold no autoloadable classes, skipped at any depth inside a module. */
     private const SKIP_DIRS = [
         'tests', 'node_modules', 'data', 'storage', 'assets', 'view', 'frame', 'template', 'docs',
@@ -26,21 +28,7 @@ class AutoloadMapTest extends TestCase
      */
     private const NOT_AUTOLOADED = [
         'Zero\\Core\\TrackedStatement' => 'second class in core/Database.php, used only once Database is loaded',
-        'Zero\\Core\\CleanInput' => 'aux/ class in the Zero\\Core namespace; required by path',
-        'Zero\\Core\\OCR' => 'aux/ class in the Zero\\Core namespace; Share requires it by path',
-        'Zero\\Core\\ReceiptParser' => 'aux/ class in the Zero\\Core namespace; Share and Test require it by path',
-        'Zero\\Module\\MyModule' => 'documentation example, never loaded',
-        'Zero\\Lib\\Push\\PushHelper' => 'stale copy in modules/Push/; the class loads from lib/Push/',
-        'Zero\\Module\\Slots\\Model\\SlotsRng' => 'second class in SlotsEngine.php, used only once that file is loaded',
-        'Zero\\Module\\TheButton\\ButtonModel' => 'required by TheButton',
-        'Zero\\Module\\TheButton\\InviteeModel' => 'required by TheButton',
-        'Zero\\Module\\TheButton\\PressModel' => 'required by TheButton',
-        'Zero\\Module\\Ttrpg\\EntityGuard' => 'required by Ttrpg from helper/',
-        'Zero\\Module\\Ttrpg\\GearApiHandler' => 'required by Ttrpg from helper/',
-        'Zero\\Module\\Ttrpg\\RequestHelper' => 'required by Ttrpg from helper/',
-        'Zero\\Module\\Ttrpg\\SearchApiHandler' => 'required by Ttrpg from helper/',
-        'Zero\\Module\\Ttrpg\\HexmapModel' => 'required by the Hexmap submodule',
-        'Zero\\Module\\Ttrpg\\DMToolsTests' => 'manual test script in test/',
+        'Zero\\Lib\\Push\\PushHelper' => 'stale copy in core/modules/Push/; the class loads from core/lib/Push/',
     ];
 
     private string $root;
@@ -74,8 +62,80 @@ class AutoloadMapTest extends TestCase
             }
         }
 
-        $this->assertGreaterThan(100, $checked, 'the walk found almost no classes');
+        $this->assertGreaterThan(50, $checked, 'the walk found almost no classes');
         $this->assertSame([], $misses, count($misses) . " of $checked classes do not resolve:\n" . implode("\n", $misses));
+    }
+
+    public function testLibrariesResolveWhereTheyLive(): void
+    {
+        $core = [
+            'Zero\\Lib\\Mail\\Mail'             => 'core/lib/Mail/Mail.php',
+            'Zero\\Lib\\Http\\Client'           => 'core/lib/Http/Client.php',
+            'Zero\\Lib\\CloudFlare\\CloudFlare' => 'core/lib/CloudFlare/CloudFlare.php',
+            'Zero\\Lib\\Push\\PushHelper'       => 'core/lib/Push/PushHelper.php',
+        ];
+        foreach ($core as $class => $path) {
+            $found = Application::classFile($class);
+            $this->assertNotNull($found, $class);
+            $this->assertSame(realpath($this->root . $path), realpath($found), $class);
+        }
+    }
+
+    public function testMovedLibraryNamesNoLongerResolve(): void
+    {
+        foreach (['Zero\\Lib\\Api\\ServiceClient', 'Zero\\Lib\\Api\\ServiceResponse', 'Zero\\Lib\\Ollama\\OllamaClient', 'Zero\\Lib\\ComfyUI\\ComfyUIClient'] as $class) {
+            $this->assertNull(Application::classFile($class), $class);
+        }
+        $this->assertDirectoryDoesNotExist($this->root . 'lib');
+    }
+
+    public function testNoFileNamesTheMovedLibraries(): void
+    {
+        $needles = ['Zero\\Lib\\Api', 'Zero\\Lib\\Ollama', 'Zero\\Lib\\ComfyUI', 'lib/Api/', 'lib/Ollama/', 'lib/ComfyUI/'];
+        $hits = [];
+        $skip = ['vendor', '.git', 'node_modules', 'superpowers', 'storage'];
+        $self = realpath(__FILE__);
+        $walk = function (string $dir) use (&$walk, &$hits, $needles, $skip, $self): void {
+            foreach (scandir($dir) ?: [] as $name) {
+                if ($name[0] === '.' || in_array($name, $skip, true) || is_link($dir . $name)) {
+                    continue;
+                }
+                $path = $dir . $name;
+                if (is_dir($path)) {
+                    $walk($path . '/');
+                    continue;
+                }
+                if (realpath($path) === $self || $name === 'DEPRECATING_CHANGES.md' || filesize($path) > 2000000) {
+                    continue;
+                }
+                $text = (string) file_get_contents($path);
+                if (str_contains($text, "\0")) {
+                    continue;
+                }
+                foreach ($needles as $needle) {
+                    if (str_contains($text, $needle)) {
+                        $hits[] = substr($path, strlen($this->root)) . ' names ' . $needle;
+                    }
+                }
+            }
+        };
+        foreach (['core', 'modules', 'app', 'docs', 'swoole', 'aux', 'plugin', 'entity'] as $top) {
+            if (is_dir($this->root . $top)) {
+                $walk($this->root . $top . '/');
+            }
+        }
+        foreach (glob($this->root . '*.{php,md,json,xml}', GLOB_BRACE) ?: [] as $file) {
+            if (basename($file) === 'DEPRECATING_CHANGES.md') {
+                continue;
+            }
+            $text = (string) file_get_contents($file);
+            foreach ($needles as $needle) {
+                if (str_contains($text, $needle)) {
+                    $hits[] = basename($file) . ' names ' . $needle;
+                }
+            }
+        }
+        $this->assertSame([], $hits);
     }
 
     public function testUnknownClassIsNull(): void
@@ -87,18 +147,9 @@ class AutoloadMapTest extends TestCase
     public function testSubmoduleClass(): void
     {
         $this->assertSame(
-            realpath($this->root . 'modules/Admin/submodule/Firewall/Firewall.php'),
+            realpath($this->root . 'core/modules/Admin/submodule/Firewall/Firewall.php'),
             realpath((string) Application::classFile('Zero\Module\Admin\Firewall'))
         );
-    }
-
-    public function testAuxClass(): void
-    {
-        $yelp = $this->root . 'aux/yelp/Yelp.php';
-        if (!is_file($yelp)) {
-            $this->markTestSkipped('aux/ is not present in this checkout');
-        }
-        $this->assertSame(realpath($yelp), realpath((string) Application::classFile('Zero\\Aux\\Yelp\\Yelp')));
     }
 
     #[\PHPUnit\Framework\Attributes\DataProvider('malformedNames')]
@@ -128,7 +179,7 @@ class AutoloadMapTest extends TestCase
         foreach (['..', 'Auth\\OAuth\\Token', 'auth/../admin', '', 'Auth.php', "Auth\n", 'api-config'] as $bad) {
             $this->assertFalse(Application::isModuleName($bad), var_export($bad, true));
         }
-        foreach (['Auth', 'ApiConfig'] as $good) {
+        foreach (['Auth', 'AccessRequest'] as $good) {
             $this->assertTrue(Application::isModuleName($good), $good);
         }
         $this->assertNull(Application::controllerFile('..'));
@@ -140,118 +191,24 @@ class AutoloadMapTest extends TestCase
     private function classFiles(): \Generator
     {
         $core = $this->root . 'core/';
-        foreach ($this->phpFiles($core, ['tests', 'skeleton', 'archive']) as $file) {
+        // core/modules/ is walked below, through Modules::all()
+        foreach ($this->phpFiles($core, ['tests', 'skeleton', 'archive', 'modules']) as $file) {
             yield $file;
         }
-        foreach ($this->phpFiles($this->root . 'lib/', []) as $file) {
+        foreach ($this->phpFiles($this->root . 'core/lib/', []) as $file) {
             yield $file;
         }
-        // aux/ is its own repository, ignored in the stage repository; walked when present
-        foreach ($this->phpFiles($this->root . 'aux/', ['tests', 'node_modules', 'data', 'docs']) as $file) {
+        foreach (glob($this->root . 'core/entity/*.php') ?: [] as $file) {
             yield $file;
         }
-        foreach (glob($this->root . 'entity/*.php') ?: [] as $file) {
-            yield $file;
-        }
-        foreach (glob($this->root . 'modules/*', GLOB_ONLYDIR) ?: [] as $dir) {
-            if (basename($dir) === 'Jackpack') {
+        // The modules core ships; a site's own are walked by its own tests.
+        foreach (Modules::all() as $name => $dir) {
+            if (!str_starts_with(realpath($dir), realpath($core))) {
                 continue;
             }
-            foreach ($this->phpFiles($dir . '/', self::SKIP_DIRS) as $file) {
+            foreach ($this->phpFiles($dir, self::SKIP_DIRS) as $file) {
                 yield $file;
             }
         }
-    }
-
-    /**
-     * @param string[] $skip directory names not to descend into
-     * @return \Generator<string>
-     */
-    private function phpFiles(string $dir, array $skip): \Generator
-    {
-        if (!is_dir($dir)) {
-            return;
-        }
-        $names = scandir($dir) ?: [];
-        sort($names);
-        foreach ($names as $name) {
-            if ($name[0] === '.') {
-                continue;
-            }
-            $path = $dir . $name;
-            if (is_dir($path)) {
-                if (!in_array($name, $skip, true)) {
-                    yield from $this->phpFiles($path . '/', $skip);
-                }
-            } elseif (str_ends_with($name, '.php')) {
-                yield $path;
-            }
-        }
-    }
-
-    /**
-     * Fully qualified names of the classes, interfaces, traits and enums a
-     * file declares in a namespace that begins Zero\.
-     *
-     * @return string[]
-     */
-    private function declaredClasses(string $file): array
-    {
-        $tokens = token_get_all((string) file_get_contents($file));
-        $namespace = '';
-        $found = [];
-        $count = count($tokens);
-
-        for ($i = 0; $i < $count; $i++) {
-            $token = $tokens[$i];
-            if (!is_array($token)) {
-                continue;
-            }
-            if ($token[0] === T_NAMESPACE) {
-                $namespace = '';
-                for ($j = $i + 1; $j < $count; $j++) {
-                    $t = $tokens[$j];
-                    if (is_array($t) && in_array($t[0], [T_STRING, T_NAME_QUALIFIED, T_NS_SEPARATOR], true)) {
-                        $namespace .= $t[1];
-                    } elseif ($t === ';' || $t === '{') {
-                        break;
-                    }
-                }
-                $i = $j;
-            } elseif (in_array($token[0], [T_CLASS, T_INTERFACE, T_TRAIT, T_ENUM], true)) {
-                // "Foo::class" and "new class" are not declarations
-                $prev = $this->previousCode($tokens, $i);
-                if ($prev !== null && is_array($prev) && in_array($prev[0], [T_DOUBLE_COLON, T_NEW], true)) {
-                    continue;
-                }
-                for ($j = $i + 1; $j < $count; $j++) {
-                    $t = $tokens[$j];
-                    if (is_array($t) && $t[0] === T_STRING) {
-                        if (str_starts_with($namespace, 'Zero\\')) {
-                            $found[] = $namespace . '\\' . $t[1];
-                        }
-                        break;
-                    }
-                    if (is_array($t) && $t[0] === T_WHITESPACE) {
-                        continue;
-                    }
-                    break;
-                }
-            }
-        }
-
-        return $found;
-    }
-
-    private function previousCode(array $tokens, int $i): array|string|null
-    {
-        for ($k = $i - 1; $k >= 0; $k--) {
-            if (is_array($tokens[$k]) && in_array($tokens[$k][0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)) {
-                continue;
-            }
-            return $tokens[$k];
-        }
-
-        return null;
     }
 }

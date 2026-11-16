@@ -342,7 +342,7 @@ public function updateSettings($args) {
   gap that OAuth login has
 
 This makes it a second, divergent writer of the session contract documented in
-`modules/Auth/CLAUDE.md`.
+`core/modules/Auth/CLAUDE.md`.
 
 **Fix:** the manual-registration project extracts session construction into a single helper.
 Because that helper has three callers — `Auth::complete()`, the magic-link consumer, and this
@@ -426,8 +426,8 @@ Two invariants currently hold **by coincidence of data**, exactly like the one
 
 **1. "No unverified user has permissions."** True — every `allow.*` row in `permission`
 belongs to a verified account — but nothing enforces it. `grant()` (`core/HoldsCapabilities.php`)
-has no `verified` check, and neither grant path does (`modules/Admin/Admin.php`,
-`modules/AccessRequest/AccessRequest.php`). **Fix:** the check belongs in `grant()` —
+has no `verified` check, and neither grant path does (`core/modules/Admin/Admin.php`,
+`core/modules/AccessRequest/AccessRequest.php`). **Fix:** the check belongs in `grant()` —
 one place, both callers covered. This matters more than the `RequireLogin`/`RequireVerified`
 question, because it is what actually makes `RequirePermission` the reliable gate.
 
@@ -440,7 +440,7 @@ has no toggle. Outside PHP, three vectors remain:
   single-table projection left over from the EAV cutover, so `UPDATE user_view SET verified = 0`
   writes through to `users`. Nothing does this today; the surface just is not obvious from a file
   named like a read-only compatibility view.
-- **`core/user_view_eav_rollback.sql`** reverts the 9 rows to the 2026-08-08 snapshot. Already
+- **`core/sql/migrations/user_view_eav_rollback.sql`** reverts the 9 rows to the 2026-08-08 snapshot. Already
   self-documented there; currently moot only because no row has been touched since cutover.
 - Manual SQL, or a restore from a pre-verification backup.
 
@@ -454,7 +454,7 @@ concrete endpoint needs "logged in, unverified is fine" — none does.
 ### Stale comment: Google adapter normalization
 **Status:** Open
 **Priority:** Trivial
-**Location:** `modules/Auth/Auth.php:255-260`
+**Location:** `core/modules/Auth/Auth.php:255-260`
 
 The comment inside `findOrCreateUser()` says Google `format()` "passes Google's value straight
 through with no normalization (`$user['verified_email'] ?: $user['email_verified']`)".

@@ -96,6 +96,8 @@ class Application {
             }
         }
         Strings::defineSiteFallbacks();
+        // Core's own wording for whatever the site did not word itself.
+        Strings::loadDefaults();
         if ($key) {
             foreach ($key as $k => $v) {
                 define($k, $v);
@@ -309,7 +311,7 @@ class Application {
      * ORDER is a real invariant — #[AllowWithToken] seeds the session that
      * #[RequireLogin] then checks, so a class-level RequireLogin above a
      * method-level AllowWithToken silently breaks token auth — and
-     * core/tests/AttributeOrderTest.php enforces it across every module by
+     * core/tests/module/AttributeOrderTest.php enforces it across every module by
      * calling this for every endpoint. That test has to see the sequence the
      * framework will actually run, including the replace/additive filtering and
      * the __call fallback below; reimplementing those rules in the test would
@@ -479,8 +481,10 @@ class Application {
      *
      *   Zero\Core\Attribute\  core/attribute/
      *   Zero\Core\            core/
-     *   Zero\Lib\             lib/
-     *   Zero\Entity\          entity/
+     *   Zero\Lib\             core/lib/
+     *   Zero\Entity\          core/entity/, then the site's entity/ (ENTITY_SITE_DIR
+     *                         when defined). A site class with the name of a
+     *                         framework class is never loaded: the framework's wins.
      *   Zero\Aux\             aux/
      *   Zero\App\Lib\        app/lib/
      *   Zero\Module\{X}\...  the folder Modules::path(X) names
@@ -507,13 +511,20 @@ class Application {
         foreach ([
             "Zero\\Core\\Attribute\\" => "core/attribute/",
             "Zero\\Core\\"            => "core/",
-            "Zero\\Lib\\"             => "lib/",
-            "Zero\\Entity\\"          => "entity/",
+            "Zero\\Lib\\"             => "core/lib/",
+            "Zero\\Entity\\"          => "core/entity/",
             "Zero\\Aux\\"             => "aux/",
             "Zero\\App\\Lib\\"        => "app/lib/",
         ] as $prefix => $folder) {
             if (str_starts_with($class, $prefix)) {
-                return self::findIn($root . $folder, substr($class, strlen($prefix)), false);
+                $rest = substr($class, strlen($prefix));
+                $file = self::findIn($root . $folder, $rest, false);
+                if ($file === null && $prefix === "Zero\\Entity\\") {
+                    // A site's own entity classes live in its entity/ folder, a second allowed base.
+                    $site = defined("ENTITY_SITE_DIR") ? rtrim(ENTITY_SITE_DIR, "/") . "/" : $root . "entity/";
+                    $file = self::findIn($site, $rest, false);
+                }
+                return $file;
             }
         }
 

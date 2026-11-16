@@ -3,7 +3,9 @@
  * PHPUnit bootstrap.
  *
  * Beyond Composer's autoloader, this registers module ENDPOINT classes, which
- * Composer cannot reach: they live at modules/{Name}/{Name}.php, and PSR-4
+ * Composer cannot reach: they live at {modules folder}/{Name}/{Name}.php (the
+ * site's modules/ or core/modules/, looked up directly so a test that points
+ * Modules at throwaway folders still finds the real controllers), and PSR-4
  * cannot map the class Zero\Module\Auth to that path because the class is not
  * under a Zero\Module\Auth\ prefix. At request time the framework registers its
  * own autoloader (Response::registerAutoloaders()), which never runs here — so
@@ -14,7 +16,7 @@
  * the per-module PSR-4 entries in composer.json and are deliberately skipped.
  *
  * The one sub-namespace registered here is a module's lib/ (classes other
- * modules call, Zero\Module\{Name}\Lib\{Class} in modules/{Name}/lib/{Class}.php):
+ * modules call, Zero\Module\{Name}\Lib\{Class} in {module folder}/lib/{Class}.php):
  * Composer's Zero\Module\ -> modules/ mapping would look for it in Lib/, and
  * the directory is lowercase.
  */
@@ -30,9 +32,12 @@ spl_autoload_register(static function (string $class): void {
 
     $rest = substr($class, strlen($prefix));
     if (preg_match('/^(\w+)\\\\Lib\\\\(.+)$/', $rest, $m)) {
-        $file = dirname(__DIR__, 2) . '/modules/' . $m[1] . '/lib/' . str_replace('\\', '/', $m[2]) . '.php';
-        if (is_file($file)) {
-            require_once $file;
+        foreach (['/modules/', '/core/modules/'] as $folder) {
+            $file = dirname(__DIR__, 2) . $folder . $m[1] . '/lib/' . str_replace('\\', '/', $m[2]) . '.php';
+            if (is_file($file)) {
+                require_once $file;
+                return;
+            }
         }
         return;
     }
@@ -40,9 +45,12 @@ spl_autoload_register(static function (string $class): void {
         return;   // a sub-namespace — Composer's PSR-4 owns it
     }
 
-    $file = dirname(__DIR__, 2) . '/modules/' . $rest . '/' . $rest . '.php';
-    if (is_file($file)) {
-        require_once $file;
+    foreach (['/modules/', '/core/modules/'] as $folder) {
+        $file = dirname(__DIR__, 2) . $folder . $rest . '/' . $rest . '.php';
+        if (is_file($file)) {
+            require_once $file;
+            return;
+        }
     }
 });
 

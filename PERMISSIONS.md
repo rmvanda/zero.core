@@ -6,9 +6,9 @@ SQL against core's, and never depends on the Admin module for them.
 | Class | What it is | Tables | Schema |
 |---|---|---|---|
 | `Zero\Core\Session` | Who is making this request | none (`$_SESSION`) | |
-| `Zero\Core\User` | An account | `users`, `user_profile`, `user_settings` | `users.sql`, `user_profile.sql` |
-| `Zero\Core\Group` | A group of users | `user_group`, `user_group_member` | `group.sql` |
-| `Zero\Core\Permission` | Who may do what | `permission` | `permission.sql` |
+| `Zero\Core\User` | An account | `users`, `user_profile`, `user_settings` | `core/sql/core.sql` (design notes: `core/sql/migrations/users.sql`, `user_profile.sql`) |
+| `Zero\Core\Group` | A group of users | `user_group`, `user_group_member` | `core/sql/core.sql` (design notes: `core/sql/migrations/group.sql`) |
+| `Zero\Core\Permission` | Who may do what | `permission` | `core/sql/core.sql` (design notes: `core/sql/migrations/permission.sql`) |
 
 `User` and `Group` are both `Zero\Core\Model` row objects, and both are a `Zero\Core\Holder`:
 something a permission can be granted to. The Admin module's screens edit users and groups
@@ -31,7 +31,7 @@ Session::end();                 // the single place it is torn down
 ```
 
 `User` knows nothing about the session: every `User` method answers for the account the object
-was loaded from. See `modules/Auth/CLAUDE.md` for what `establish()` puts in `$_SESSION`.
+was loaded from. See `core/modules/Auth/CLAUDE.md` for what `establish()` puts in `$_SESSION`.
 
 ## Two kinds of permission
 

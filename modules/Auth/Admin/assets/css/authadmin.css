@@ -1,0 +1,105 @@
+/* OAuth Providers admin — extends the shared admin.css table/stat kit with the
+   provider-specific cells. Inherits main.css tokens (dark glass / cyan accent). */
+
+.admin-hint {
+    margin: 0 0 1.25rem;
+    padding: 0.9rem 1.1rem;
+    background: rgba(var(--surface-bg-rgb), 0.2);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--accent-primary);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.55;
+}
+
+.admin-hint strong { color: var(--text-bright); }
+
+.admin-hint code {
+    background: rgba(var(--surface-bg-rgb), 0.4);
+    padding: 0.05rem 0.35rem;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.82em;
+    color: var(--accent-primary);
+}
+
+/* --- Provider cell (logo tile + name) --- */
+.oauth-admin-provider {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+
+.oauth-admin-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    background: rgba(var(--surface-bg-rgb), 0.35);
+    border: 1px solid var(--border-color);
+}
+
+.oauth-admin-icon svg { width: 22px; height: 22px; }
+
+.oauth-admin-name {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.oauth-admin-name span {
+    color: var(--text-bright);
+    font-weight: 500;
+    font-size: 1rem;
+}
+
+.oauth-admin-name code {
+    color: var(--text-dimmed);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+}
+
+/* --- Credential status pills --- */
+.oauth-cred {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.oauth-cred .material-symbols-outlined { font-size: 14px; }
+
+/* Success green derived from main.css --color-success (#00ff88 = 0,255,136). */
+.oauth-cred.is-configured {
+    background: rgba(0, 255, 136, 0.14);
+    color: var(--color-success);
+}
+
+.oauth-cred.not-configured {
+    background: rgba(var(--surface-bg-rgb), 0.4);
+    color: var(--text-dimmed);
+    border: 1px solid var(--border-color);
+}
+
+/* --- Toggle cell --- */
+.oauth-admin-toggle {
+    display: inline-flex;
+    margin: 0;
+    cursor: pointer;
+}
+
+/* Disabled providers read as dimmed (except the live toggle itself). */
+.oauth-admin-row.is-disabled .oauth-admin-provider,
+.oauth-admin-row.is-disabled td:nth-child(2),
+.oauth-admin-row.is-disabled td:nth-child(3) {
+    opacity: 0.45;
+}

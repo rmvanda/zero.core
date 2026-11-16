@@ -1,0 +1,243 @@
+<template id="admin-expandable-table">
+  <style>
+    :host {
+      display: block;
+      color: var(--text-primary, white);
+      font-family: inherit;
+    }
+
+    .table-wrapper {
+      background: rgba(var(--surface-bg-rgb, 10, 30, 20), 0.1);
+      backdrop-filter: blur(var(--surface-blur, 8px));
+      border: 1px solid var(--border-color, rgba(255, 255, 255, 0.2));
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      color: inherit;
+    }
+
+    thead {
+      background: rgba(var(--surface-bg-rgb, 10, 30, 20), 0.3);
+    }
+
+    ::slotted(th) {
+      padding: 1rem;
+      text-align: left;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.9rem;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.2));
+      color: inherit;
+    }
+
+    ::slotted(tr.main-row) {
+      cursor: pointer;
+      transition: background 0.2s ease;
+      border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.2));
+    }
+
+    ::slotted(tr.main-row:hover) {
+      background: rgba(var(--accent-primary-rgb, 0, 255, 255), 0.1);
+    }
+
+    ::slotted(tr.main-row.expanded) {
+      background: rgba(var(--accent-primary-rgb, 0, 255, 255), 0.05);
+    }
+
+    ::slotted(td) {
+      padding: 1rem;
+      color: inherit;
+    }
+
+    ::slotted(.expand-icon) {
+      font-family: "Material Symbols Outlined";
+      font-size: 1.2rem;
+      transition: transform 0.3s ease;
+      display: inline-block;
+    }
+
+    ::slotted(tr.expanded .expand-icon) {
+      transform: rotate(90deg);
+    }
+
+    ::slotted(tr.details-row) {
+      display: none;
+      background: rgba(var(--surface-bg-rgb, 10, 30, 20), 0.2);
+    }
+
+    ::slotted(tr.details-row.visible) {
+      display: table-row;
+    }
+
+    th {
+      padding: 1rem;
+      text-align: left;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.9rem;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.2));
+    }
+  </style>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th width="30"></th>
+          <slot name="headers"></slot>
+        </tr>
+      </thead>
+      <tbody>
+        <slot name="rows"></slot>
+      </tbody>
+    </table>
+  </div>
+</template>
+
+<script>
+  class AdminExpandableTable extends ShadowComponent {
+    connectedCallback() {
+      super.connectedCallback();
+      this.setupEventListeners();
+      this.applyStylesToSlottedContent();
+    }
+
+    setupEventListeners() {
+      // Listen for clicks on the light DOM
+      this.addEventListener('click', (e) => {
+        const mainRow = e.target.closest('.main-row');
+        if (mainRow) {
+          this.toggleRow(mainRow);
+        }
+      });
+    }
+
+    applyStylesToSlottedContent() {
+      // Apply styles to slotted content via CSS classes
+      const style = document.createElement('style');
+      style.textContent = `
+        admin-expandable-table .expand-icon {
+          font-family: "Material Symbols Outlined";
+          font-size: 1.2rem;
+          transition: transform 0.3s ease;
+          display: inline-block;
+        }
+
+        admin-expandable-table tr.main-row.expanded .expand-icon {
+          transform: rotate(90deg);
+        }
+
+        admin-expandable-table tr.details-row {
+          display: none;
+          background: rgba(var(--surface-bg-rgb, 10, 30, 20), 0.2);
+        }
+
+        admin-expandable-table tr.details-row.visible {
+          display: table-row;
+        }
+
+        admin-expandable-table .details-cell {
+          padding: 0;
+        }
+
+        admin-expandable-table .details-content {
+          padding: 1.5rem;
+          animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        admin-expandable-table .details-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 1.5rem;
+          margin-bottom: 1rem;
+        }
+
+        admin-expandable-table .detail-item {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+
+        admin-expandable-table .detail-label {
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: var(--text-secondary, rgba(255, 255, 255, 0.8));
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+
+        admin-expandable-table .detail-value {
+          color: var(--text-primary, rgba(255, 255, 255, 0.9));
+        }
+
+        admin-expandable-table .actions-row {
+          display: flex;
+          gap: 0.5rem;
+          padding-top: 1rem;
+          border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.2));
+        }
+
+        admin-expandable-table .status-badge {
+          display: inline-block;
+          padding: 0.25rem 0.75rem;
+          border-radius: 12px;
+          font-size: 0.85rem;
+          font-weight: 500;
+        }
+
+        admin-expandable-table .status-active {
+          background: rgba(76, 175, 80, 0.2);
+          color: #4caf50;
+          border: 1px solid rgba(76, 175, 80, 0.4);
+        }
+
+        admin-expandable-table .status-inactive {
+          background: rgba(158, 158, 158, 0.2);
+          color: #9e9e9e;
+          border: 1px solid rgba(158, 158, 158, 0.4);
+        }
+      `;
+
+      if (!document.getElementById('admin-expandable-table-styles')) {
+        style.id = 'admin-expandable-table-styles';
+        document.head.appendChild(style);
+      }
+    }
+
+    toggleRow(row) {
+      const detailsRow = row.nextElementSibling;
+      if (!detailsRow || !detailsRow.classList.contains('details-row')) return;
+
+      // Close all other rows
+      this.querySelectorAll('.main-row.expanded').forEach(r => {
+        if (r !== row) {
+          r.classList.remove('expanded');
+          const details = r.nextElementSibling;
+          if (details) details.classList.remove('visible');
+        }
+      });
+
+      // Toggle this row
+      row.classList.toggle('expanded');
+      detailsRow.classList.toggle('visible');
+    }
+  }
+  customElements.define("admin-expandable-table", AdminExpandableTable);
+</script>

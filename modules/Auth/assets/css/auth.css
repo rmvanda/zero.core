@@ -1,0 +1,81 @@
+/* ===== REGISTER / SIGN-IN FORMS ===== */
+/* Mirrors .login-container and .login-box from the User module's login.css.
+ *
+ * They are RESTATED here, not inherited: Response::loadAssetTypeFromDir() only
+ * scans /assets/{live module}/css/ and only picks files named {module}.css or
+ * {endpoint}.css — core/modules/User/assets/css/login.css is never linked on these
+ * pages, so relying on it would leave the forms completely unstyled. Keep the
+ * two in sync.
+ *
+ * Named auth.css, not register.css, precisely because of that matching rule:
+ * the module-name file loads on EVERY /auth/* page, so /auth/register,
+ * /auth/signin and /auth/token all share this one sheet. An endpoint-named
+ * file would only ever have styled the one endpoint it is named for.
+ *
+ * The form-field rules (.register-form, .register-field, .register-label,
+ * .register-submit) moved to app/frontend/www/assets/css/widgets.css — that
+ * global stylesheet is the one place login.php AND the footer signin modal
+ * both load, and this sheet still doesn't reach either of them. What's left
+ * here is only what's specific to the /auth/register and /auth/signin pages
+ * themselves. */
+
+.login-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2rem;
+}
+
+.login-box {
+    max-width: 400px;
+    width: 100%;
+    padding: 3rem 2rem;
+    background: rgba(var(--surface-bg-rgb), var(--surface-opacity-medium));
+    backdrop-filter: blur(var(--surface-blur));
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    text-align: center;
+}
+
+.login-box h2 {
+    color: var(--text-bright);
+    margin-bottom: 0.5rem;
+    font-size: 1.8rem;
+}
+
+.register-box {
+    max-width: 460px;
+    text-align: left;
+}
+
+.register-errors {
+    margin: 1rem 0 0;
+    padding: 0.75rem 1rem 0.75rem 2rem;
+    background: rgba(var(--surface-bg-rgb), var(--surface-opacity-light));
+    border-left: 3px solid var(--color-error);
+    border-radius: 4px;
+    color: var(--text-bright);
+    font-size: var(--font-size-sm);
+}
+
+.register-sent,
+.register-alt {
+    color: var(--text-dimmed);
+    font-size: var(--font-size-sm);
+    line-height: 1.5;
+}
+
+.register-alt {
+    margin-top: 1.5rem;
+    text-align: center;
+}
+
+.register-alt a {
+    color: var(--accent-primary);
+    text-decoration: none;
+}
+
+.register-alt a:hover {
+    text-decoration: underline;
+}

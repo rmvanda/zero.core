@@ -14,7 +14,7 @@ fi;
 # both set in above ini file... 
 # if you have [categories] it complains, but it still works. 
 #NOTIFY_LOG_LVLS="error"
-#EMAIL_NOTIFY_TO='james@unisolu.com'
+#EMAIL_NOTIFY_TO='you@example.com'
 
 source $CONFIG_LOCATION; 
 

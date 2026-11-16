@@ -1,0 +1,288 @@
+/* ===== API TOKENS PAGE ===== */
+
+/* --- Header with description and create button --- */
+.tokens-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tokens-description {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    margin: 0;
+    max-width: 60%;
+}
+
+.tokens-create-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
+    background: rgba(var(--accent-primary-rgb), 0.15);
+    color: var(--accent-primary);
+    border: 1px solid rgba(var(--accent-primary-rgb), 0.3);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tokens-create-btn:hover {
+    background: rgba(var(--accent-primary-rgb), 0.25);
+    border-color: rgba(var(--accent-primary-rgb), 0.5);
+}
+
+.tokens-create-btn .material-symbols-outlined {
+    font-size: 20px;
+}
+
+/* --- Token List --- */
+.tokens-list {
+    padding: 0.5rem 0;
+}
+
+.token-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.85rem 1.5rem;
+    transition: background 0.15s ease;
+}
+
+.token-row:hover {
+    background: rgba(var(--accent-primary-rgb), 0.04);
+}
+
+.token-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 0;
+}
+
+.token-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-bright);
+    font-size: 1rem;
+}
+
+.token-label .material-symbols-outlined {
+    font-size: 20px;
+    color: var(--accent-primary);
+    opacity: 0.7;
+}
+
+.token-meta {
+    color: var(--text-dimmed);
+    font-size: 0.85rem;
+    padding-left: 1.75rem;
+}
+
+.token-delete-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.4rem;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--text-dimmed);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.token-delete-btn:hover {
+    color: var(--color-error);
+    background: rgba(255, 68, 68, 0.1);
+    border-color: rgba(255, 68, 68, 0.2);
+}
+
+.token-delete-btn .material-symbols-outlined {
+    font-size: 20px;
+}
+
+/* --- Dialog --- */
+.token-dialog {
+    background: rgba(var(--surface-bg-rgb), 0.95);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--text-primary);
+    padding: 0;
+    max-width: 500px;
+    width: 90vw;
+}
+
+.token-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+}
+
+.token-dialog-content {
+    padding: 1.5rem;
+}
+
+.token-dialog-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.2rem;
+    font-weight: 400;
+    color: var(--accent-primary);
+    margin: 0 0 1.25rem 0;
+}
+
+.token-dialog-title .material-symbols-outlined {
+    font-size: 24px;
+}
+
+/* --- Form Elements --- */
+.token-form-label {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+}
+
+.token-form-input {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    background: rgba(var(--surface-bg-rgb), var(--surface-opacity-medium));
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-bright);
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s ease;
+    box-sizing: border-box;
+}
+
+.token-form-input:focus {
+    border-color: rgba(var(--accent-primary-rgb), 0.5);
+}
+
+.token-form-input::placeholder {
+    color: var(--text-dimmed);
+}
+
+/* --- Dialog Actions --- */
+.token-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+.token-btn {
+    padding: 0.5rem 1.25rem;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.token-btn-cancel {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+}
+
+.token-btn-cancel:hover {
+    background: rgba(var(--surface-bg-rgb), var(--surface-opacity-light));
+    color: var(--text-primary);
+}
+
+.token-btn-primary {
+    background: rgba(var(--accent-primary-rgb), 0.2);
+    border: 1px solid rgba(var(--accent-primary-rgb), 0.3);
+    color: var(--accent-primary);
+}
+
+.token-btn-primary:hover {
+    background: rgba(var(--accent-primary-rgb), 0.3);
+    border-color: rgba(var(--accent-primary-rgb), 0.5);
+}
+
+/* --- Token Display (after creation) --- */
+.token-warning {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-warning);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.token-warning .material-symbols-outlined {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.token-display {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(var(--surface-bg-rgb), var(--surface-opacity-medium));
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.75rem;
+}
+
+.token-display code {
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--accent-primary);
+    word-break: break-all;
+    user-select: all;
+}
+
+.token-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: var(--text-dimmed);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.token-copy-btn:hover {
+    color: var(--accent-primary);
+    background: rgba(var(--accent-primary-rgb), 0.1);
+}
+
+.token-copy-btn .material-symbols-outlined {
+    font-size: 20px;
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+    .tokens-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+
+    .tokens-description {
+        max-width: 100%;
+    }
+
+    .token-row {
+        padding: 0.85rem 1rem;
+    }
+
+    .token-meta {
+        font-size: 0.8rem;
+    }
+}

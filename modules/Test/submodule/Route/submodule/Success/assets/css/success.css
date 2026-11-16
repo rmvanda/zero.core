@@ -1,0 +1,13 @@
+/* Success submodule styles - loaded for all Success endpoints */
+body::before {
+    content: "success.css loaded";
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: #333;
+    color: #0ff;
+    padding: 4px 8px;
+    font-family: monospace;
+    font-size: 12px;
+    z-index: 9999;
+}

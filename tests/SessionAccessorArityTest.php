@@ -48,7 +48,7 @@ class SessionAccessorArityTest extends ZeroTestCase
      * particular is tracked by no repository — so findOffendingCallSites()
      * skips a missing directory silently rather than failing the test.
      */
-    private const SCAN_DIRS = ['modules', 'core', 'app', 'aux', 'lib', 'entity', 'plugin', 'swoole'];
+    private const SCAN_DIRS = ['modules', 'core', 'app', 'aux', 'entity', 'plugin', 'swoole'];
 
     public function testNoCallSitePassesAnArgumentToAZeroParameterSessionAccessor(): void
     {

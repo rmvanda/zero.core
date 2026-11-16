@@ -1,0 +1,119 @@
+/* HelloWorld Module - Base Styles (loaded on all endpoints) */
+
+.greeting-display {
+    text-align: center;
+    padding: 3rem 1rem;
+    margin: 2rem 0;
+}
+
+.greeting {
+    font-size: 2.5rem;
+    font-weight: 300;
+    color: var(--text-primary, #333);
+    margin: 0;
+}
+
+.back-link {
+    text-align: center;
+}
+
+.back-link a {
+    color: var(--primary, #2196F3);
+    text-decoration: none;
+}
+
+.back-link a:hover {
+    text-decoration: underline;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin: 0 0.25rem 1rem;
+}
+
+.badge.auth {
+    background: var(--success, #4CAF50);
+    color: white;
+}
+
+.badge.perm {
+    background: var(--warning, #FF9800);
+    color: white;
+}
+
+/* Secure endpoint styling */
+.greeting-display.secure {
+    border: 2px solid var(--success, #4CAF50);
+    border-radius: 8px;
+    background: var(--success-bg, rgba(76, 175, 80, 0.05));
+}
+
+/* Permitted endpoint styling */
+.greeting-display.permitted {
+    border: 2px solid var(--warning, #FF9800);
+    border-radius: 8px;
+    background: var(--warning-bg, rgba(255, 152, 0, 0.05));
+}
+
+/* Endpoints listing (index page) */
+.endpoints {
+    margin-top: 2rem;
+}
+
+.endpoint-card {
+    background: var(--surface, #f5f5f5);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid var(--primary, #2196F3);
+}
+
+.endpoint-card h3 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+}
+
+.endpoint-card h3 a {
+    color: var(--primary, #2196F3);
+    text-decoration: none;
+}
+
+.endpoint-card h3 a:hover {
+    text-decoration: underline;
+}
+
+.endpoint-card .description {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+}
+
+.endpoint-card .usage {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.endpoint-card ul {
+    margin: 0.5rem 0 1rem 0;
+    padding-left: 1.5rem;
+}
+
+.endpoint-card li {
+    margin-bottom: 0.25rem;
+}
+
+.endpoint-card .note {
+    font-size: 0.9rem;
+    color: var(--text-secondary, #666);
+    margin-bottom: 0;
+}
+
+.endpoint-card code {
+    background: var(--code-bg, #e0e0e0);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.9em;
+}

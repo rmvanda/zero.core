@@ -3,7 +3,7 @@ namespace Zero\Core;
 
 /**
  * Who may read, update or delete a module's things: the `permission` table
- * (schema in core/permission.sql). This is the only class that reads or writes
+ * (schema in core/sql/migrations/permission.sql). This is the only class that reads or writes
  * that table; a module never keeps a permission table of its own.
  *
  * One object answers for one permission key, "{module}.{entity}":

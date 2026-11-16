@@ -1,33 +1,34 @@
 #!/bin/bash
-# zero-init.sh — Stand up a new Zero Framework project
+# zero-init.sh — Build a Zero Framework site folder from core's skeleton
 #
 # Usage:
-#   ./zero-init.sh <site-directory> [domain]
+#   core/skeleton/zero-init.sh [site-directory] [domain]
 #
-# Examples:
-#   ./zero-init.sh /var/www/html/mysite.com
-#   ./zero-init.sh /var/www/html/mysite.com mysite.com
+# The script lives at {site}/core/skeleton/zero-init.sh, with core/ a git
+# submodule (or a plain checkout) of the site. Without arguments it builds the
+# site in the folder that contains core/. Nothing is cloned and nothing needs
+# root; the only thing it reads is the skeleton beside it.
 #
-# If domain is omitted, it's derived from the directory name.
+# It is safe to run again: a file that already exists is left exactly as it is
+# and named in the output, so a site's own config, strings, frames and modules
+# are never overwritten.
 #
-# Creates:
+# Builds:
 #
-#   mysite.com/
-#   ├── etc/                                (Apache/Nginx vhost configs)
-#   ├── www -> zero/app/frontend/www/       (symlink — document root)
-#   └── zero/
-#       ├── core/                           (cloned from rmvanda/zero.core)
-#       │   └── skeleton/                   (template files — left in place for reference)
-#       ├── app/                            (your app — git-initialized)
-#       │   ├── _config_templates/          (reference copies — don't edit)
-#       │   ├── config/                     (your config — edit these)
-#       │   ├── strings/                    (your wording — site.ini names the site)
-#       │   └── frontend/
-#       │       ├── frame/                  (head, header, footer, sideNav)
-#       │       └── www/                    (webroot: index.php, .htaccess, assets/)
-#       │           └── shadow-component/   (cloned from rmvanda/shadowjs)
-#       └── modules/
-#           └── Index/                      (barebones landing page module)
+#   {site}/
+#   ├── core/                  (already there: the framework)
+#   ├── etc/                   Apache and nginx vhost samples for the domain
+#   ├── entity/                the site's own entity classes
+#   ├── modules/Index/         the landing page module
+#   ├── storage/cache/         what core caches (must be writable by the web server)
+#   └── app/
+#       ├── config/            settings and secrets: fill in database.ini (never committed)
+#       ├── config-tmpl/       blank copies of config/, committed
+#       ├── strings/site.ini   the site's wording
+#       ├── modules.ini        which modules are on
+#       └── frontend/
+#           ├── frame/         head, header, sideNav, footer
+#           └── www/           web root: index.php, .htaccess, assets/
 
 set -euo pipefail
 
@@ -44,147 +45,152 @@ ok()    { echo -e "${GREEN}[zero]${NC} $1"; }
 warn()  { echo -e "${YELLOW}[zero]${NC} $1"; }
 fail()  { echo -e "${RED}[zero]${NC} $1" >&2; exit 1; }
 
-# ─── Validate input ─────────────────────────────────────────────────
-if [ $# -lt 1 ]; then
-    echo -e "${BOLD}Usage:${NC} $0 <site-directory> [domain]"
+# ─── Where the skeleton is ───────────────────────────────────────────
+# Logical path (no symlink resolution): when core/ is a symlink or submodule of
+# the site, the folder that contains it is the site.
+SKEL="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+[ -d "$SKEL/frontend" ] || fail "Skeleton not found. Expected: $SKEL/frontend"
+DEFAULT_SITE="$(cd "$SKEL/../.." && pwd)"
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+    echo -e "${BOLD}Usage:${NC} $0 [site-directory] [domain]"
     echo ""
-    echo "  Examples:"
-    echo "    $0 /var/www/html/mysite.com"
-    echo "    $0 /var/www/html/mysite.com mysite.com"
-    echo ""
-    echo "  The directory will be created if it doesn't exist."
-    echo "  If it already exists, it must be empty."
-    exit 1
+    echo "  Builds the site folder from core's skeleton. Without arguments the site"
+    echo "  is the folder that contains core/: $DEFAULT_SITE"
+    echo "  Files that already exist are skipped, so it is safe to run again."
+    exit 0
 fi
 
-SITE_DIR="$(realpath -m "$1")"
+SITE_DIR="$(realpath -m "${1:-$DEFAULT_SITE}")"
+DOMAIN_GIVEN="${2:-}"
 DOMAIN="${2:-$(basename "$SITE_DIR")}"
 
-command -v git >/dev/null 2>&1 || fail "git is required but not installed."
-command -v php >/dev/null 2>&1 || fail "php is required but not installed."
+info "Building ${BOLD}$DOMAIN${NC} at ${BOLD}$SITE_DIR${NC}"
+if [ -z "$DOMAIN_GIVEN" ]; then
+    warn "No domain given: PRIMARY_DOMAIN is a placeholder, the folder name \"$DOMAIN\". Edit it in app/config/config.ini."
+fi
 
-# If directory exists, make sure it's empty
-if [ -d "$SITE_DIR" ]; then
-    if [ "$(ls -A "$SITE_DIR" 2>/dev/null)" ]; then
-        fail "$SITE_DIR already exists and is not empty."
+if [ ! -f "$SITE_DIR/core/Application.php" ]; then
+    warn "No core/ in $SITE_DIR. The site needs the framework there, for example:"
+    warn "  git submodule add <zero.core repository> core"
+elif [ ! -f "$SITE_DIR/core/entity/Entity.php" ]; then
+    warn "core/entity/Entity.php is missing: core's entity submodule is not checked out, and sign-in needs it. Run:"
+    warn "  git submodule update --init --recursive"
+fi
+
+# ─── Helpers ─────────────────────────────────────────────────────────
+CREATED=()
+SKIPPED=()
+
+# copy_file <source> <destination>: copy unless the destination exists.
+# Sets COPIED=1 when it copied, 0 when the destination was already there.
+copy_file() {
+    local src="$1" dst="$2"
+    if [ -e "$dst" ] || [ -L "$dst" ]; then
+        SKIPPED+=("$dst")
+        warn "exists, skipped: $dst"
+        COPIED=0
+        return 0
     fi
-fi
+    mkdir -p "$(dirname "$dst")"
+    cp "$src" "$dst"
+    CREATED+=("$dst")
+    COPIED=1
+}
 
-info "Creating project ${BOLD}$DOMAIN${NC} at ${BOLD}$SITE_DIR${NC}"
+# copy_tree <source dir> <destination dir>: copy_file for every file below it
+# (dotfiles included).
+copy_tree() {
+    local src="$1" dst="$2" file
+    while IFS= read -r -d '' file; do
+        copy_file "$file" "$dst/${file#"$src"/}"
+    done < <(find "$src" -type f -print0)
+}
 
-# ─── Clone zero.core ─────────────────────────────────────────────────
-# Core ships the skeleton — clone it first, then copy skeleton out
-mkdir -p "$SITE_DIR/zero"
-info "Cloning zero.core..."
-git clone git@github.com:rmvanda/zero.core "$SITE_DIR/zero/core"
-ok "zero.core cloned."
+# sed_escape <text>: text safe on the replacement side of s|...|...|
+sed_escape() {
+    printf '%s' "$1" | sed -e 's/[\\&|]/\\&/g'
+}
 
-SKEL="$SITE_DIR/zero/core/skeleton"
+# ─── Directories ─────────────────────────────────────────────────────
+mkdir -p "$SITE_DIR/app/config" "$SITE_DIR/app/config-tmpl" "$SITE_DIR/modules" \
+         "$SITE_DIR/entity" "$SITE_DIR/etc"
+# The cache holds what core generates at runtime; the web server writes to it.
+mkdir -p -m 775 "$SITE_DIR/storage/cache"
+chmod 775 "$SITE_DIR/storage" 2>/dev/null || true
+touch "$SITE_DIR/entity/.gitkeep" 2>/dev/null || true
 
-if [ ! -d "$SKEL/frontend" ]; then
-    fail "Skeleton not found in cloned core. Expected: $SKEL/frontend"
-fi
+# ─── app/ ────────────────────────────────────────────────────────────
+info "Setting up app/..."
+copy_tree "$SKEL/frontend" "$SITE_DIR/app/frontend"
+copy_tree "$SKEL/strings"  "$SITE_DIR/app/strings"
+STRINGS_NEW="$COPIED"
+copy_file "$SKEL/modules.ini" "$SITE_DIR/app/modules.ini"
 
-# ─── Copy app from skeleton ──────────────────────────────────────────
-info "Setting up app directory..."
-mkdir -p "$SITE_DIR/zero/app"
-
-cp -r "$SKEL/frontend"          "$SITE_DIR/zero/app/frontend"
-cp -r "$SKEL/_config_templates" "$SITE_DIR/zero/app/_config_templates"
-cp -r "$SKEL/strings"           "$SITE_DIR/zero/app/strings"
-
-# Create editable config from templates
-mkdir -p "$SITE_DIR/zero/app/config"
-cp "$SKEL/_config_templates/"*.ini "$SITE_DIR/zero/app/config/"
-ok "App skeleton copied."
-
-# ─── Clone ShadowComponent ──────────────────────────────────────────
-info "Cloning shadow-component..."
-git clone git@github.com:rmvanda/shadowjs "$SITE_DIR/zero/app/frontend/www/shadow-component"
-ok "shadow-component cloned."
-
-# ─── Set up Index module ─────────────────────────────────────────────
-info "Creating Index module..."
-mkdir -p "$SITE_DIR/zero/modules/Index/view"
-cp "$SKEL/modules/Index/Index.php"      "$SITE_DIR/zero/modules/Index/Index.php"
-cp "$SKEL/modules/Index/view/index.php" "$SITE_DIR/zero/modules/Index/view/index.php"
-ok "Index module created."
-
-# ─── Create www symlink ──────────────────────────────────────────────
-info "Creating www symlink..."
-ln -s "$SITE_DIR/zero/app/frontend/www" "$SITE_DIR/www"
-ok "www -> zero/app/frontend/www/"
-
-# ─── Generate vhost configs ─────────────────────────────────────────
-info "Generating webserver configs..."
-mkdir -p "$SITE_DIR/etc"
-
-for TPL in "$SKEL/etc/"*.conf; do
-    BASENAME="$(basename "$TPL")"
-    sed -e "s|{{DOMAIN}}|$DOMAIN|g" \
-        -e "s|{{SITE_DIR}}|$SITE_DIR|g" \
-        "$TPL" > "$SITE_DIR/etc/$BASENAME"
+# Blank templates, committed; the editable copy in app/config/ is never committed.
+for TPL in "$SKEL/_config_templates/"*.ini; do
+    NAME="$(basename "$TPL")"
+    copy_file "$TPL" "$SITE_DIR/app/config-tmpl/$NAME"
+    copy_file "$TPL" "$SITE_DIR/app/config/$NAME"
+    # Fill in what the script knows, only in a config.ini it has just created.
+    if [ "$NAME" = "config.ini" ] && [ "$COPIED" = 1 ]; then
+        D="$(sed_escape "$DOMAIN")"
+        W="$(sed_escape "$SITE_DIR/app/frontend/www")"
+        sed -i -e "s|/var/www/html/example.com/www|$W|g" \
+               -e "s|example.com|$D|g" "$SITE_DIR/app/config/config.ini"
+    fi
 done
-ok "Configs written to etc/  (apache.conf, apache-ssl.conf, nginx.conf)"
+# The site's name is its domain until it is given a better one.
+if [ "$STRINGS_NEW" = 1 ] && [ -f "$SITE_DIR/app/strings/site.ini" ]; then
+    sed -i "s|My Zero App|$(sed_escape "$DOMAIN")|g" "$SITE_DIR/app/strings/site.ini"
+fi
+ok "app/ ready."
 
-# ─── Substitute placeholders in app config ───────────────────────────
-info "Configuring for ${BOLD}$DOMAIN${NC}..."
-sed -i "s|example.com|$DOMAIN|g"                          "$SITE_DIR/zero/app/config/config.ini"
-sed -i "s|/var/www/html/example.com/www|$SITE_DIR/www|g"  "$SITE_DIR/zero/app/config/config.ini"
-sed -i "s|My Zero App|$DOMAIN|g"                          "$SITE_DIR/zero/app/strings/site.ini"
-ok "Config updated."
+# ─── modules/Index ───────────────────────────────────────────────────
+info "Setting up the Index module..."
+copy_tree "$SKEL/modules/Index" "$SITE_DIR/modules/Index"
+ok "modules/Index ready."
 
-# ─── Git init the app directory ──────────────────────────────────────
-info "Initializing git repo for app..."
-git -C "$SITE_DIR/zero/app" init
-git -C "$SITE_DIR/zero/app" add -A
-git -C "$SITE_DIR/zero/app" commit -m "Initial app skeleton"
-ok "app/ is now a git repo."
-
-# ─── Set permissions ─────────────────────────────────────────────────
-info "Setting permissions..."
-find "$SITE_DIR" -type d -exec chmod 775 {} \;
-find "$SITE_DIR" -type f -exec chmod 664 {} \;
-
-CURRENT_USER="$(whoami)"
-CURRENT_GROUP="$(id -gn)"
-ok "Permissions set (owner: $CURRENT_USER:$CURRENT_GROUP)."
+# ─── Web server samples ──────────────────────────────────────────────
+info "Writing webserver samples..."
+for TPL in "$SKEL/etc/"*.conf; do
+    NAME="$(basename "$TPL")"
+    DST="$SITE_DIR/etc/$NAME"
+    if [ -e "$DST" ]; then
+        SKIPPED+=("$DST")
+        warn "exists, skipped: $DST"
+        continue
+    fi
+    sed -e "s|{{DOMAIN}}|$(sed_escape "$DOMAIN")|g" \
+        -e "s|{{SITE_DIR}}|$(sed_escape "$SITE_DIR")|g" "$TPL" > "$DST"
+    CREATED+=("$DST")
+done
+ok "Samples in etc/  (apache.conf, apache-ssl.conf, nginx.conf)"
 
 # ─── Summary ─────────────────────────────────────────────────────────
 echo ""
-echo -e "${GREEN}${BOLD}Project created successfully!${NC}"
+echo -e "${GREEN}${BOLD}Done.${NC} ${#CREATED[@]} file(s) created, ${#SKIPPED[@]} already existed and were left alone."
 echo ""
 echo -e "  ${BOLD}Domain:${NC}    $DOMAIN"
 echo -e "  ${BOLD}Location:${NC}  $SITE_DIR"
-echo -e "  ${BOLD}Webroot:${NC}   $SITE_DIR/www  (symlink)"
+echo -e "  ${BOLD}Web root:${NC}  $SITE_DIR/app/frontend/www"
 echo ""
 echo -e "${BOLD}Next steps:${NC}"
 echo ""
-echo "  1. Edit your config:"
-echo "       $SITE_DIR/zero/app/config/config.ini"
-echo "       $SITE_DIR/zero/app/config/database.ini"
+echo "  1. Fill in the database settings (this file is never committed):"
+echo "       $SITE_DIR/app/config/database.ini"
+echo "     and check the domain and mail addresses in:"
+echo "       $SITE_DIR/app/config/config.ini"
 echo ""
-echo "  2. Install the vhost config (pick one):"
+echo "  2. Create the tables core needs:"
+echo "       mysql <database> < $SITE_DIR/core/sql/core.sql"
 echo ""
-echo "     Apache:"
-echo "       sudo cp $SITE_DIR/etc/apache.conf /etc/httpd/sites-available/$DOMAIN.conf"
-echo "       sudo ln -s /etc/httpd/sites-available/$DOMAIN.conf /etc/httpd/sites-enabled/"
-echo "       sudo systemctl reload httpd"
+echo "  3. Make storage/ writable by the web server user:"
+echo "       $SITE_DIR/storage/cache"
 echo ""
-echo "     Nginx:"
-echo "       sudo cp $SITE_DIR/etc/nginx.conf /etc/nginx/conf.d/$DOMAIN.conf"
-echo "       sudo nginx -t && sudo systemctl reload nginx"
+echo "  4. Install a vhost from etc/ (document root: $SITE_DIR/app/frontend/www):"
+echo "       Apache:  $SITE_DIR/etc/apache.conf  (or apache-ssl.conf)"
+echo "       Nginx:   $SITE_DIR/etc/nginx.conf"
 echo ""
-echo "  3. (Optional) Set up SSL:"
-echo "       sudo certbot --apache -d $DOMAIN"
-echo "       # or: sudo certbot --nginx -d $DOMAIN"
-echo ""
-echo "  4. Start building modules:"
-echo "       $SITE_DIR/zero/modules/"
-echo ""
-
-# Ownership note
-if [ "$CURRENT_USER" != "apache" ] && [ "$CURRENT_USER" != "www-data" ] && [ "$CURRENT_USER" != "nginx" ]; then
-    warn "Files are owned by ${BOLD}$CURRENT_USER:$CURRENT_GROUP${NC}. If your webserver runs"
-    warn "as a different user, you may need to:  chown -R apache:apache $SITE_DIR"
-fi
+echo "  5. Open the site, then start building modules in:"
+echo "       $SITE_DIR/modules/"

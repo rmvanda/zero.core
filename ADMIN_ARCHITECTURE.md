@@ -25,10 +25,10 @@ This keeps domain logic co-located with its module and prevents the Admin module
 | AWS billing | `modules/Billing/Admin/BillingAdmin.php` |
 | Plugin manager | `modules/Plugins/Admin/PluginsAdmin.php` |
 | API key config | `modules/ApiConfig/Admin/ApiConfigAdmin.php` |
-| Entity types, records, event log | `modules/Entity/Admin/EntityAdmin.php` |
+| Entity types, records, event log | `core/modules/Entity/Admin/EntityAdmin.php` |
 | WebSocket monitor | `modules/Ws/Admin/WsAdmin.php` |
-| Push notifications | `modules/Push/Admin/PushAdmin.php` |
-| Firewall rules | `modules/Admin/submodule/Firewall/` (Admin's own screen) |
+| Push notifications | `core/modules/Push/Admin/PushAdmin.php` |
+| Firewall rules | `core/modules/Admin/submodule/Firewall/` (Admin's own screen) |
 
 ### What makes an offering
 
@@ -64,7 +64,7 @@ Base class for all admin controllers. Extends `Module`.
 | `setBreadcrumbs(array $crumbs)` | Prepend "Admin" and set navigation |
 | `routeToModuleAdmin($module, $method, $params)` | Route to a module's admin controller |
 
-### `Admin` Module (`modules/Admin/Admin.php`)
+### `Admin` Module (`core/modules/Admin/Admin.php`)
 
 Main admin hub. Extends `AdminResponse`. Handles user and group management, and routes `/admin/{module}/*` to module admin controllers via `__call`.
 
@@ -190,6 +190,6 @@ See `core/ADMIN_ASSETS.md` for how inline loading works and the filename-matchin
 - **Security**: multi-layer permission checks, assets never web-accessible
 - **Simplicity**: drop in an `Admin/{Module}Admin.php` class, auto-discovered
 - **Scalability**: each module owns its admin interface
-- **Consistency**: shared UI patterns via `modules/Admin/assets/`
+- **Consistency**: shared UI patterns via `core/modules/Admin/assets/`
 
 Core philosophy: convention over configuration, secure by default, pluggable by design.

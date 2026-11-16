@@ -115,7 +115,7 @@ final class Session
 
     /**
      * Build the login session. THE single writer of the session contract
-     * documented in modules/Auth/CLAUDE.md.
+     * documented in core/modules/Auth/CLAUDE.md.
      *
      * Three callers: Auth::complete() (OAuth), the magic-link token consumer,
      * and core/attribute/AllowWithToken.php (API tokens). Before this existed,
@@ -179,7 +179,22 @@ final class Session
 
         // Non-expiring "probably a returning user" hint. NOT authentication —
         // it holds a plaintext id and must never be trusted as proof of identity.
-        setcookie('unisolu_user_id', (string) $user->id, 2147483647, '/', '', true, true);
+        setcookie(self::hintCookieName(), (string) $user->id, 2147483647, '/', '', true, true);
+    }
+
+    /**
+     * The name of the "returning user" hint cookie: the site's SESSION_HINT_COOKIE
+     * (app/config/constants.ini) when it is defined as a usable cookie name,
+     * zero_user_id otherwise. Every reader and the writer use this name.
+     */
+    public static function hintCookieName(): string
+    {
+        if (defined('SESSION_HINT_COOKIE')
+            && is_string(SESSION_HINT_COOKIE)
+            && preg_match('/^[A-Za-z0-9_]+$/', SESSION_HINT_COOKIE) === 1) {
+            return SESSION_HINT_COOKIE;
+        }
+        return 'zero_user_id';
     }
 
     /**

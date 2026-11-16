@@ -1,0 +1,667 @@
+#!/usr/bin/env bash
+#
+# mkmod — scaffold a new Zero Framework module from the skeleton.
+#
+# The skeleton (this script's own directory) is the template source. mkmod copies
+# real files out of it and rewrites the module name with a short list of anchored
+# substitutions. See README, and `mkmod --selftest`.
+#
+set -euo pipefail
+
+# Logical path (no symlink resolution), the way core/skeleton/zero-init.sh finds
+# itself: when core/ is a symlink to a shared core, the folder that contains
+# that link is the site. Where mkmod compares two folders it compares real paths.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SKEL_DIR="$SCRIPT_DIR"
+# This script is {site}/core/modules/Module/mkmod: the bundled modules sit one
+# level up, core/ two, and the site that holds core/ three.
+BUNDLED_DIR="$(dirname "$SCRIPT_DIR")"
+CORE_DIR="$(dirname "$BUNDLED_DIR")"
+SITE_DIR="$(dirname "$CORE_DIR")"
+
+# A new module belongs to the site: its modules/ folder, unless --dest says otherwise.
+DEST="$SITE_DIR/modules"
+DEST_EXPLICIT=0
+NAME=""
+DRY_RUN=0
+FORCE=0
+SELFTEST=0
+SUBMODULE=""
+MANIFEST=()
+
+# Optional directories, off by default.
+WANT_MODEL=0
+WANT_FRAME=0
+WANT_ADMIN=0
+WANT_CONFIG=0
+WANT_AUX=0
+WANT_HELPER=0
+WANT_COMPONENT=0
+WANT_TESTS=0
+
+die() { printf 'mkmod: %s\n' "$1" >&2; exit "${2:-1}"; }
+
+usage() {
+    cat <<'EOF'
+Usage: mkmod <Name> [flags]
+       mkmod                 (interactive)
+       mkmod --selftest
+
+Scaffolds <Name>/ from the Module skeleton into the site's modules/ folder (the
+folder that holds core/), never into core/. The site's own modules and the
+bundled modules in core/modules/ both count when checking that the name is free:
+a new module may not reuse a bundled module's name.
+<Name> must be StudlyCaps: Weather, HelloWorld, ApiDemo.
+
+Default layout (no flags):
+    <Name>.php  view/index.php  assets/css/<name>.css  assets/js/<name>.js
+    .gitignore
+
+Optional directories:
+    --model              model/<Name>Model.php
+    --frame              frame/head.php
+    --admin              Admin/ (controller, admin-config, view, assets)
+    --config             config.ini, config/example.ini and config-tmpl/ (their
+                         committed copies), and strings/example.ini (wording
+                         defaults, committed)
+    --aux                aux/nav.php
+    --helper             helper/ExampleHelper.php
+    --component          assets/component/<name>-panel.html
+    --submodule=<Name>   submodule/<Name>/
+    --tests              tests/<Name>Test.php
+    --all                every directory above
+
+Behaviour:
+    --dry-run            print the destination and the tree, write nothing
+    --force              overwrite an existing module
+    --dest <dir>         write to <dir> instead of the site's modules/ (used by
+                         --selftest). The only way to write inside core/.
+    --skel <dir>         read templates from <dir> instead of this script's dir
+    --selftest           generate to a temp dir, lint, verify substitutions
+    --help               this text
+EOF
+}
+
+# StudlyCaps -> kebab-case. Must mirror ExampleHelper::slugify() EXACTLY, which is
+#   strtolower(preg_replace('/(?<!^)[A-Z]/', '-$0', $studly))
+# i.e. insert a dash before every capital except a leading one.
+#
+# Do NOT use `sed -E 's/(.)([A-Z])/\1-\2/g'`. sed's global match is
+# non-overlapping, so it consumes the character before each capital and cannot
+# fire again on an immediately following capital:
+#   ABTest  -> a-btest    (wrong; PHP gives a-b-test)
+#   APIDemo -> a-pi-demo  (wrong; PHP gives a-p-i-demo)
+# Insert-then-strip-leading is equivalent to the PHP lookbehind:
+slugify() {
+    printf '%s' "$1" | sed -E 's/([A-Z])/-\1/g; s/^-//' | tr '[:upper:]' '[:lower:]'
+}
+
+# StudlyCaps -> SCREAMING_SNAKE, for .ini constant prefixes.
+# Same non-overlapping-match hazard; same fix.
+screamify() {
+    printf '%s' "$1" | sed -E 's/([A-Z])/_\1/g; s/^_//' | tr '[:lower:]' '[:upper:]'
+}
+
+validate_name() {
+    local n="$1" what="$2"
+    [ -n "$n" ] || { usage >&2; die "$what is required" 2; }
+    [[ "$n" =~ ^[A-Z][A-Za-z0-9]*$ ]] \
+        || die "$what '$n' is not StudlyCaps (letters and digits, leading capital, no spaces or dashes)" 2
+}
+
+enable_all() {
+    WANT_MODEL=1; WANT_FRAME=1; WANT_ADMIN=1; WANT_CONFIG=1
+    WANT_AUX=1; WANT_HELPER=1; WANT_COMPONENT=1; WANT_TESTS=1
+    [ -n "$SUBMODULE" ] || SUBMODULE="Example"
+}
+
+parse_args() {
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --help|-h)      usage; exit 0 ;;
+            # Deferred until the whole arg list is parsed, so that a later
+            # --skel/--dest is honoured rather than silently ignored.
+            --selftest)     SELFTEST=1 ;;
+            --dry-run)      DRY_RUN=1 ;;
+            --force)        FORCE=1 ;;
+            --dest)         shift; DEST="${1:-}"; [ -n "$DEST" ] || die "--dest needs a directory" 2; DEST_EXPLICIT=1 ;;
+            # --skel lets the selftest corrupt a COPY of the skeleton rather than
+            # the live one under the web root. Never point it at a served path.
+            --skel)         shift; SKEL_DIR="${1:-}"; [ -d "$SKEL_DIR" ] || die "--skel needs an existing directory" 2 ;;
+            --model)        WANT_MODEL=1 ;;
+            --frame)        WANT_FRAME=1 ;;
+            --admin)        WANT_ADMIN=1 ;;
+            --config)       WANT_CONFIG=1 ;;
+            --aux)          WANT_AUX=1 ;;
+            --helper)       WANT_HELPER=1 ;;
+            --component)    WANT_COMPONENT=1 ;;
+            --tests)        WANT_TESTS=1 ;;
+            --submodule=*)  SUBMODULE="${1#*=}"; [ -n "$SUBMODULE" ] || die "--submodule needs a name" 2 ;;
+            --all)          enable_all ;;
+            -*)             usage >&2; die "unknown flag: $1" 2 ;;
+            *)              [ -z "$NAME" ] || die "unexpected argument: $1" 2; NAME="$1" ;;
+        esac
+        shift
+    done
+}
+
+# Without --dest the new module goes into {site}/modules/. That needs this script
+# to sit at {site}/core/modules/Module/mkmod, and never lands inside core/.
+check_default_dest() {
+    [ "$DEST_EXPLICIT" -eq 0 ] || return 0
+    if [ "$(basename "$BUNDLED_DIR")" != modules ] || [ "$(basename "$CORE_DIR")" != core ]; then
+        die "cannot find the site: mkmod is not at {site}/core/modules/Module/mkmod (use --dest <dir>)" 2
+    fi
+    case "$(realpath -m "$DEST")/" in
+        "$(realpath -m "$CORE_DIR")"/*)
+            die "refusing to write inside core/ (use --dest <dir> to say so explicitly)" 2 ;;
+    esac
+}
+
+# folded NAME: lowercase, hyphens removed, the way Modules::path() compares names.
+fold() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -d '-'; }
+
+# A new module may not reuse the name of a module core ships, or of one already
+# in the destination folder (case-insensitive, hyphens ignored, as
+# Modules::assertNoClash() compares). The destination's own exact-name target
+# is check_target()'s business, so that --force can overwrite it.
+check_clash() {
+    local want folder entry rbundled rdest
+    want="$(fold "$NAME")"
+    rbundled="$(realpath -m "$BUNDLED_DIR")"
+    rdest="$(realpath -m "$DEST")"
+    for folder in "$BUNDLED_DIR" "$DEST"; do
+        [ -d "$folder" ] || continue
+        for entry in "$folder"/*/; do
+            [ -d "$entry" ] || continue
+            entry="$(basename "$entry")"
+            [ "$(fold "$entry")" = "$want" ] || continue
+            # The destination folder may be the bundled folder itself (compared
+            # by real path): then the name is a bundled module's, never the
+            # destination's own exact-name target.
+            if [ "$folder" = "$DEST" ] && [ "$rdest" != "$rbundled" ] \
+                && [ "$(realpath -m "$folder/$entry")" = "$(realpath -m "$DEST/$NAME")" ]; then
+                continue
+            fi
+            if [ "$folder" = "$BUNDLED_DIR" ] || [ "$rdest" = "$rbundled" ]; then
+                die "$NAME already exists as a bundled module ($BUNDLED_DIR/$entry); choose another name" 1
+            fi
+            die "$NAME already exists as $folder/$entry; choose another name" 1
+        done
+    done
+}
+
+check_target() {
+    local target="$DEST/$NAME"
+    [ "$NAME" != "Module" ] || die "refusing to overwrite the skeleton itself" 2
+    check_clash
+    if [ -e "$target" ] && [ "$FORCE" -eq 0 ]; then
+        die "$target already exists (use --force to overwrite)" 1
+    fi
+}
+
+# Populates MANIFEST as "source_relative_path<TAB>target_relative_path".
+# Source paths are relative to SKEL_DIR, targets relative to the new module.
+build_manifest() {
+    local kebab; kebab="$(slugify "$NAME")"
+    MANIFEST=()
+
+    MANIFEST+=("Module.php	$NAME.php")
+    MANIFEST+=("view/index.php	view/index.php")
+    MANIFEST+=("view/error404.php	view/error404.php")
+    MANIFEST+=("assets/css/module.css	assets/css/$kebab.css")
+    MANIFEST+=("assets/css/index.css	assets/css/index.css")
+    MANIFEST+=("assets/js/module.js	assets/js/$kebab.js")
+    # Every module carries its own ignore rules. The skeleton's copy has a
+    # MKMOD:SKELETON-ONLY block (the negations that keep its config examples
+    # tracked); rule 0 strips it, so a new module gets the plain file.
+    MANIFEST+=(".gitignore	.gitignore")
+
+    [ "$WANT_MODEL"     -eq 0 ] || MANIFEST+=("model/ModuleModel.php	model/${NAME}Model.php")
+    [ "$WANT_FRAME"     -eq 0 ] || MANIFEST+=("frame/head.php	frame/head.php")
+    [ "$WANT_AUX"       -eq 0 ] || MANIFEST+=("aux/nav.php	aux/nav.php")
+    [ "$WANT_HELPER"    -eq 0 ] || MANIFEST+=("helper/ExampleHelper.php	helper/ExampleHelper.php")
+    [ "$WANT_COMPONENT" -eq 0 ] || MANIFEST+=("assets/component/module-panel.html	assets/component/$kebab-panel.html")
+
+    if [ "$WANT_CONFIG" -ne 0 ]; then
+        MANIFEST+=("config.ini	config.ini")
+        MANIFEST+=("config/example.ini	config/example.ini")
+        # config.ini and config/ are ignored by the module's .gitignore;
+        # config-tmpl/ is the copy of each that is committed.
+        MANIFEST+=("config-tmpl/config.ini	config-tmpl/config.ini")
+        MANIFEST+=("config-tmpl/example.ini	config-tmpl/example.ini")
+        # strings/ is wording and is committed: the module's .gitignore does
+        # not ignore it.
+        MANIFEST+=("strings/example.ini	strings/example.ini")
+    fi
+
+    if [ "$WANT_ADMIN" -ne 0 ]; then
+        MANIFEST+=("Admin/ModuleAdmin.php	Admin/${NAME}Admin.php")
+        MANIFEST+=("Admin/admin-config.php	Admin/admin-config.php")
+        MANIFEST+=("Admin/view/index.php	Admin/view/index.php")
+        MANIFEST+=("Admin/assets/css/moduleadmin.css	Admin/assets/css/${kebab}admin.css")
+    fi
+
+    # Only the smoke test is copied. ModuleTest and MkmodTest assert
+    # skeleton-specific facts and would fail immediately in a new module.
+    if [ "$WANT_TESTS" -ne 0 ]; then
+        MANIFEST+=("tests/ModuleSmokeTest.php	tests/${NAME}SmokeTest.php")
+    fi
+
+    if [ -n "$SUBMODULE" ]; then
+        local subkebab; subkebab="$(slugify "$SUBMODULE")"
+        MANIFEST+=("submodule/Example/Example.php	submodule/$SUBMODULE/$SUBMODULE.php")
+        MANIFEST+=("submodule/Example/view/index.php	submodule/$SUBMODULE/view/index.php")
+        MANIFEST+=("submodule/Example/assets/css/example.css	submodule/$SUBMODULE/assets/css/$subkebab.css")
+    fi
+}
+
+print_tree() {
+    printf 'Destination: %s/%s\n' "${DEST%/}" "$NAME"
+    local row target
+    for row in "${MANIFEST[@]}"; do
+        target="${row#*$'\t'}"
+        printf '  %s\n' "$target"
+    done
+    printf '\nURL path: /%s/\n' "$(slugify "$NAME")"
+}
+
+# substitute <src-abs> <dst-abs>
+#
+# Copies one skeleton file, rewriting the module name. The rules are ANCHORED on
+# purpose: a bare s/Module/Weather/g would corrupt `extends \Zero\Core\Module`
+# and `namespace Zero\Module;`. Rule 3 cannot match ModuleModel/ModuleAdmin/
+# ModulePanel because \b requires a non-word char after "Module".
+#
+# `mkmod --selftest` fails loudly if this drifts out of sync with the skeleton.
+substitute() {
+    local src="$1" dst="$2"
+    local kebab scream ext
+    kebab="$(slugify "$NAME")"
+    scream="$(screamify "$NAME")"
+    ext="${src##*.}"
+
+    mkdir -p "$(dirname "$dst")"
+
+    # Rule 0. Deletes every line from a MKMOD:SKELETON-ONLY-START marker through
+    # its matching MKMOD:SKELETON-ONLY-END marker, inclusive. Applied FIRST, to
+    # every text extension, before any of the numbered rewrite rules below.
+    #
+    # Why: the skeleton's own docblocks/comments/prose are written to describe
+    # core/modules/Module/ itself — "this is the reference module", dead links to a
+    # submodule that a generated module may not have, an admin-CSS header that
+    # names an API call, etc. That prose is TRUE of the skeleton and FALSE the
+    # instant it is copied into a new module. Rather than chase every such
+    # sentence with its own sed rule, skeleton-only prose is fenced in a
+    # comment (so the skeleton stays valid PHP/CSS/JS/HTML/INI) and rule 0
+    # deletes the fence and everything inside it. Content meant to survive
+    # copying is written OUTSIDE the markers.
+    local skeleton_only_filter='/MKMOD:SKELETON-ONLY-START/,/MKMOD:SKELETON-ONLY-END/d'
+
+    case "$ext" in
+        ini)
+            # Rule 16. .ini ONLY — MODULE_PATH is a real constant in PHP.
+            sed -e "$skeleton_only_filter" "$src" \
+                | sed -E "s/^MODULE_/${scream}_/" > "$dst"
+            ;;
+        php)
+            # Rules 1-12, 14, 15, 18. Rule 1 must precede rule 2.
+            # Rules 3-6 precede rule 7 for readability; \b makes the order moot.
+            # Rule 18 handles the docblock URL /admin/module, which rule 14
+            # (requires a trailing slash: /module/) never matches on its own.
+            # Placed before rule 14 for readability only; the two match
+            # disjoint text, so their relative order does not matter.
+            sed -e "$skeleton_only_filter" "$src" \
+                | sed -E \
+                -e "s|^namespace Zero\\\\Module\\\\Module;|namespace Zero\\\\Module\\\\${NAME};|" \
+                -e "s|Zero\\\\Module\\\\Module\\\\|Zero\\\\Module\\\\${NAME}\\\\|g" \
+                -e "s|\bModuleSmokeTest\b|${NAME}SmokeTest|g" \
+                -e "s|\bModuleModel\b|${NAME}Model|g" \
+                -e "s|\bModuleAdmin\b|${NAME}Admin|g" \
+                -e "s|\bModulePanel\b|${NAME}Panel|g" \
+                -e "s|^class Module\b|class ${NAME}|" \
+                -e "s|Manage Module|Manage ${NAME}|g" \
+                -e "s|Module Skeleton|${NAME}|g" \
+                -e "s|\?\? 'Module'|?? '${NAME}'|g" \
+                -e "s|\bmodule-panel\b|${kebab}-panel|g" \
+                -e "s|/admin/module\b|/admin/${kebab}|g" \
+                -e "s|/module/|/${kebab}/|g" \
+                -e "s|\bmodule\.(css\|js)\b|${kebab}.\1|g" \
+                > "$dst"
+            ;;
+        html|css|js)
+            # Rules 12, 13, 14, 15.
+            sed -e "$skeleton_only_filter" "$src" \
+                | sed -E \
+                -e "s|\bmodule-panel\b|${kebab}-panel|g" \
+                -e "s|\bModulePanel\b|${NAME}Panel|g" \
+                -e "s|/module/|/${kebab}/|g" \
+                -e "s|\bmodule\.(css\|js)\b|${kebab}.\1|g" \
+                > "$dst"
+            ;;
+        gitignore)
+            # Rule 0 only. Nothing in .gitignore names the module.
+            sed -e "$skeleton_only_filter" "$src" > "$dst"
+            ;;
+        *)
+            # No rewrite rules exist for this extension: copy verbatim, name and
+            # all. Today the manifest only ever emits .php, .css, .js, .html,
+            # .ini and .gitignore (see build_manifest()), so this branch is unreachable in
+            # practice — it exists so a future binary asset (e.g. an image) is
+            # copied rather than rejected. If a manifest entry is ever added with
+            # an extension that DOES contain a module identifier (.md, .json,
+            # .txt, ...), that's a decision to make explicitly (add a case above
+            # or confirm verbatim copy is intended), not something to fall
+            # through to silently. testManifestOnlyEmitsExtensionsTheEngineRewrites
+            # in tests/MkmodTest.php enforces that.
+            cp "$src" "$dst"
+            ;;
+    esac
+}
+
+# The submodule's class is Example in the skeleton; rename it to the requested name.
+rename_submodule_class() {
+    local dst="$1"
+    sed -E -i "s|^class Example\b|class ${SUBMODULE}|" "$dst"
+}
+
+generate() {
+    build_manifest
+
+    # Fail before writing anything if the skeleton is missing a source file.
+    local row src
+    for row in "${MANIFEST[@]}"; do
+        src="${row%%$'\t'*}"
+        [ -f "$SKEL_DIR/$src" ] || die "skeleton file missing: $src" 1
+    done
+
+    if [ "$DRY_RUN" -ne 0 ]; then
+        print_tree
+        return 0
+    fi
+
+    local target="$DEST/$NAME"
+
+    # Build into a staging directory on the same filesystem as $DEST, then merge
+    # into place only once every file has been written successfully. Under
+    # `set -e`, a write failure partway through the loop below (a bad skeleton
+    # permission, a full disk, etc.) aborts the script — and because $target is
+    # never touched until the very end, a GENERATION failure never leaves a
+    # half-written module on disk. That guarantee covers the staging loop only:
+    # the final `cp -a` merge itself is not atomic, so a --force run over
+    # pre-existing files that are read-only can still fail mid-copy and leave
+    # $target partially overwritten. `--force`'s MERGE semantics (overwrite the
+    # manifest's files, leave unrelated pre-existing files in $target alone)
+    # are preserved by using `cp -a ".../." "$target/"` rather than replacing
+    # $target outright.
+    mkdir -p "$DEST"
+    local staging
+    staging="$(mktemp -d "${DEST%/}/.mkmod-XXXXXX")"
+
+    # Save any trap the caller already owns (selftest() sets one on the same
+    # signal for its own temp dir, and generate() runs nested inside it) so we
+    # can restore it instead of clobbering it. If nothing below fails, the
+    # staging dir is removed explicitly and the trap is restored/cleared before
+    # we return; if something DOES fail, the trap fires on the ensuing `exit`
+    # under `set -e` and removes the staging dir for us.
+    local prev_trap
+    prev_trap="$(trap -p EXIT)"
+    trap 'rm -rf "$staging"' EXIT
+
+    for row in "${MANIFEST[@]}"; do
+        src="${row%%$'\t'*}"
+        local dst="${row#*$'\t'}"
+        substitute "$SKEL_DIR/$src" "$staging/$NAME/$dst"
+        case "$dst" in
+            submodule/*/"$SUBMODULE".php) rename_submodule_class "$staging/$NAME/$dst" ;;
+        esac
+    done
+
+    mkdir -p "$target"
+    cp -a "$staging/$NAME/." "$target/"
+    rm -rf "$staging"
+    if [ -n "$prev_trap" ]; then
+        eval "$prev_trap"
+    else
+        trap - EXIT
+    fi
+
+    printf 'Created %s\n\n' "$target"
+    print_tree
+    printf '\nNext: add endpoints to %s.php, then visit the URL above.\n' "$NAME"
+
+    # The module's own .gitignore (emitted above) ignores config.ini and
+    # config/, so the config files this run just emitted are untracked. Say so — a silent gitignore miss means a
+    # fresh clone gets a module whose MODULE_* constants are never defined
+    # until someone copies config-tmpl/ into place.
+    if [ "$WANT_CONFIG" -ne 0 ]; then
+        printf '\n'
+        printf 'NOTE: %s/.gitignore ignores config.ini and config/, so these are NOT tracked:\n' "$NAME"
+        printf '  %s/config.ini\n  %s/config/example.ini\n' "$NAME" "$NAME"
+        printf 'Commit their blank copies in %s/config-tmpl/ instead. Keep the keys\n' "$NAME"
+        printf 'there in step with the real files, and never put a secret in one.\n'
+    fi
+}
+
+# Generates a throwaway module into a temp dir, then asserts that:
+#   1. every emitted .php parses,
+#   2. no skeleton identifier survived,
+#   3. no emitted filename still says "module",
+#   4. the expected tree exists,
+#   5. .gitignore is the plain bare-module file.
+#
+# This is what keeps substitute()'s anchored rules honest as the skeleton evolves.
+selftest() {
+    local tmp rc=0
+    tmp="$(mktemp -d /tmp/mkmod-selftest.XXXXXX)"
+    # EXIT, not RETURN: _selftest_body calls generate(), which calls `die` (i.e.
+    # `exit`, not `return`) if the skeleton is missing a manifest source file.
+    # A RETURN trap would never fire in that case because the function never
+    # returns; an EXIT trap fires on any process termination, including a bare
+    # `exit`, so the temp dir is always removed. Cleared before the explicit
+    # return below so a later `exit` in the caller doesn't try to remove it
+    # (or something else) a second time.
+    trap 'rm -rf "$tmp"' EXIT
+    _selftest_body "$tmp" || rc=$?
+    rm -rf "$tmp"
+    trap - EXIT
+    return "$rc"
+}
+
+_selftest_body() {
+    local tmp="$1" rc=0
+
+    NAME="Selftest"
+    DEST="$tmp"
+    DRY_RUN=0
+    FORCE=1
+    enable_all
+    # enable_all defaults SUBMODULE to "Example" only when empty; override after.
+    SUBMODULE="Inner"
+
+    if ! generate >"$tmp/out.log" 2>&1; then
+        printf 'selftest: generate failed\n' >&2
+        cat "$tmp/out.log" >&2
+        return 1
+    fi
+
+    local mod="$tmp/Selftest"
+
+    # 1. Every emitted PHP file parses.
+    local f
+    while IFS= read -r -d '' f; do
+        if ! php -l "$f" >/dev/null 2>&1; then
+            printf 'selftest: php -l failed: %s\n' "$f" >&2
+            php -l "$f" >&2 || true
+            rc=1
+        fi
+    done < <(find "$mod" -name '*.php' -print0)
+
+    # 2. No skeleton identifier survived. We check these exact identifiers rather
+    #    than the substring "module", which appears legitimately in prose.
+    #    `\Zero\Core\Module` and `namespace Zero\Module;` are expected — allowed.
+    #
+    #    'class Module' is anchored to ^ here for the same reason rule 7 is:
+    #    Module.php's own docblock mentions the string `class Module ...`, and an
+    #    unanchored grep would match that comment and fail every run. The
+    #    whitespace class (rather than a literal single space) is deliberate:
+    #    a drifted skeleton that reformats "class Module" to "class  Module"
+    #    (extra space) breaks rule 7's literal-space anchor too, so the
+    #    generated file keeps the un-rewritten "class  Module" identifier —
+    #    this check must still catch that surviving identifier.
+    local pat
+    for pat in '^class[[:space:]]+Module\b' '\bModuleModel\b' '\bModuleAdmin\b' \
+               '\bModulePanel\b' '\bModuleSmokeTest\b' 'Zero\\Module\\Module\\' \
+               '^namespace Zero\\Module\\Module;' '\bmodule-panel\b' '^MODULE_'; do
+        if grep -rEn "$pat" "$mod" >/dev/null 2>&1; then
+            printf 'selftest: skeleton identifier survived substitution: %s\n' "$pat" >&2
+            grep -rEn "$pat" "$mod" >&2
+            rc=1
+        fi
+    done
+
+    # 2a. Skeleton-specific PROSE must not survive into a generated module.
+    #     These strings describe the skeleton itself and are false anywhere else.
+    #
+    #     Grepped against the GENERATED module, never against the skeleton. A
+    #     phrase may legitimately appear in core/modules/Module/ so long as it sits
+    #     inside a MKMOD:SKELETON-ONLY block — rule 0 strips it on the way out.
+    #     That is why 'submodule/Example/' and 'example() method' are safe to
+    #     guard here even though Example.php's own docblock mentions both.
+    for pat in 'The skeleton module' 'the reference module' 'modules/Module/' \
+               'skeleton module script' "skeleton module's admin" \
+               'Example Submodule' 'submodule/Example/' 'example() method' \
+               'the parent module has no'; do
+        if grep -rFn "$pat" "$mod" >/dev/null 2>&1; then
+            printf 'selftest: skeleton prose survived into the generated module: %s\n' "$pat" >&2
+            grep -rFn "$pat" "$mod" >&2
+            rc=1
+        fi
+    done
+
+    # 2a. The wording defaults carry the module's prefix, and the module's
+    #     .gitignore does not hide them.
+    grep -q '^SELFTEST_EXAMPLE_STRING=' "$mod/strings/example.ini" \
+        || { printf 'selftest: strings/example.ini key was not prefixed\n' >&2; rc=1; }
+    if grep -q 'MODULE_' "$mod/strings/example.ini"; then
+        printf 'selftest: strings/example.ini still has MODULE_ keys\n' >&2; rc=1
+    fi
+    if grep -qE '^/?strings' "$mod/.gitignore"; then
+        printf 'selftest: .gitignore ignores strings/\n' >&2; rc=1
+    fi
+
+    # 2b. The substitutions that MUST have happened.
+    grep -q 'class Selftest extends \\Zero\\Core\\Module' "$mod/Selftest.php" \
+        || { printf 'selftest: controller class was not rewritten\n' >&2; rc=1; }
+    grep -q 'namespace Zero\\Module;' "$mod/Selftest.php" \
+        || { printf 'selftest: bare namespace was corrupted\n' >&2; rc=1; }
+    grep -q 'class Inner extends' "$mod/submodule/Inner/Inner.php" \
+        || { printf 'selftest: submodule class was not renamed\n' >&2; rc=1; }
+
+    #    The generated admin-config.php carries neither key: app/modules.ini
+    #    decides whether a module is on and where its card sits.
+    if grep -qE "^[[:space:]]*'(enabled|order)'" "$mod/Admin/admin-config.php"; then
+        printf 'selftest: admin-config.php still has enabled/order\n' >&2
+        rc=1
+    fi
+
+    # 3. No emitted FILE is still named after the skeleton.
+    #    Must be -type f: the directory `submodule/` legitimately contains the
+    #    substring "module" and would false-positive on a plain -iname sweep.
+    if find "$mod" -type f -iname '*module*' | grep -q .; then
+        printf 'selftest: filename not renamed:\n' >&2
+        find "$mod" -type f -iname '*module*' >&2
+        rc=1
+    fi
+
+    # 4. The expected tree exists.
+    local expect
+    for expect in .gitignore Selftest.php view/index.php frame/head.php model/SelftestModel.php \
+                  Admin/SelftestAdmin.php Admin/admin-config.php config.ini \
+                  config/example.ini config-tmpl/config.ini config-tmpl/example.ini \
+                  strings/example.ini \
+                  aux/nav.php helper/ExampleHelper.php \
+                  assets/css/selftest.css assets/js/selftest.js \
+                  assets/component/selftest-panel.html \
+                  submodule/Inner/Inner.php tests/SelftestSmokeTest.php; do
+        [ -f "$mod/$expect" ] || { printf 'selftest: missing %s\n' "$expect" >&2; rc=1; }
+    done
+
+    # 5. .gitignore is the plain bare-module file: it ignores swap files and
+    #    config, and the skeleton's own negations did not come along.
+    if [ -f "$mod/.gitignore" ]; then
+        local rules
+        rules="$(grep -vE '^[[:space:]]*(#|$)' "$mod/.gitignore" | tr '\n' ' ')"
+        if [ "$rules" != '*swp config/ config.ini !**/config-tmpl/config.ini ' ]; then
+            printf 'selftest: .gitignore rules are not the bare-module set: %s\n' "$rules" >&2
+            rc=1
+        fi
+    fi
+
+    if [ "$rc" -eq 0 ]; then
+        printf 'selftest: OK — %d php files linted, substitutions verified\n' \
+            "$(find "$mod" -name '*.php' | wc -l)"
+    fi
+    return "$rc"
+}
+
+# Prompted per-directory. Only reached when mkmod is run with no name on a TTY;
+# a non-TTY (CI, a test harness) gets the usage error instead, so nothing hangs.
+ask() {
+    local prompt="$1" default="$2" reply
+    if [ "$default" = "y" ]; then
+        read -r -p "  $prompt [Y/n] " reply
+        [[ "${reply:-y}" =~ ^[Yy] ]]
+    else
+        read -r -p "  $prompt [y/N] " reply
+        [[ "${reply:-n}" =~ ^[Yy] ]]
+    fi
+}
+
+interactive() {
+    read -r -p "Module name: " NAME
+    validate_name "$NAME" "module name"
+
+    ask "model/"            n && WANT_MODEL=1
+    ask "frame/"            n && WANT_FRAME=1
+    ask "Admin/"            n && WANT_ADMIN=1
+    ask "config/"           n && WANT_CONFIG=1
+    ask "aux/"              n && WANT_AUX=1
+    ask "helper/"           n && WANT_HELPER=1
+    ask "assets/component/" n && WANT_COMPONENT=1
+    ask "tests/"            n && WANT_TESTS=1
+
+    if ask "submodule/" n; then
+        read -r -p "  submodule name: " SUBMODULE
+        validate_name "$SUBMODULE" "submodule name"
+    fi
+    printf '\n'
+}
+
+main() {
+    parse_args "$@"
+
+    if [ "$SELFTEST" -eq 1 ]; then
+        selftest
+        exit $?
+    fi
+
+    # An empty NAME on a TTY means interactive. Off a TTY it is a usage error,
+    # NOT a prompt — otherwise a test harness or CI run hangs forever on `read`.
+    if [ -z "$NAME" ]; then
+        if [ -t 0 ]; then
+            interactive
+        else
+            usage >&2
+            die "module name is required" 2
+        fi
+    fi
+
+    validate_name "$NAME" "module name"
+    [ -z "$SUBMODULE" ] || validate_name "$SUBMODULE" "submodule name"
+    check_default_dest
+    check_target
+    generate
+}
+
+main "$@"

@@ -2,6 +2,7 @@
 
 namespace Zero\Tests\Core;
 
+use Zero\Core\Modules;
 use Zero\Core\Request;
 use Zero\Core\Response;
 
@@ -13,10 +14,9 @@ use Zero\Core\Response;
  * frame is derived from the referring URL, so it is scoped to one handoff
  * rather than to the browser, and no state is written anywhere.
  *
- * These tests use REAL module directories under modules/ rather than fixtures:
- * the method's whole job is to answer "is this a module with a frame", so a
- * fixture tree would test the fixture rather than the answer. Ttrpg, Notebook
- * and Module have frame/ directories; Auth and AccessRequest do not.
+ * These tests use a throwaway module root: Fixone and Fixtwo have a frame/
+ * directory, Fixplain has none, and core's own Auth and AccessRequest have
+ * none either. The method's job is to answer "is this a module with a frame".
  */
 final class AdoptFrameTest extends ZeroTestCase
 {
@@ -46,23 +46,27 @@ final class AdoptFrameTest extends ZeroTestCase
     }
 
     private string $backupDomain;
+    private string $mods = '';
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        // defineConstants() does not run under PHPUnit.
-        if (!defined('MODULE_PATH')) {
-            define('MODULE_PATH', dirname(__DIR__, 2) . '/modules/');
+        $this->mods = sys_get_temp_dir() . '/zerotest-adopt-' . getmypid() . '/';
+        foreach (['Fixone/frame', 'Fixtwo/frame', 'Fixplain'] as $dir) {
+            mkdir($this->mods . $dir, 0777, true);
         }
+        Modules::configure([$this->mods, dirname(__DIR__, 2) . '/core/modules/'], null);
 
         $this->backupDomain = Request::$domain ?? '';
-        Request::$domain = 'unisolu.com';
+        Request::$domain = 'example.test';
     }
 
     protected function tearDown(): void
     {
         Request::$domain = $this->backupDomain;
+        exec('rm -rf ' . escapeshellarg($this->mods));
+        zeroTestConfigureModules();
         parent::tearDown();
     }
 
@@ -72,8 +76,8 @@ final class AdoptFrameTest extends ZeroTestCase
     {
         $p = $this->probe();
 
-        $this->assertTrue($p->probeAdopt('https://unisolu.com/ttrpg/campaigns'));
-        $this->assertSame(MODULE_PATH . 'Ttrpg/frame/', $p->frame());
+        $this->assertTrue($p->probeAdopt('https://example.test/fixone/campaigns'));
+        $this->assertSame($this->mods . 'Fixone/frame/', $p->frame());
     }
 
     public function testAdoptsParentFrameFromSubmodulePath(): void
@@ -83,8 +87,8 @@ final class AdoptFrameTest extends ZeroTestCase
         // segment lands on the same directory the submodule would have used.
         $p = $this->probe();
 
-        $this->assertTrue($p->probeAdopt('https://unisolu.com/ttrpg/characters/42'));
-        $this->assertSame(MODULE_PATH . 'Ttrpg/frame/', $p->frame());
+        $this->assertTrue($p->probeAdopt('https://example.test/fixone/characters/42'));
+        $this->assertSame($this->mods . 'Fixone/frame/', $p->frame());
     }
 
     public function testModuleSegmentIsCaseInsensitive(): void
@@ -93,16 +97,16 @@ final class AdoptFrameTest extends ZeroTestCase
         // A Referer carrying that URL has to resolve the same way routing did.
         $p = $this->probe();
 
-        $this->assertTrue($p->probeAdopt('https://unisolu.com/TTRPG/campaigns'));
-        $this->assertSame(MODULE_PATH . 'Ttrpg/frame/', $p->frame());
+        $this->assertTrue($p->probeAdopt('https://example.test/FIXONE/campaigns'));
+        $this->assertSame($this->mods . 'Fixone/frame/', $p->frame());
     }
 
     public function testAcceptsRefererWithQueryAndFragment(): void
     {
         $p = $this->probe();
 
-        $this->assertTrue($p->probeAdopt('https://unisolu.com/notebook/page?id=7#top'));
-        $this->assertSame(MODULE_PATH . 'Notebook/frame/', $p->frame());
+        $this->assertTrue($p->probeAdopt('https://example.test/fixtwo/page?id=7#top'));
+        $this->assertSame($this->mods . 'Fixtwo/frame/', $p->frame());
     }
 
     public function testAcceptsHostWithPort(): void
@@ -111,10 +115,10 @@ final class AdoptFrameTest extends ZeroTestCase
         // is in the URL. Comparing hosts rather than authorities keeps a
         // non-default port from reading as a different site.
         $p = $this->probe();
-        Request::$domain = 'unisolu.com:8443';
+        Request::$domain = 'example.test:8443';
 
-        $this->assertTrue($p->probeAdopt('https://unisolu.com:8443/ttrpg/'));
-        $this->assertSame(MODULE_PATH . 'Ttrpg/frame/', $p->frame());
+        $this->assertTrue($p->probeAdopt('https://example.test:8443/fixone/'));
+        $this->assertSame($this->mods . 'Fixone/frame/', $p->frame());
     }
 
     /* ── Rejects, leaving the resolved frame alone ── */
@@ -123,7 +127,7 @@ final class AdoptFrameTest extends ZeroTestCase
     {
         $p = $this->probe();
 
-        $this->assertFalse($p->probeAdopt('https://unisolu.com/auth/login'));
+        $this->assertFalse($p->probeAdopt('https://example.test/fixplain/x'));
         $this->assertNull($p->frame());
     }
 
@@ -131,7 +135,7 @@ final class AdoptFrameTest extends ZeroTestCase
     {
         $p = $this->probe();
 
-        $this->assertFalse($p->probeAdopt('https://unisolu.com/nosuchmodule/x'));
+        $this->assertFalse($p->probeAdopt('https://example.test/nosuchmodule/x'));
         $this->assertNull($p->frame());
     }
 
@@ -141,7 +145,7 @@ final class AdoptFrameTest extends ZeroTestCase
         // choose which of our frames renders around our own content.
         $p = $this->probe();
 
-        $this->assertFalse($p->probeAdopt('https://evil.example/ttrpg/campaigns'));
+        $this->assertFalse($p->probeAdopt('https://evil.example/fixone/campaigns'));
         $this->assertNull($p->frame());
     }
 
@@ -149,8 +153,8 @@ final class AdoptFrameTest extends ZeroTestCase
     {
         $p = $this->probe();
 
-        $this->assertFalse($p->probeAdopt('https://notunisolu.com/ttrpg/'));
-        $this->assertFalse($p->probeAdopt('https://unisolu.com.evil.example/ttrpg/'));
+        $this->assertFalse($p->probeAdopt('https://notexample.test/fixone/'));
+        $this->assertFalse($p->probeAdopt('https://example.test.evil.example/fixone/'));
         $this->assertNull($p->frame());
     }
 
@@ -158,9 +162,9 @@ final class AdoptFrameTest extends ZeroTestCase
     {
         $p = $this->probe();
 
-        $this->assertFalse($p->probeAdopt('https://unisolu.com/../../etc/passwd'));
-        $this->assertFalse($p->probeAdopt('https://unisolu.com/%2e%2e%2f%2e%2e/etc'));
-        $this->assertFalse($p->probeAdopt('https://unisolu.com/./ttrpg/'));
+        $this->assertFalse($p->probeAdopt('https://example.test/../../etc/passwd'));
+        $this->assertFalse($p->probeAdopt('https://example.test/%2e%2e%2f%2e%2e/etc'));
+        $this->assertFalse($p->probeAdopt('https://example.test/./fixone/'));
         $this->assertNull($p->frame());
     }
 
@@ -168,8 +172,8 @@ final class AdoptFrameTest extends ZeroTestCase
     {
         $p = $this->probe();
 
-        $this->assertFalse($p->probeAdopt("https://unisolu.com/ttrpg\0/x"));
-        $this->assertFalse($p->probeAdopt('https://unisolu.com/ttrpg%00/x'));
+        $this->assertFalse($p->probeAdopt("https://example.test/fixone\0/x"));
+        $this->assertFalse($p->probeAdopt('https://example.test/fixone%00/x'));
         $this->assertNull($p->frame());
     }
 
@@ -177,8 +181,8 @@ final class AdoptFrameTest extends ZeroTestCase
     {
         $p = $this->probe();
 
-        $this->assertFalse($p->probeAdopt('https://unisolu.com/'));
-        $this->assertFalse($p->probeAdopt('https://unisolu.com'));
+        $this->assertFalse($p->probeAdopt('https://example.test/'));
+        $this->assertFalse($p->probeAdopt('https://example.test'));
         $this->assertNull($p->frame());
     }
 
@@ -200,7 +204,7 @@ final class AdoptFrameTest extends ZeroTestCase
 
         $this->assertFalse($p->probeAdopt('not a url at all'));
         $this->assertFalse($p->probeAdopt('http://'));
-        $this->assertFalse($p->probeAdopt('/ttrpg/campaigns'));   // no host to verify
+        $this->assertFalse($p->probeAdopt('/fixone/campaigns'));   // no host to verify
         $this->assertNull($p->frame());
     }
 
@@ -213,7 +217,7 @@ final class AdoptFrameTest extends ZeroTestCase
         // throw and does not resolve to something outside modules/.
         $p = $this->probe();
 
-        $this->assertFalse($p->probeAdopt('https://unisolu.com/access-request/permission'));
+        $this->assertFalse($p->probeAdopt('https://example.test/access-request/permission'));
         $this->assertNull($p->frame());
     }
 
@@ -224,7 +228,7 @@ final class AdoptFrameTest extends ZeroTestCase
         $_SESSION = [];
         $p = $this->probe();
 
-        $p->probeAdopt('https://unisolu.com/ttrpg/campaigns');
+        $p->probeAdopt('https://example.test/fixone/campaigns');
 
         $this->assertSame([], $_SESSION,
             'adoptFrameFrom() exists to remove the per-request session write; it must not add one back');

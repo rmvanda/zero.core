@@ -13,7 +13,7 @@
 
 That rule works, and `modules/S/S.php` is its reference implementation —
 method-level `#[RequireLogin]` on all eight private endpoints, nothing on the
-two public ones. `modules/Push` was just fixed the same way: four gated methods,
+two public ones. `core/modules/Push` was just fixed the same way: four gated methods,
 `vapidKey()` left public.
 
 The cost is the **default when someone adds a method later**:
@@ -127,7 +127,7 @@ deliberately public endpoint in the codebase. Today the public endpoints are the
 ones with *no* attribute, which cannot be grepped for and cannot be
 distinguished from the ones someone forgot.
 
-That last point may be the strongest practical one. `modules/Push` was
+That last point may be the strongest practical one. `core/modules/Push` was
 unprotected for its entire life and nothing surfaced it — an absent attribute
 looks identical to an oversight.
 
@@ -142,7 +142,7 @@ looks identical to an oversight.
 3. Tests belong in `core/tests/AttributeOverrideTest.php`, which already covers
    replace, additive and the `__call` fallback. Needed: suppression of each of
    the three auth gates, non-suppression of `AllowedMethods`, and the no-op case.
-4. Convert `modules/Push` to class-level `#[RequireLogin]` + `#[AllowPublic]` on
+4. Convert `core/modules/Push` to class-level `#[RequireLogin]` + `#[AllowPublic]` on
    `vapidKey()` as the first user, and revisit `modules/TheButton`, where the
    fail-safe default earns the most.
 

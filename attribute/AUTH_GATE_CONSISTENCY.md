@@ -120,9 +120,9 @@ class-level attribute turned out to be the actual bug — see below.
 |---|---|---|
 | `modules/Notes/Notes.php` | **none** | 8 |
 | `modules/Paste/Paste.php` | **none** | 8 |
-| `modules/AccessRequest/AccessRequest.php` | **none** | 6 |
-| `modules/Auth/Auth.php` | **none** | 3 |
-| `modules/User/User.php` | method-level only | 2 |
+| `core/modules/AccessRequest/AccessRequest.php` | **none** | 6 |
+| `core/modules/Auth/Auth.php` | **none** | 3 |
+| `core/modules/User/User.php` | method-level only | 2 |
 | `modules/Ttrpg/submodule/Hexmap/Hexmap.php` | **none** | 2 |
 | `modules/S/S.php` | **none** | 2 |
 | `modules/Thingiverse/Thingiverse.php` | **none** | 1 |
@@ -134,7 +134,7 @@ is no attribute behind it. Get one wrong and the endpoint is open.
 That is not hypothetical. `modules/Notes/Notes.php` had a **live authentication bypass** on
 2026-08-16, introduced by migrating its eight `isset($_SESSION['user_id'])` gates to
 `Session::userId() !== null`. `currentId()` falls back to `$_SESSION['user']['id']`, which
-`modules/Auth/Auth.php:155` writes *before* `enforceVerifiedEmail()` at `:164` can throw — so an
+`core/modules/Auth/Auth.php:155` writes *before* `enforceVerifiedEmail()` at `:164` can throw — so an
 ordinary OAuth attempt with an unverified provider email left a session that passed all eight
 gates with a provider-controlled id. Fixed by gating on `isLoggedIn()` instead (`ff39479`), and
 `currentId()` was separately hardened to reject non-positive and non-integer values (`6f4d5f9`).
@@ -150,7 +150,7 @@ examined next for exactly that reason. **No bypass.** All four of its gates (`ed
 | File | Calls | Why it is not a gate |
 |---|---|---|
 | `app/frontend/frame/header.php`, `footer.php` | 5 | Nav differs for signed-in visitors |
-| `modules/Test/view/settings.php` | 3 | View branch |
+| `core/modules/Test/view/settings.php` | 3 | View branch |
 | `modules/Ttrpg/view/index.php`, `submodule/Hexmap/frame/header.php` | 2 | View branch |
 | `modules/S/S.php` | 2 | `index()` renders a landing page for anonymous; `__call()` logs a click with a user id or `null` |
 | `modules/Ttrpg/Ttrpg.php` | 1 | `index()` adds recent activity when signed in |

@@ -1,0 +1,38 @@
+<template id="module-panel">
+<style>
+    :host {
+        display: block;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    .heading {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+</style>
+<div class="heading"><slot name="heading">Panel</slot></div>
+<div class="body"><slot></slot></div>
+</template>
+
+<script>
+    /*
+     * Components live in assets/component/, NOT a top-level component/ dir.
+     * Response::getComponents() scans assets/component/*.html on every request
+     * and injects the <template> into the DOM, so the element is ready to use
+     * in any view of this module. defineBasePaths() does set
+     * $this->componentPath, but nothing reads it — getComponents() resolves
+     * through moduleAssetDir instead.
+     */
+    class ModulePanel extends ShadowComponent {
+        connectedCallback() {
+            super.connectedCallback();
+            // The constructor already cloned the <template> into the shadow
+            // root, so it is safe to query it and wire listeners here.
+            // ShadowComponent does not define any other post-render lifecycle
+            // hook — all 56 components in this codebase use this pattern.
+        }
+    }
+    customElements.define("module-panel", ModulePanel);
+</script>

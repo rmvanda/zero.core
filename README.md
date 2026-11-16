@@ -11,6 +11,13 @@ Zero Routing
 Zero Configuration
 Zero Bloat
 
+# What a site installs
+
+`core/composer.json` lists the Composer packages core uses and does not bring with it:
+`minishlink/web-push` (the Push library) and, suggested, `google/apiclient` (the Auth
+module's Google sign-in). A site requires them in its own `composer.json`. Nothing reads
+`core/composer.json` at runtime; it documents what to install.
+
 # How to use it.
 
 First, you need to define some constants to let the Core Frame know where it is and what the things you want are.
@@ -164,7 +171,7 @@ and what to do if the `method` called does not exist (throw 404 page, automatica
 - **Session.php**
     Who is making this request: `userId()`, `user()`, `isLoggedIn()`, `can()`. `establish()` is
     the single writer of the login session and `end()` the single teardown. See
-    `modules/Auth/CLAUDE.md` for the session contract.
+    `core/modules/Auth/CLAUDE.md` for the session contract.
 
 - **Holder.php**, **HoldsCapabilities.php**
     A holder is something a permission is granted to. `User` and `Group` are the two holders
