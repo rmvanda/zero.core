@@ -1,0 +1,3 @@
+[submodule "entity"]
+	path = entity
+	url = git@github.com:rmvanda/entity
