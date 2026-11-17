@@ -76,7 +76,7 @@ public function handler() {
     $currentMethod = strtoupper(Request::$method);
 
     if (!in_array($currentMethod, $this->methods)) {
-        new Error(405, 'Method not allowed. Allowed: ' . implode(', ', $this->methods));
+        throw new HTTPError(405, 'Method >'.Request::$method.'< not allowed. Allowed: ' . implode(', ', $this->methods));
     }
 
     return true;
