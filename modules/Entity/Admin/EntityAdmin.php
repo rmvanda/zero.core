@@ -4,7 +4,7 @@ namespace Zero\Module\Entity\Admin;
 
 use Zero\Core\AdminResponse;
 use Zero\Core\Attribute\{AllowedMethods, RequiredParams, RequirePermission};
-use Zero\Core\HTTPError;
+use Zero\Core\Exception\HTTPError;
 use Zero\Module\Entity\Model\EntityStore;
 
 /**

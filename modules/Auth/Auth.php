@@ -248,11 +248,11 @@ class Auth extends \Zero\Core\Module {
     public static function enforceVerifiedEmail(array $identity): void
     {
         if (empty($identity['email'])) {
-            throw new \Zero\Core\HTTPError(401, "Provider identity missing email");
+            throw new \Zero\Core\Exception\HTTPError(401, "Provider identity missing email");
         }
 
         if (filter_var($identity['verified'] ?? false, FILTER_VALIDATE_BOOLEAN) !== true) {
-            throw new \Zero\Core\HTTPError(403, "Provider email not verified");
+            throw new \Zero\Core\Exception\HTTPError(403, "Provider email not verified");
         }
     }
 
@@ -375,9 +375,9 @@ class Auth extends \Zero\Core\Module {
             $slug = strtolower($this->smids[$this->workingSmid] ?? '');
             $p = $slug !== '' ? \Zero\Module\Auth\OAuth\Provider::bySlug($slug) : null;
             if ($p !== null && (!$p['enabled'] || !$p['configured'])) {
-                throw new \Zero\Core\HTTPError(404, "Provider not available");
+                throw new \Zero\Core\Exception\HTTPError(404, "Provider not available");
             }
-        } catch (\Zero\Core\HTTPError $e) {
+        } catch (\Zero\Core\Exception\HTTPError $e) {
             throw $e;
         } catch (\Throwable $e) {
             Console::warn("Provider availability check failed: " . $e->getMessage());
@@ -467,7 +467,7 @@ class Auth extends \Zero\Core\Module {
                 "ip"       => $ip
             ]);
             Console::warn("Auth throttle tripped for $ip");
-            throw new \Zero\Core\HTTPError(429, "Too many requests");
+            throw new \Zero\Core\Exception\HTTPError(429, "Too many requests");
         }
 
         return true;
@@ -828,13 +828,13 @@ class Auth extends \Zero\Core\Module {
         $via = filter_var($via ?? ($_GET['via'] ?? null), FILTER_VALIDATE_INT);
 
         if ($via === false || !isset($this->smids[$via]) || $this->smids[$via] === "") {
-            throw new \Zero\Core\HTTPError(404, "Unknown auth provider");
+            throw new \Zero\Core\Exception\HTTPError(404, "Unknown auth provider");
         }
 
         $ac   = $this->smids[$via] . "Adapter";
         $path = __DIR__."/adapters/".$ac.".php";
         if (!is_file($path)) {
-            throw new \Zero\Core\HTTPError(404, "Unknown auth provider");
+            throw new \Zero\Core\Exception\HTTPError(404, "Unknown auth provider");
         }
 
         $this->workingSmid = $via;

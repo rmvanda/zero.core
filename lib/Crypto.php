@@ -1,5 +1,5 @@
 <?php
-namespace Zero\Core;
+namespace Zero\Lib;
 
 /**
  * Reusable authenticated at-rest encryption (AES-256-GCM).

@@ -1,6 +1,6 @@
 <?php
 
-namespace Zero\Core;
+namespace Zero\Lib\Net;
 
 /**
  * Which peers are entitled to tell us who the real client is.

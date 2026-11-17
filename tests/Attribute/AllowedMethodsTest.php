@@ -5,7 +5,7 @@ namespace Zero\Tests\Core\Attribute;
 use Zero\Tests\Core\ZeroTestCase;
 use Zero\Core\Attribute\AllowedMethods;
 use Zero\Core\Request;
-use Zero\Core\HTTPError;
+use Zero\Core\Exception\HTTPError;
 
 class AllowedMethodsTest extends ZeroTestCase
 {

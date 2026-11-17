@@ -39,7 +39,7 @@ Both are rows in the `permission` table.
 
 **Capabilities**: "may this user use this feature at all?" A named key such as `allow.polly`,
 gated with `#[RequirePermission('allow.polly')]` and read with `$user->can()`. See
-[Capabilities](#capabilities) below and `docs/attributes/RequirePermission.md`.
+[Capabilities](#capabilities) below and `core/docs/attributes/RequirePermission.md`.
 
 **Sharing**: "may this user read, update or delete *this item*?" A key of `{module}.{entity}`
 and an item id, read and written through `Zero\Core\Permission`.

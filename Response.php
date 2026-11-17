@@ -1,6 +1,7 @@
 <?php
 
 namespace Zero\Core;
+use Zero\Core\Exception\HTTPError;
 
 /*
  * Assigning to an undeclared property is deprecated as of PHP 8.2 and becomes

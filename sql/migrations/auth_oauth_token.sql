@@ -1,5 +1,5 @@
 -- OAuth per-provider token store. One row per (user_id, provider).
--- Secret columns (access_token, refresh_token) hold a Zero\Core\Crypto envelope;
+-- Secret columns (access_token, refresh_token) hold a Zero\Lib\Crypto envelope;
 -- the rest is plaintext + queryable. See
 -- docs/superpowers/specs/2026-07-07-oauth-token-persistence-design.md
 CREATE TABLE IF NOT EXISTS oauth_token (

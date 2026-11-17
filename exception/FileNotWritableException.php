@@ -1,6 +1,6 @@
 <?php
 
-namespace Zero\Core;
+namespace Zero\Core\Exception;
 
 /**
  * A file cannot be written: its folder or lock file is not usable, or the file

@@ -95,7 +95,7 @@ namespace {
 
     try {
         $approved = $attr->handler();
-    } catch (\Zero\Core\HTTPError $e) {
+    } catch (\Zero\Core\Exception\HTTPError $e) {
         // The JSON denial path: a real 401 instead of a 302, so an XHR sees a
         // status it can act on rather than the login page's HTML.
         echo "HTTPERROR:{$e->getCode()}:{$e->detail}\n";

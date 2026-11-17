@@ -1,10 +1,10 @@
 <?php
 namespace Zero\Tests\Core;
 
-use Zero\Core\Cidr;
+use Zero\Lib\Net\Cidr;
 
 /**
- * Zero\Core\Cidr decides two things with very different stakes: whether a client
+ * Zero\Lib\Net\Cidr decides two things with very different stakes: whether a client
  * is on an allow-list (RestrictIP), and whether a peer may tell us who the real
  * client is (Request::clientIp). A false positive here hands away either.
  */

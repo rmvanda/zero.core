@@ -1,6 +1,6 @@
 <?php
 
-namespace Zero\Core;
+namespace Zero\Lib\Net;
 
 /**
  * IP address and CIDR range matching.

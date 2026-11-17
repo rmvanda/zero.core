@@ -1,5 +1,5 @@
 <?php
-namespace Zero\Core; 
+namespace Zero\Lib\Http; 
 
 class ExternalRequest{
 

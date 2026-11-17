@@ -1,6 +1,6 @@
 <?php
 use \Zero\Core\Console;
-use \Zero\Core\HTTPError;
+use \Zero\Core\Exception\HTTPError;
 use \Zero\Lib\Http\Client;
 
 /**

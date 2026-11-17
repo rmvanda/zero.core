@@ -1,7 +1,7 @@
 <?php
 namespace Zero\Module\Auth\OAuth;
 
-use Zero\Core\Crypto;
+use Zero\Lib\Crypto;
 use Zero\Core\Database;
 
 /**
@@ -9,7 +9,7 @@ use Zero\Core\Database;
  * dedicated `oauth_token` table (NOT the EAV Entity framework — see
  * docs/superpowers/specs/2026-07-07-oauth-token-persistence-design.md).
  *
- * Secret columns are transparently encrypted at rest via Zero\Core\Crypto;
+ * Secret columns are transparently encrypted at rest via Zero\Lib\Crypto;
  * callers always pass and receive plaintext.
  */
 class Token

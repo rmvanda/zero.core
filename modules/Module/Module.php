@@ -2,7 +2,7 @@
 
 namespace Zero\Module;
 
-use Zero\Core\HTTPError;
+use Zero\Core\Exception\HTTPError;
 
 /**
  * Module — a Zero Framework module.

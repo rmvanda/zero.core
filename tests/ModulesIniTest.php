@@ -6,9 +6,9 @@ namespace Zero\Tests\Core;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Zero\Core\FileNotWritableException;
+use Zero\Core\Exception\FileNotWritableException;
 use Zero\Core\Modules;
-use Zero\Core\StaleFileException;
+use Zero\Core\Exception\StaleFileException;
 use Zero\Core\ModulesIni;
 
 /**

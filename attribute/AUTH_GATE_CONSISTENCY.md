@@ -255,7 +255,7 @@ Roughly in order of value.
    `AccessRequest` (6 checks), `Auth` (3) and `Thingiverse` (1) are what remain.
 4. ~~**Decide what `#[RequireLogin]` should mean** and write it down.~~ **Done** — it means
    `Session::isLoggedIn()`: a fully established session for a verified account. Written down in
-   `docs/attributes/RequireLogin.md` and `docs/ATTRIBUTES.md`.
+   `core/docs/attributes/RequireLogin.md` and `core/docs/ATTRIBUTES.md`.
 5. **Make `AllowWithToken` refuse an unverified owner.** No longer a bypass — the gate catches it
    — but establishing a session it will not honour is still wrong.
 6. **Resolve the TODO in `RequireLogin::handler()`**: whether `verified` should be configurable
@@ -289,7 +289,7 @@ Four bare gates remain, each the only thing gating its endpoint:
 (`Ttrpg/Hexmap`'s six moved to `#[RequireLogin]` when submodule attributes started running.)
 
 Full reasoning, the usage inventory, and the condition for un-shelving it are in
-`docs/attributes/RequireAuthLevel.md`. **Do not add new bare `#[RequireAuthLevel]` gates** — use
+`core/docs/attributes/RequireAuthLevel.md`. **Do not add new bare `#[RequireAuthLevel]` gates** — use
 `#[RequirePermission]`.
 
 ## Reproducing the audit

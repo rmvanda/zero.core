@@ -1,6 +1,6 @@
 <?php
 
-namespace Zero\Core;
+namespace Zero\Core\Exception;
 
 /**
  * A file changed on disk after the caller read it, so the caller's change is

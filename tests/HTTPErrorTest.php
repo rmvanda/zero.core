@@ -3,7 +3,7 @@
 namespace Zero\Tests\Core;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use Zero\Core\HTTPError;
+use Zero\Core\Exception\HTTPError;
 
 class HTTPErrorTest extends ZeroTestCase
 {

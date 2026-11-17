@@ -14,7 +14,7 @@ class RenderErrorTest extends ZeroTestCase
     private const CHILD = <<<'PHP'
 <?php
 [, $core, $detail] = $argv + [2 => null];
-require $core . '/HTTPError.php';
+require $core . '/exception/HTTPError.php';
 require $core . '/Response.php';
 require dirname($core) . '/vendor/autoload.php';
 define('ZERO_ROOT', dirname($core) . '/');
@@ -26,12 +26,12 @@ define('MODULE_PATH', ZERO_ROOT . 'modules/');
 $response = new class extends \Zero\Core\Response {
     public function endpoint(?string $detail): void {
         $this->data = ['half_built' => 'endpoint data'];
-        throw new \Zero\Core\HTTPError(404, $detail);
+        throw new \Zero\Core\Exception\HTTPError(404, $detail);
     }
 };
 try {
     $response->endpoint($detail);
-} catch (\Zero\Core\HTTPError $e) {
+} catch (\Zero\Core\Exception\HTTPError $e) {
     $response->renderError($e);
 }
 PHP;

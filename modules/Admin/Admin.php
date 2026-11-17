@@ -54,7 +54,7 @@ class Admin extends AdminResponse {
 
     public function manage($type = null, $id = null) {
         if (!$type) {
-            throw new \Zero\Core\HTTPError(400, 'Management type required');
+            throw new \Zero\Core\Exception\HTTPError(400, 'Management type required');
         }
 
         // Drive per-view asset loading off $type so /admin/manage/users picks up
@@ -93,7 +93,7 @@ class Admin extends AdminResponse {
                 $this->build(__DIR__."/view/manage-modules.php");
             break;
             default:
-                throw new \Zero\Core\HTTPError(404, "Unknown management type: {$type}");
+                throw new \Zero\Core\Exception\HTTPError(404, "Unknown management type: {$type}");
         }
     }
 
@@ -235,19 +235,19 @@ class Admin extends AdminResponse {
         $ini = $this->modulesIni();
         $hash = $_POST['hash'] ?? null;
         if (!is_string($hash)) {
-            throw new \Zero\Core\HTTPError(400, 'hash must be a string');
+            throw new \Zero\Core\Exception\HTTPError(400, 'hash must be a string');
         }
 
         try {
             if (!hash_equals($ini->hash(), $hash)) {
-                throw new \Zero\Core\StaleFileException('app/modules.ini changed since the screen was drawn');
+                throw new \Zero\Core\Exception\StaleFileException('app/modules.ini changed since the screen was drawn');
             }
             $this->applyModuleSetting($ini, $_POST);
             $ini->save();
-        } catch (\Zero\Core\StaleFileException $e) {
+        } catch (\Zero\Core\Exception\StaleFileException $e) {
             $this->failModuleSave(409, $e->getMessage() . '. ' . ADMIN_MODULES_RELOAD_HINT);
             return;
-        } catch (\Zero\Core\FileNotWritableException $e) {
+        } catch (\Zero\Core\Exception\FileNotWritableException $e) {
             $this->failModuleSave(500, $e->getMessage());
             return;
         } catch (\RuntimeException $e) {
@@ -314,7 +314,7 @@ class Admin extends AdminResponse {
             // Modules' own, of the text the rows above were read from.
             $this->modulesIni();
             $this->modulesHash = \Zero\Core\Modules::iniHash();
-        } catch (\Zero\Core\HTTPError $e) {
+        } catch (\Zero\Core\Exception\HTTPError $e) {
             if ($e->getCode() !== 500 || $e->detail === 'Modules are not configured') {
                 throw $e;
             }
@@ -328,12 +328,12 @@ class Admin extends AdminResponse {
     protected function modulesIni(): \Zero\Core\ModulesIni {
         $file = \Zero\Core\Modules::iniFile();
         if ($file === null) {
-            throw new \Zero\Core\HTTPError(500, 'Modules are not configured');
+            throw new \Zero\Core\Exception\HTTPError(500, 'Modules are not configured');
         }
         try {
             return new \Zero\Core\ModulesIni($file);
         } catch (\RuntimeException $e) {
-            throw new \Zero\Core\HTTPError(500, $e->getMessage());
+            throw new \Zero\Core\Exception\HTTPError(500, $e->getMessage());
         }
     }
 
@@ -345,28 +345,28 @@ class Admin extends AdminResponse {
     protected function applyModuleSetting(\Zero\Core\ModulesIni $ini, array $post): void {
         $module = $post['module'] ?? null;
         if (!is_string($module) || $module === '') {
-            throw new \Zero\Core\HTTPError(400, 'A module name is required');
+            throw new \Zero\Core\Exception\HTTPError(400, 'A module name is required');
         }
         $real = \Zero\Core\Modules::name($module);
         if ($real === null) {
-            throw new \Zero\Core\HTTPError(404, 'Unknown module');
+            throw new \Zero\Core\Exception\HTTPError(404, 'Unknown module');
         }
 
         $enabled = $post['enabled'] ?? null;
         if ($enabled !== null && (!is_string($enabled) || !in_array($enabled, ['on', 'off', 'default'], true))) {
-            throw new \Zero\Core\HTTPError(400, 'enabled must be on, off or default');
+            throw new \Zero\Core\Exception\HTTPError(400, 'enabled must be on, off or default');
         }
 
         $order = $post['order'] ?? null;
         $orderValue = null;
         if ($order !== null) {
             if (!is_string($order)) {
-                throw new \Zero\Core\HTTPError(400, 'order must be a whole number');
+                throw new \Zero\Core\Exception\HTTPError(400, 'order must be a whole number');
             }
             $order = trim($order);
             if ($order !== '') {
                 if (!preg_match('/^[0-9]{1,4}$/', $order)) {
-                    throw new \Zero\Core\HTTPError(400, 'order must be a whole number from 0 to 9999');
+                    throw new \Zero\Core\Exception\HTTPError(400, 'order must be a whole number from 0 to 9999');
                 }
                 $orderValue = (int) $order;
             }
@@ -380,7 +380,7 @@ class Admin extends AdminResponse {
                 $ini->setOrder($real, $orderValue);
             }
         } catch (\DomainException $e) {
-            throw new \Zero\Core\HTTPError(400, $e->getMessage());
+            throw new \Zero\Core\Exception\HTTPError(400, $e->getMessage());
         }
     }
 
@@ -488,12 +488,12 @@ class Admin extends AdminResponse {
      * The group with this id.
      *
      * @param int|string $groupId From the URL or a form
-     * @throws \Zero\Core\HTTPError 404 when no group has that id
+     * @throws \Zero\Core\Exception\HTTPError 404 when no group has that id
      */
     private function findGroup($groupId): \Zero\Core\Group {
         $group = ctype_digit((string) $groupId) ? \Zero\Core\Group::find((int) $groupId) : null;
         if (!$group) {
-            throw new \Zero\Core\HTTPError(404, 'Group not found');
+            throw new \Zero\Core\Exception\HTTPError(404, 'Group not found');
         }
 
         return $group;

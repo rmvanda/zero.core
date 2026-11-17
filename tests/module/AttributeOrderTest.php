@@ -32,7 +32,7 @@ use Zero\Core\Attribute\Validate;
  * reads correctly at both sites and is wrong when combined. No amount of
  * reading one file catches that.
  *
- * The order below is not invented here. docs/ATTRIBUTES.md has published it as
+ * The order below is not invented here. core/docs/ATTRIBUTES.md has published it as
  * "Best Practice Order" all along, and modules/Index/view/zero-framework.php
  * publishes a second, slightly different one — an invariant stated twice, in
  * two places that disagree, and enforced nowhere. This test is the one place
@@ -59,7 +59,7 @@ class AttributeOrderTest extends ZeroTestCase
      *                     to precede everything that reads one. This is the
      *                     pair the whole test exists for.
      *   RequireLogin      Who are you.
-     *   RequireAuthLevel  Shelved (see docs/attributes/RequireAuthLevel.md) but
+     *   RequireAuthLevel  Shelved (see core/docs/attributes/RequireAuthLevel.md) but
      *                     still live in core/modules/User, so it still needs a slot.
      *   RequirePermission What may you do. After RequireLogin, so an anonymous
      *                     caller gets 401 rather than 403.

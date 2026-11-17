@@ -5,7 +5,7 @@ use Zero\Tests\Core\ZeroTestCase;
 use Zero\Module\Auth\OAuth\Token;
 use Zero\Module\Auth\OAuth\Provider;
 use Zero\Module\Auth\OAuth\Broker;
-use Zero\Core\Crypto;
+use Zero\Lib\Crypto;
 use Zero\Core\Database;
 
 /**

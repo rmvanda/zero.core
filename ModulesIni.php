@@ -1,6 +1,8 @@
 <?php
 
 namespace Zero\Core;
+use Zero\Core\Exception\FileNotWritableException;
+use Zero\Core\Exception\StaleFileException;
 
 /**
  * ModulesIni: the one writer of app/modules.ini.

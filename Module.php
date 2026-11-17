@@ -2,6 +2,7 @@
 
 Namespace Zero\Core; 
 
+use Zero\Core\Exception\HTTPError;
 use \Zero\Core\Request as Request; 
 class Module extends Response { 
 // Yes, this class is secretly a way to realias Response to Module.

@@ -1,6 +1,7 @@
 <?php
 
 namespace Zero\Core;
+use Zero\Core\Exception\HTTPError;
 
 use Zero\Core\Module;
 use Zero\Core\Request;

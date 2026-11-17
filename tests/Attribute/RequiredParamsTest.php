@@ -4,7 +4,7 @@ namespace Zero\Tests\Core\Attribute;
 
 use Zero\Tests\Core\ZeroTestCase;
 use Zero\Core\Attribute\RequiredParams;
-use Zero\Core\HTTPError;
+use Zero\Core\Exception\HTTPError;
 
 class RequiredParamsTest extends ZeroTestCase
 {

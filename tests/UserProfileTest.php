@@ -1,7 +1,7 @@
 <?php
 namespace Zero\Tests\Core;
 
-use Zero\Core\Crypto;
+use Zero\Lib\Crypto;
 use Zero\Core\Database;
 use Zero\Core\User;
 

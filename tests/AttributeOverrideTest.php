@@ -5,7 +5,7 @@ namespace Zero\Tests\Core;
 use Zero\Core\Application;
 use Zero\Core\Attribute\AllowedMethods;
 use Zero\Core\Request;
-use Zero\Core\HTTPError;
+use Zero\Core\Exception\HTTPError;
 
 /* ── Fixture classes under test ── */
 

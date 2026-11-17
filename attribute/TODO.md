@@ -107,7 +107,7 @@ public function sensitiveUpdate($args) {
 **Status:** ✅ **IMPLEMENTED**
 **Priority:** High
 **Location:** `core/attribute/AuditLog.php`
-**Documentation:** `docs/attributes/AuditLog.md`
+**Documentation:** `core/docs/attributes/AuditLog.md`
 
 **Purpose:** Automatically log access to sensitive endpoints for compliance and security.
 
@@ -382,7 +382,7 @@ silently fails every gated endpoint.
 ### RequireAuthLevel — shelved, not retired
 **Status:** Shelved 2026-08-16. Existing call sites stay; do not add new ones.
 **Location:** `core/attribute/RequireAuthLevel.php`
-**Documentation:** `docs/attributes/RequireAuthLevel.md` (full reasoning + un-shelving condition)
+**Documentation:** `core/docs/attributes/RequireAuthLevel.md` (full reasoning + un-shelving condition)
 
 `RequireAuthLevel` was meant as the **blanket** alternative to `RequirePermission`'s **granular**
 grants. It has not earned that role:
@@ -484,7 +484,7 @@ catches Keycloak's unnormalized value.
   - Namespace: `\Zero\Core\Attribute`
   - Location: `core/attribute/`
   - Must have `handler()` method returning `true` or `Error` object
-  - Document in `docs/attributes/` when implemented
+  - Document in `core/docs/attributes/` when implemented
 
 - Consider attribute interactions:
   - `RequireJSON` + `RequiredParams` should validate JSON keys

@@ -1,6 +1,7 @@
 <?php
 
 namespace Zero\Core;
+use Zero\Lib\Crypto;
 
 /**
  * A site user — the row gateway for `users`, the user's settings and profile

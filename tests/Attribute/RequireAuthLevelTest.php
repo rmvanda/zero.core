@@ -4,7 +4,7 @@ namespace Zero\Tests\Core\Attribute;
 
 use Zero\Tests\Core\ZeroTestCase;
 use Zero\Core\Attribute\RequireAuthLevel;
-use Zero\Core\HTTPError;
+use Zero\Core\Exception\HTTPError;
 use Zero\Core\Session;
 use Zero\Core\Database;
 

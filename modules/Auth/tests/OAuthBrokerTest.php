@@ -4,7 +4,7 @@ namespace Zero\Module\Auth\Tests;
 use Zero\Tests\Core\ZeroTestCase;
 
 use Zero\Module\Auth\OAuth\Broker;
-use Zero\Core\Crypto;
+use Zero\Lib\Crypto;
 use Zero\Module\Auth\OAuth\Token;
 
 class OAuthBrokerTest extends ZeroTestCase

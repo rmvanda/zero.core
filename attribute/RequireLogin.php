@@ -4,7 +4,7 @@ namespace Zero\Core\Attribute;
 
 use \Attribute;
 use \Zero\Core\Console;
-use \Zero\Core\HTTPError;
+use \Zero\Core\Exception\HTTPError;
 use \Zero\Core\Request;
 use Zero\Core\Session;
 

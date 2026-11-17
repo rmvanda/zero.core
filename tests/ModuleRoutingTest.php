@@ -5,7 +5,7 @@ namespace Zero\Tests\Core;
 use PHPUnit\Framework\TestCase;
 use Zero\Core\Application;
 use Zero\Core\Console;
-use Zero\Core\HTTPError;
+use Zero\Core\Exception\HTTPError;
 use Zero\Core\Modules;
 use Zero\Core\Request;
 use Zero\Core\Response;

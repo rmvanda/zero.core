@@ -6,7 +6,7 @@ namespace Zero\Module\Admin\Tests;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Zero\Core\HTTPError;
+use Zero\Core\Exception\HTTPError;
 use Zero\Core\Modules;
 use Zero\Core\ModulesIni;
 use Zero\Core\Request;

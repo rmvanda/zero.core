@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/OAuth2Adapter.php';
 
-use \Zero\Core\HTTPError;
+use \Zero\Core\Exception\HTTPError;
 use \Zero\Lib\Http\Client;
 
 /**

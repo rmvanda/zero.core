@@ -9,7 +9,7 @@ use Zero\Core\Session;
 use Zero\Core\Database;
 use Zero\Core\Group;
 use Zero\Core\Request;
-use Zero\Core\HTTPError;
+use Zero\Core\Exception\HTTPError;
 use Zero\Core\Application;
 
 /**

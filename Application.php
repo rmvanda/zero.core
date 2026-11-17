@@ -1,6 +1,7 @@
 <?php
 
 namespace Zero\Core;
+use Zero\Core\Exception\HTTPError;
 //use \Zero\Core\Request as Request;
 use \Zero\Lib\CloudFlare\CloudFlare;
 

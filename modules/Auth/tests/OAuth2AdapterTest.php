@@ -78,7 +78,7 @@ class OAuth2AdapterTest extends ZeroTestCase
 
         $adapter = new FakeOAuth2Adapter($this->config());
 
-        $this->expectException(\Zero\Core\HTTPError::class);
+        $this->expectException(\Zero\Core\Exception\HTTPError::class);
         $adapter->getCurrentUser();
     }
 
@@ -90,7 +90,7 @@ class OAuth2AdapterTest extends ZeroTestCase
 
         $adapter = new FakeOAuth2Adapter($this->config());
 
-        $this->expectException(\Zero\Core\HTTPError::class);
+        $this->expectException(\Zero\Core\Exception\HTTPError::class);
         $adapter->getCurrentUser();
     }
 }

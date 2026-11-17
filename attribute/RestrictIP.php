@@ -3,9 +3,9 @@
 namespace Zero\Core\Attribute;
 
 use \Attribute;
-use \Zero\Core\Cidr;
+use \Zero\Lib\Net\Cidr;
 use \Zero\Core\Console;
-use \Zero\Core\HTTPError;
+use \Zero\Core\Exception\HTTPError;
 use \Zero\Core\Request;
 
 #[Attribute]
@@ -78,7 +78,7 @@ class RestrictIP {
     /**
      * Does $ip match a single allow-list entry (exact IP or CIDR range)?
      *
-     * Delegates to Zero\Core\Cidr, which is where this logic now lives — it
+     * Delegates to Zero\Lib\Net\Cidr, which is where this logic now lives — it
      * gained a second consumer in Request::clientIp(), which uses it to decide
      * whether a peer is entitled to set forwarding headers. One matcher, so an
      * authorisation check and a trust check cannot drift apart.

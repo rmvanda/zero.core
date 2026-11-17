@@ -5,7 +5,7 @@ and Ttrpg specifically — see "Why it is deferred" below for the numbers.
 **Trigger:** build it when a single class has ~4+ endpoints sharing the same
 login-derived setup **and** something needs to opt out per endpoint. Without
 that last clause the constructor already does the job for free.
-**Related:** `core/attribute/AUTH_GATE_CONSISTENCY.md`, `docs/attributes/RequireLogin.md`
+**Related:** `core/attribute/AUTH_GATE_CONSISTENCY.md`, `core/docs/attributes/RequireLogin.md`
 
 ## The idea
 
@@ -80,7 +80,7 @@ non-endpoint methods — `TheButton::handlePress()`, `Paste::show()`.
 
 ## Ordering constraint, if it is ever built
 
-`docs/ATTRIBUTES.md` documents `RequireLogin` **first** in the attribute chain.
+`core/docs/ATTRIBUTES.md` documents `RequireLogin` **first** in the attribute chain.
 A setup callback that reads request data wants `#[Sanitize]` to have run
 *already*, so it belongs **last**.
 

@@ -1,7 +1,7 @@
 <?php
 namespace Zero\Module\Auth\Model;
 
-use Zero\Core\HTTPError;
+use Zero\Core\Exception\HTTPError;
 use Zero\Core\Console;
 
 /**

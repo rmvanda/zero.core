@@ -192,7 +192,7 @@ class AutoloadMapTest extends TestCase
     {
         $core = $this->root . 'core/';
         // core/modules/ is walked below, through Modules::all()
-        foreach ($this->phpFiles($core, ['tests', 'skeleton', 'archive', 'modules']) as $file) {
+        foreach ($this->phpFiles($core, ['tests', 'skeleton', 'archive', 'deprecated', 'modules']) as $file) {
             yield $file;
         }
         foreach ($this->phpFiles($this->root . 'core/lib/', []) as $file) {

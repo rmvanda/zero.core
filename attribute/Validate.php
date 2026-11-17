@@ -3,7 +3,7 @@ namespace Zero\Core\Attribute;
 
 use \Attribute;
 use \Zero\Core\Console;
-use \Zero\Core\HTTPError;
+use \Zero\Core\Exception\HTTPError;
 
 /**
  * Validate Attribute - Validates POST/GET parameters before method execution

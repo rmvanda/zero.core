@@ -6,6 +6,7 @@
  */
 
 namespace Zero\Core; 
+use Zero\Lib\Net\TrustedProxy;
 
 class Request
 {

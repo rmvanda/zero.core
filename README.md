@@ -146,7 +146,7 @@ and what to do if the `method` called does not exist (throw 404 page, automatica
     Base class for admin controllers. A Module subclass with its own asset handling — admin
     assets are inlined, never web-accessible. See `ADMIN_ARCHITECTURE.md` and `ADMIN_ASSETS.md`.
 
-- **HTTPError.php**
+- **exception/HTTPError.php** (`Zero\Core\Exception\HTTPError`)
     Exception class for HTTP errors. `throw new HTTPError(404)` bubbles up to
     `Application::run()`'s try/catch and renders an error page using the module's
     existing Response instance — preserving framePath and all resolved paths.
@@ -191,21 +191,21 @@ and what to do if the `method` called does not exist (throw 404 page, automatica
 
 ## Auth and security
 
-- **Crypto.php**
+- **lib/Crypto.php** (`Zero\Lib\Crypto`)
     Authenticated at-rest encryption (AES-256-GCM). Table-agnostic: any column can store
     `Crypto::encrypt($plain)` and recover it.
 
-- **TrustedProxy.php**
+- **lib/Net/TrustedProxy.php** (`Zero\Lib\Net\TrustedProxy`)
     Which peers are entitled to tell us who the real client is. `X-Forwarded-For` and
     `CF-Connecting-IP` are just request headers — anyone can send them.
 
-- **Cidr.php**
+- **lib/Net/Cidr.php** (`Zero\Lib\Net\Cidr`)
     IP address and CIDR range matching.
 
 - **attribute/**
     The declarative gates: `RequireLogin`, `RequirePermission`, `AllowWithToken`,
     `AllowedMethods`, `RequiredParams`, `Sanitize`, `Validate`, `RestrictIP`, `AuditLog`,
-    and the shelved `RequireAuthLevel`. See `docs/ATTRIBUTES.md`.
+    and the shelved `RequireAuthLevel`. See `core/docs/ATTRIBUTES.md`.
 
 ## Everything else
 
@@ -215,15 +215,15 @@ and what to do if the `method` called does not exist (throw 404 page, automatica
 
 - **PluginLoader.php**
     Discovers and manages plugins. Scans `plugin/` for subdirectories containing a matching
-    `.php` file, and fires hooks such as `afterRun`. See `docs/PLUGINS.md`.
+    `.php` file, and fires hooks such as `afterRun`. See `core/docs/PLUGINS.md`.
 
-- **ExternalRequest.php**
+- **lib/Http/ExternalRequest.php** (`Zero\Lib\Http\ExternalRequest`)
     Small curl wrapper for calling third-party APIs. Used by Dictionary and Thingiverse.
 
 - **Error.php**
     Deprecated. Use `HTTPError`. See `DEPRECATING_CHANGES.md`.
 
-- **SQLAdapter.php**
+- **deprecated/SQLAdapter.php**
     Dead code — it extends an `Adapter` class that does not exist in this repo, and nothing
     references it. It would fatal if it were ever autoloaded.
 
@@ -232,9 +232,13 @@ and what to do if the `method` called does not exist (throw 404 page, automatica
 | Path | What it is |
 |---|---|
 | `attribute/` | The declarative gate attributes |
+| `exception/` | The exceptions core throws: `HTTPError`, `StaleFileException`, `FileNotWritableException` |
+| `lib/` | Libraries any site can use (`Zero\Lib\`) |
+| `docs/` | Framework documentation: routing, attributes, plugins, push |
+| `deprecated/` | Classes on their way out. Nothing loads them. |
 | `tests/` | PHPUnit suite for core |
 | `skeleton/` | A minimal working site layout, for standing up a new install |
-| `bin/` | Maintenance scripts (`refresh-cloudflare-ips.php`) |
+| `bin/` | Maintenance scripts (`refresh-cloudflare-ips.php`, `log_monitor.sh`) |
 | `archive/` | Superseded design notes. History, not documentation. |
 
 # TODO
@@ -242,5 +246,5 @@ and what to do if the `method` called does not exist (throw 404 page, automatica
 - Learn MarkDown and make this file prettier
 - Better access control
 - Subdomain support
-- Delete `SQLAdapter.php` or restore the `Adapter` base class it needs
+- Delete `deprecated/SQLAdapter.php` or restore the `Adapter` base class it needs
 - Migrate the last `new Error()` call sites off the deprecated class

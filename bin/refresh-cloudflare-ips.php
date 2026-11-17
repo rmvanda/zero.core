@@ -1,7 +1,7 @@
 <?php
 /**
  * Report drift between Cloudflare's published edge ranges and the list compiled
- * into Zero\Core\TrustedProxy.
+ * into Zero\Lib\Net\TrustedProxy.
  *
  * Deliberately does NOT write anything. The ranges decide whose forwarding
  * headers we believe, so they are trust data: changing them should be a
@@ -15,7 +15,7 @@
  */
 require __DIR__ . '/../../vendor/autoload.php';
 
-use Zero\Core\TrustedProxy;
+use Zero\Lib\Net\TrustedProxy;
 
 const SOURCES = [
     'IPv4' => 'https://www.cloudflare.com/ips-v4',
@@ -51,7 +51,7 @@ if (!$added && !$removed) {
     exit(0);
 }
 
-echo "refresh-cloudflare-ips: DRIFT DETECTED — update core/TrustedProxy.php\n";
+echo "refresh-cloudflare-ips: DRIFT DETECTED — update core/lib/Net/TrustedProxy.php\n";
 
 foreach ($added as $r) {
     // Missing ranges are the urgent direction: real visitors arriving through a

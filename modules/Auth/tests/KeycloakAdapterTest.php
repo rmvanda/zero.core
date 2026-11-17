@@ -124,7 +124,7 @@ class KeycloakAdapterTest extends ZeroTestCase
 
         $adapter = new \KeycloakAdapter($this->config());
 
-        $this->expectException(\Zero\Core\HTTPError::class);
+        $this->expectException(\Zero\Core\Exception\HTTPError::class);
         $adapter->validateIdToken($token, $this->jwksJson($key));
     }
 
@@ -138,7 +138,7 @@ class KeycloakAdapterTest extends ZeroTestCase
 
         $adapter = new \KeycloakAdapter($this->config());
 
-        $this->expectException(\Zero\Core\HTTPError::class);
+        $this->expectException(\Zero\Core\Exception\HTTPError::class);
         $adapter->validateIdToken($token, $this->jwksJson($key));
     }
 
@@ -156,7 +156,7 @@ class KeycloakAdapterTest extends ZeroTestCase
 
         $adapter = new \KeycloakAdapter($this->config());
 
-        $this->expectException(\Zero\Core\HTTPError::class);
+        $this->expectException(\Zero\Core\Exception\HTTPError::class);
         $adapter->validateIdToken($token, $this->jwksJson($otherKey));
     }
 
@@ -170,7 +170,7 @@ class KeycloakAdapterTest extends ZeroTestCase
 
         $adapter = new \KeycloakAdapter($this->config());
 
-        $this->expectException(\Zero\Core\HTTPError::class);
+        $this->expectException(\Zero\Core\Exception\HTTPError::class);
         $adapter->validateIdToken($token, $this->jwksJson($key));
     }
 
@@ -184,7 +184,7 @@ class KeycloakAdapterTest extends ZeroTestCase
 
         $adapter = new \KeycloakAdapter($this->config());
 
-        $this->expectException(\Zero\Core\HTTPError::class);
+        $this->expectException(\Zero\Core\Exception\HTTPError::class);
         $adapter->validateIdToken($token, $this->jwksJson($key));
     }
 
@@ -196,7 +196,7 @@ class KeycloakAdapterTest extends ZeroTestCase
 
         $adapter = new \KeycloakAdapter($this->config());
 
-        $this->expectException(\Zero\Core\HTTPError::class);
+        $this->expectException(\Zero\Core\Exception\HTTPError::class);
         $adapter->validateIdToken($token, $this->jwksJson($key));
     }
 
@@ -210,7 +210,7 @@ class KeycloakAdapterTest extends ZeroTestCase
 
         $adapter = new \KeycloakAdapter($this->config());
 
-        $this->expectException(\Zero\Core\HTTPError::class);
+        $this->expectException(\Zero\Core\Exception\HTTPError::class);
         $adapter->validateIdToken($token, $this->jwksJson($key));
     }
 
@@ -225,7 +225,7 @@ class KeycloakAdapterTest extends ZeroTestCase
 
         $adapter = new \KeycloakAdapter($this->config());
 
-        $this->expectException(\Zero\Core\HTTPError::class);
+        $this->expectException(\Zero\Core\Exception\HTTPError::class);
         $adapter->validateIdToken($token, $this->jwksJson($key));
     }
 
@@ -253,7 +253,7 @@ class KeycloakAdapterTest extends ZeroTestCase
 
         $adapter = new \KeycloakAdapter($this->config());
 
-        $this->expectException(\Zero\Core\HTTPError::class);
+        $this->expectException(\Zero\Core\Exception\HTTPError::class);
         $adapter->getCurrentUser();
     }
 
@@ -265,7 +265,7 @@ class KeycloakAdapterTest extends ZeroTestCase
 
         $adapter = new \KeycloakAdapter($this->config());
 
-        $this->expectException(\Zero\Core\HTTPError::class);
+        $this->expectException(\Zero\Core\Exception\HTTPError::class);
         $adapter->getCurrentUser();
     }
 
@@ -279,7 +279,7 @@ class KeycloakAdapterTest extends ZeroTestCase
 
         $adapter = new \KeycloakAdapter($this->config());
 
-        $this->expectException(\Zero\Core\HTTPError::class);
+        $this->expectException(\Zero\Core\Exception\HTTPError::class);
         $adapter->validateIdToken($token, $this->jwksJson($key));
     }
 
@@ -293,7 +293,7 @@ class KeycloakAdapterTest extends ZeroTestCase
 
         $adapter = new \KeycloakAdapter($this->config());
 
-        $this->expectException(\Zero\Core\HTTPError::class);
+        $this->expectException(\Zero\Core\Exception\HTTPError::class);
         $adapter->validateIdToken($token, $this->jwksJson($key));
     }
 

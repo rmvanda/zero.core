@@ -3,7 +3,7 @@ namespace Zero\Core\Attribute;
 
 use \Attribute;
 use \Zero\Core\Request;
-use \Zero\Core\HTTPError;
+use \Zero\Core\Exception\HTTPError;
 
 #[Attribute]
 class AllowedMethods {

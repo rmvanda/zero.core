@@ -126,7 +126,7 @@ mean the rule exists in two places — reconcile before reviving that adapter.
 ## Token persistence (`oauth_token`)
 
 `Zero\Module\Auth\OAuth\Token` (`OAuth/Token.php`; schema `core/sql/migrations/auth_oauth_token.sql`, created by `core/sql/core.sql`) — one row per `(user_id, provider)`, `access_token`/`refresh_token`
-encrypted at rest with `Zero\Core\Crypto` (AES-256-GCM, key `APP_ENCRYPTION_KEY` from
+encrypted at rest with `Zero\Lib\Crypto` (AES-256-GCM, key `APP_ENCRYPTION_KEY` from
 `app/config/crypto.ini`). Callers always see plaintext.
 
 - `complete()` stores the bundle after login, wrapped in try/catch — **a persistence failure must

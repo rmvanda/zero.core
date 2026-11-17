@@ -3,7 +3,7 @@ namespace Zero\Module\Auth\Tests;
 
 use Zero\Tests\Core\ZeroTestCase;
 use Zero\Module\Auth\Model\RegistrationFields;
-use Zero\Core\HTTPError;
+use Zero\Core\Exception\HTTPError;
 
 class RegistrationFieldsTest extends ZeroTestCase
 {

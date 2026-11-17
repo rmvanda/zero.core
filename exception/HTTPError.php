@@ -1,6 +1,6 @@
 <?php
 
-namespace Zero\Core;
+namespace Zero\Core\Exception;
 
 /**
  * HTTP error exception for clean control flow.
