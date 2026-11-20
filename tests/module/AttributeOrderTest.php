@@ -430,14 +430,10 @@ class OrderProbeMisordered
     public function api() {}
 }
 
-/** Stands in for an attribute added to core/attribute/ and never placed in ORDER. */
-#[\Attribute(\Attribute::TARGET_ALL)]
-class OrderProbeStrayAttribute {}
-
 /** Carries an attribute the pipeline has never heard of. */
 class OrderProbeUnranked
 {
-    #[OrderProbeStrayAttribute]
+    #[\Zero\Core\Attribute\OrderProbeStrayAttribute]
     public function api() {}
 }
 
@@ -459,3 +455,24 @@ class OrderProbeOverride
     #[RequireLogin('/somewhere/else')]
     public function api() {}
 }
+
+
+/* ── A probe attribute in the framework's own namespace ──────────────────
+ *
+ * Application::resolveAttributes() keeps only attributes whose name starts
+ * with Zero\Core\Attribute\, so a probe declared anywhere else is dropped
+ * before the order check sees it. This one is declared in that namespace, in
+ * this file, for that reason alone.
+ */
+
+namespace Zero\Core\Attribute;
+
+/**
+ * FOR TESTING PURPOSES ONLY. Not a real attribute: it has no handler() and no
+ * file in core/attribute/, and nothing outside AttributeOrderTest may use it.
+ *
+ * Stands in for an attribute added to core/attribute/ and never placed in
+ * AttributeOrderTest::ORDER.
+ */
+#[\Attribute(\Attribute::TARGET_ALL)]
+class OrderProbeStrayAttribute {}
