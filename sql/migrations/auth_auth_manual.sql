@@ -1,5 +1,5 @@
 -- One-time tokens for magic-link sign-in, email verification, and (later)
--- password reset. See docs/superpowers/specs/2026-08-07-auth-manual-registration-design.md
+-- password reset.
 --
 -- selector + validator rather than one opaque token: the selector is the indexed
 -- lookup key, the validator is the secret and only its SHA-256 is stored. One

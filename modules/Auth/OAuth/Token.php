@@ -6,8 +6,7 @@ use Zero\Core\Database;
 
 /**
  * Per-provider OAuth token store. One row per (user_id, provider) in the
- * dedicated `oauth_token` table (NOT the EAV Entity framework — see
- * docs/superpowers/specs/2026-07-07-oauth-token-persistence-design.md).
+ * dedicated `oauth_token` table (NOT the EAV Entity framework).
  *
  * Secret columns are transparently encrypted at rest via Zero\Lib\Crypto;
  * callers always pass and receive plaintext.

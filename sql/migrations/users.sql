@@ -1,6 +1,5 @@
 -- Zero\Core\User backing table.
--- Replaces the EAV `user` entity type (entity.type = 4). See
--- docs/superpowers/specs/2026-08-07-zero-model-user-migration-design.md
+-- Replaces the EAV `user` entity type (entity.type = 4).
 --
 -- DEFAULT CHARSET is stated explicitly on purpose: the database default is
 -- latin1, and every modern table here overrides it.

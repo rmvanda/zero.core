@@ -136,8 +136,6 @@ encrypted at rest with `Zero\Lib\Crypto` (AES-256-GCM, key `APP_ENCRYPTION_KEY` 
 - `Zero\Module\Auth\OAuth\Broker` refreshes on demand for other modules (Calendar, Dashboard) via
   `Auth::adapterForProvider($slug)`.
 
-See `docs/superpowers/specs/2026-07-07-oauth-token-persistence-design.md`.
-
 ## Session contract
 
 `Zero\Core\Session::establish()` is the single writer of the login session. All three sign-in
@@ -230,8 +228,7 @@ The `RegistrationFields` machinery that reads the config and renders extra field
 just dormant while the config is empty. `user_profile` rows are written and read through the
 `Zero\Core\Access\User` instance API: `->storeProfile($values, $fieldDefs)` and `->profile()`.
 
-**Passwords are still not implemented.** `user_credential` is specced but not built — see
-`docs/superpowers/specs/2026-08-07-auth-manual-registration-design.md` §4.3.
+**Passwords are still not implemented.** `user_credential` is not built.
 
 **`Auth::register()`'s own input validation has no automated coverage** — nothing in the test
 suite calls `register()` directly. The following cases are verified by hand only; re-check them
@@ -243,9 +240,6 @@ by hand after touching `register()`:
 
 ## Reference
 
-- `core/` + `docs/superpowers/specs/2026-08-07-zero-model-user-migration-design.md` — the `user` record lives in the `users` table via `Zero\Core\Access\User`; `user_view` is a compatibility view over it
+- `core/` — the `user` record lives in the `users` table via `Zero\Core\Access\User`; `user_view` is a compatibility view over it
 - `entity/CLAUDE.md`, `/entityframework` skill — the EAV framework, which `user` does not use
 - `core/ADMIN_ARCHITECTURE.md` — the `/admin/auth` panel
-- `docs/superpowers/specs/2026-06-26-keycloak-oidc-test-integration-design.md`
-- `docs/superpowers/specs/2026-07-06-multi-provider-oauth-adapters-design.md`
-- `docs/superpowers/specs/2026-07-07-oauth-token-persistence-design.md`

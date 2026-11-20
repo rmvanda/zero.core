@@ -14,7 +14,7 @@ complete HTML page as a side effect. Both make `Response` and `Module` subclasse
 untestable without deliberate work.
 
 This is why the invite-email fix in `modules/TheButton/TheButton.php` (`:920`, `:932`) shipped
-with code review but no behavioural test — see `docs/superpowers/plans/2026-08-15-user-consolidation-b.md`.
+with code review but no behavioural test.
 
 ## The two failures
 

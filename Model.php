@@ -5,8 +5,7 @@ namespace Zero\Core;
  * Thin typed row gateway over a real table.
  *
  * Deliberately NOT an ORM and deliberately NOT Zero\Entity — this is for models
- * with fixed columns and hand-written SQL, shared across modules. See
- * docs/superpowers/specs/2026-08-07-zero-model-user-migration-design.md
+ * with fixed columns and hand-written SQL, shared across modules.
  *
  * One intentional incompatibility with Zero\Entity\Entity: findBy() returns a
  * single ?static, never an array. Entity::where() returns null|Entity|array

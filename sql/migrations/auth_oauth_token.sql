@@ -1,7 +1,6 @@
 -- OAuth per-provider token store. One row per (user_id, provider).
 -- Secret columns (access_token, refresh_token) hold a Zero\Lib\Crypto envelope;
--- the rest is plaintext + queryable. See
--- docs/superpowers/specs/2026-07-07-oauth-token-persistence-design.md
+-- the rest is plaintext + queryable.
 CREATE TABLE IF NOT EXISTS oauth_token (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id          INT UNSIGNED NOT NULL,      -- logical FK -> users.id (not enforced; user_view is retained but has zero live readers, this column included)

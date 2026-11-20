@@ -2,7 +2,7 @@
 -- which providers exist and whether they're available. The (future) admin
 -- dashboard flips `enabled`; login buttons and /user/profile read from this.
 -- Keycloak (test-only OIDC) is intentionally NOT listed — it isn't a
--- user-facing token provider. See docs/superpowers/specs/2026-07-07-oauth-token-persistence-design.md
+-- user-facing token provider.
 CREATE TABLE IF NOT EXISTS oauth_provider (
   id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
   slug       VARCHAR(32)  NOT NULL,               -- 'google' | 'github' | 'discord' | 'gitlab'

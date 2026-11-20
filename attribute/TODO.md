@@ -352,8 +352,7 @@ a private method on the Auth module. Once it exists, replace lines 100-126 with 
 **Do not do this in isolation** — it is only worth touching once the shared helper lands, or
 the divergence just moves.
 
-**Found:** while tracing `user_view` consumers for the `Zero\Model` migration
-(`docs/superpowers/specs/2026-08-07-zero-model-user-migration-design.md` §12).
+**Found:** while tracing `user_view` consumers for the `Zero\Model` migration.
 
 ---
 
