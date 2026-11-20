@@ -106,6 +106,60 @@ class User extends Model implements Holder
     }
 
     /**
+     * The users this user may see by name: for a mention, an invitation, a
+     * share. They are the members of the active groups this user belongs to.
+     * A user who holds `allow.admin` may see every user. This user is never
+     * in the list.
+     *
+     * A module that has a narrower rule of its own (the readers of one
+     * notebook) keeps that rule; this is the widest list a module shows.
+     *
+     * @param string|null $term  Text to find in the name or the email, without
+     *                           regard to case. Null or '' gives the whole list.
+     * @param int         $limit Most rows to give; 0 for no limit
+     * @return array[] Rows of id, name, email, in name order
+     */
+    public function mentionableUsers(?string $term = null, int $limit = 0): array
+    {
+        if (!$this->hasUsableId()) {
+            return [];
+        }
+
+        $sql    = "SELECT u.id, u.name, u.email FROM users u WHERE u.id != ?";
+        $params = [(int) $this->id];
+
+        if (!$this->can('allow.admin')) {
+            $sql .= " AND u.id IN (SELECT m.user_id FROM user_group_member m WHERE m.group_id IN ("
+                  . Group::activeIdsSql() . "))";
+            $params[] = (int) $this->id;
+        }
+
+        $term = trim((string) $term);
+        if ($term !== '') {
+            // % and _ in the term are literal text, not wildcards
+            $like = '%' . addcslashes($term, '\\%_') . '%';
+            // The email column has a binary collation, thus LOWER() on both sides
+            // makes the search ignore case.
+            $sql .= " AND (LOWER(u.email) LIKE LOWER(?) OR u.name LIKE ?)";
+            $params[] = $like;
+            $params[] = $like;
+        }
+
+        $sql .= " ORDER BY u.name, u.email";
+        if ($limit > 0) {
+            $sql .= " LIMIT " . $limit;
+        }
+
+        $stmt = Database::getConnection()->prepare($sql);
+        $stmt->execute($params);
+
+        return array_map(
+            fn(array $row) => ['id' => (int) $row['id'], 'name' => $row['name'], 'email' => $row['email']],
+            $stmt->fetchAll(\PDO::FETCH_ASSOC)
+        );
+    }
+
+    /**
      * Delete the account and everything core keeps about it: its group
      * memberships, the permissions granted to it, its settings and its
      * profile. No foreign key does any of this.
