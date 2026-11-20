@@ -135,7 +135,9 @@ done
 # Blank templates, committed; the editable copy in app/config/ is never committed.
 for TPL in "$SKEL/config-templates/"*.ini "$SKEL/config-templates/"*.lst; do
     NAME="$(basename "$TPL")"
-    copy_file "$TPL" "$SITE_DIR/app/config-tmpl/$NAME"
+    # TODO: the templates are core's (skeleton/config-templates/); a site copy in
+    # app/config-tmpl/ is to be reworked.
+    #copy_file "$TPL" "$SITE_DIR/app/config-tmpl/$NAME"
     copy_file "$TPL" "$SITE_DIR/app/config/$NAME"
     # Fill in what the script knows, only in a config.ini it has just created.
     if [ "$NAME" = "config.ini" ] && [ "$COPIED" = 1 ]; then

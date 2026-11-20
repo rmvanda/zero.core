@@ -22,12 +22,6 @@ Same check, same place (the first line of `Application::run()`). Nothing else ca
 `app/config/` or `core/skeleton/config/` is not parsed, so `app/config/allowed-ips.lst` can
 sit beside the config files.
 
-### `core/skeleton/_config_templates/` — RENAMED to `core/skeleton/config-templates/`
-
-The blank config files a new site starts from, and `allowed-ips.lst` with them.
-`zero-init.sh` reads them from there. A site keeps no template folder of its own in `app/`
-(`app/_config_templates/` is gone); the templates are core's.
-
 ### `DEPRECATING_CHANGES.md` at the site root — MOVED to `core/docs/DEPRECATING_CHANGES.md`
 
 This file. It travels with core.
