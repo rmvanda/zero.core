@@ -1,7 +1,7 @@
 <?php
 namespace Zero\Module;
 
-use Zero\Core\User;
+use Zero\Core\Access\User;
 use Zero\Core\Session;
 use \Zero\Entity\Event;
 use \Zero\Core\Console;
@@ -264,7 +264,7 @@ class Auth extends \Zero\Core\Module {
      *
      * @param array $identity ['full_name','email','verified','pic']
      */
-    private function findOrCreateUser(array $identity): \Zero\Core\User
+    private function findOrCreateUser(array $identity): \Zero\Core\Access\User
     {
         $user = User::findByEmail($identity['email']);
         if ($user) {
@@ -503,7 +503,7 @@ class Auth extends \Zero\Core\Module {
         //
         // Normalised immediately so the whole method works on the canonical form:
         // users.email is byte-exact (utf8mb4_bin), so a lookup that differs only
-        // in case would silently miss. See Zero\Core\User::normalizeEmail().
+        // in case would silently miss. See Zero\Core\Access\User::normalizeEmail().
         $email = User::normalizeEmail(is_string($_POST['email'] ?? null) ? $_POST['email'] : '');
 
         // Collected by the form itself rather than by RegistrationFields: `name`
@@ -789,7 +789,7 @@ class Auth extends \Zero\Core\Module {
     }
 
     /** Email a verification link. Consuming it marks the account verified and signs in. */
-    private function sendVerifyLink(\Zero\Core\User $user): void
+    private function sendVerifyLink(\Zero\Core\Access\User $user): void
     {
         $token = AuthToken::issue($user->id, 'verify', self::TOKEN_TTL_VERIFY);
         $link  = 'https://' . PRIMARY_DOMAIN . '/auth/token?t=' . urlencode($token);
@@ -809,7 +809,7 @@ class Auth extends \Zero\Core\Module {
      * already exists sends a sign-in link instead of revealing that the address
      * is taken.
      */
-    private function sendLoginLink(\Zero\Core\User $user): void
+    private function sendLoginLink(\Zero\Core\Access\User $user): void
     {
         $token = AuthToken::issue($user->id, 'login', self::TOKEN_TTL_LOGIN);
         $link  = 'https://' . PRIMARY_DOMAIN . '/auth/token?t=' . urlencode($token);

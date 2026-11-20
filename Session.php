@@ -1,12 +1,13 @@
 <?php
 
 namespace Zero\Core;
+use Zero\Core\Access\User;
 
 /**
  * The login session: who is making this request.
  *
  * Every method is static and answers for the current request only — none of
- * them take a user to answer about. Zero\Core\User is the account; this is
+ * them take a user to answer about. Zero\Core\Access\User is the account; this is
  * the session an account is signed in to. That split is what stops
  * `$someoneElse->isLoggedIn()` from ever compiling.
  *

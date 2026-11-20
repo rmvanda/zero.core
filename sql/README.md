@@ -18,7 +18,7 @@ Tables come first and views after the tables they read.
 
 | Owner | Tables and views |
 |---|---|
-| Core (`Zero\Core\User`, `Group`, `Permission`) | `users`, `user_profile`, `user_settings`, `user_group`, `user_group_member`, `permission`, `user_view` |
+| Core (`Zero\Core\Access\User`, `Group`, `Permission`) | `users`, `user_profile`, `user_settings`, `user_group`, `user_group_member`, `permission`, `user_view` |
 | Auth | `auth_token`, `oauth_provider`, `oauth_token` |
 | User | `api_tokens` |
 | AccessRequest | `access_requests` |

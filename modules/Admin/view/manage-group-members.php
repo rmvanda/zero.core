@@ -1,11 +1,11 @@
 <?php
 // Admin::manage() loads the group and answers 404 when there is none.
-/** @var \Zero\Core\Group $group */
+/** @var \Zero\Core\Access\Group $group */
 $group = $this->group;
 
 $members = $group->members();
 $nonMembers = $group->nonMembers();
-$createdBy = $group->created_by ? \Zero\Core\User::find($group->created_by) : null;
+$createdBy = $group->created_by ? \Zero\Core\Access\User::find($group->created_by) : null;
 ?>
 
 <div class="content-wrapper">

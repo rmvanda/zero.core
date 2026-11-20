@@ -41,7 +41,7 @@ use \Zero\Core\Request;
  * per instance for the life of the request and nowhere else. There is no
  * session cache; there used to be a $_SESSION['user_settings'] one, and it made
  * a revoked permission survive until logout. A capability is granted by a row in
- * `permission` (see Zero\Core\Permission), and any lookup failure denies.
+ * `permission` (see Zero\Core\Access\Permission), and any lookup failure denies.
  *
  * NOTE for classes using __call(): Application resolves attributes against the
  * URL endpoint name, and a __call-dispatched endpoint has no ReflectionMethod
@@ -121,7 +121,7 @@ class RequirePermission {
         // $_SESSION['user_id'] and returns null rather than raising an
         // undefined-key warning, so it is safe here whatever the session holds.
         // (It used to also fall back to $_SESSION['user']['id']; that fallback
-        // is gone — it read the PROVIDER's id, not ours. See core/User.php.)
+        // is gone — it read the PROVIDER's id, not ours. See core/access/User.php.)
         $userId = \Zero\Core\Session::userId();
 
         // Check each required permission

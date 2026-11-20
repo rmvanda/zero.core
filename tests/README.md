@@ -35,7 +35,7 @@
 
 Tests live inside the repo they exercise, so each repo carries its own suite:
 
-- `core/tests/` - Core framework tests (`ZeroTestCase` base class, Request, Console, Database, `Zero\Core\User` row-gateway tests, etc.)
+- `core/tests/` - Core framework tests (`ZeroTestCase` base class, Request, Console, Database, `Zero\Core\Access\User` row-gateway tests, etc.)
 - `modules/*/tests/` - Module tests live inside each module's own folder
 
 `ZeroTestCase` is shared by all of them and stays at `Zero\Tests\Core\ZeroTestCase`
@@ -44,7 +44,7 @@ regardless of which repo a test lives in — the namespace is mapped by prefix i
 
 Placement follows the **subject under test**, not the collaborators. `SessionEstablishTest`
 lives in core because it tests `Zero\Core\Session::establish()`, even though it builds its
-fixture row via `Zero\Core\User::create()`; `OAuthBrokerTest` likewise tests
+fixture row via `Zero\Core\Access\User::create()`; `OAuthBrokerTest` likewise tests
 `Zero\Module\Auth\OAuth\Broker` through `Zero\Module\Auth\OAuth\Token`, and lives in the Auth module.
 
 Note that `phpunit.xml`, `composer.json` and `composer.lock` sit at the assembly root and

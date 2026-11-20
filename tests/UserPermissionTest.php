@@ -2,11 +2,11 @@
 namespace Zero\Tests\Core;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use Zero\Core\User;
+use Zero\Core\Access\User;
 use Zero\Core\Session;
 use Zero\Core\Database;
-use Zero\Core\Group;
-use Zero\Core\Permission;
+use Zero\Core\Access\Group;
+use Zero\Core\Access\Permission;
 
 class UserPermissionTest extends ZeroTestCase
 {
@@ -323,7 +323,7 @@ class UserPermissionTest extends ZeroTestCase
     }
 
     /**
-     * The \Throwable catch in capabilities() (core/HoldsCapabilities.php) and settings() (core/User.php) is the single most
+     * The \Throwable catch in capabilities() (core/access/HoldsCapabilities.php) and settings() (core/access/User.php) is the single most
      * security-relevant line in the permission system: it is what makes a
      * database failure DENY rather than grant or fatal. Swap in a PDO whose
      * prepare() throws, bypassing Database's singleton guard directly via the
@@ -352,7 +352,7 @@ class UserPermissionTest extends ZeroTestCase
     }
 
     /**
-     * setSetting()'s docblock (core/User.php) promises it drops the memo
+     * setSetting()'s docblock (core/access/User.php) promises it drops the memo
      * so a read later in the same request sees the write. Nothing checked
      * that promise before this test — testRevocationTakesEffectWithoutReLogin()
      * above covers the DB actually changing, but goes through a fresh

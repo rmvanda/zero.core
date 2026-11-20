@@ -1,7 +1,7 @@
 # Authentication gates: `#[RequireLogin]` vs hand-rolled checks
 
 **Status:** Settled 2026-08-16. The ruling below is now enforced in code.
-**Files:** `core/attribute/RequireLogin.php`, `core/User.php:84-89`,
+**Files:** `core/attribute/RequireLogin.php`, `core/access/User.php:84-89`,
 `core/Application.php:231-252`, `core/attribute/AllowWithToken.php:94-101`,
 `core/tests/Attribute/RequireLoginTest.php`
 
@@ -20,7 +20,7 @@ why, and turns up a second, larger problem pointing the opposite way.
 // core/attribute/RequireLogin.php:41 — what the attribute enforced
 if (session_status() == PHP_SESSION_NONE || !isset($_SESSION['user_id'])) { … redirect … }
 
-// core/User.php:86-88 — what isLoggedIn() answers
+// core/access/User.php:86-88 — what isLoggedIn() answers
 return isset($_SESSION['email'])
     && isset($_SESSION['verified'])
     && $_SESSION['verified'];

@@ -346,7 +346,7 @@ This makes it a second, divergent writer of the session contract documented in
 
 **Fix:** the manual-registration project extracts session construction into a single helper.
 Because that helper has three callers — `Auth::complete()`, the magic-link consumer, and this
-attribute — it belongs on `Zero\Core\User` (which already owns session *reads*) rather than as
+attribute — it belongs on `Zero\Core\Access\User` (which already owns session *reads*) rather than as
 a private method on the Auth module. Once it exists, replace lines 100-126 with one call.
 
 **Do not do this in isolation** — it is only worth touching once the shared helper lands, or
@@ -425,7 +425,7 @@ Two invariants currently hold **by coincidence of data**, exactly like the one
 `AUTH_GATE_CONSISTENCY.md` documents:
 
 **1. "No unverified user has permissions."** True — every `allow.*` row in `permission`
-belongs to a verified account — but nothing enforces it. `grant()` (`core/HoldsCapabilities.php`)
+belongs to a verified account — but nothing enforces it. `grant()` (`core/access/HoldsCapabilities.php`)
 has no `verified` check, and neither grant path does (`core/modules/Admin/Admin.php`,
 `core/modules/AccessRequest/AccessRequest.php`). **Fix:** the check belongs in `grant()` —
 one place, both callers covered. This matters more than the `RequireLogin`/`RequireVerified`

@@ -2,7 +2,7 @@
 namespace Zero\Tests\Core;
 
 use Zero\Core\Database;
-use Zero\Core\User;
+use Zero\Core\Access\User;
 
 /**
  * User-specific behaviour of the migrated table — above all, that the

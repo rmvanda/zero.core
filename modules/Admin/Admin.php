@@ -120,7 +120,7 @@ class Admin extends AdminResponse {
 
         try {
             if ($kind === 'capability') {
-                $targetUser = \Zero\Core\User::find($userId);
+                $targetUser = \Zero\Core\Access\User::find($userId);
                 if (!$targetUser) {
                     throw new \Exception("User {$userId} not found");
                 }
@@ -140,7 +140,7 @@ class Admin extends AdminResponse {
                 // Route through User::setSetting() — $currentUserId is
                 // the acting admin, recorded as updated_by via setSetting()'s
                 // $actorId parameter.
-                $targetUser = \Zero\Core\User::find($userId);
+                $targetUser = \Zero\Core\Access\User::find($userId);
                 if (!$targetUser) {
                     throw new \Exception("User {$userId} not found");
                 }
@@ -195,7 +195,7 @@ class Admin extends AdminResponse {
             $db->beginTransaction();
 
             // The cascade lives in UserAdmin: there are no foreign keys onto
-            // `users`, so UserAdmin's table list, with what Zero\Core\User::delete()
+            // `users`, so UserAdmin's table list, with what Zero\Core\Access\User::delete()
             // clears, IS the guarantee, and it needs a home
             // with a test rather than a controller body. Previously this method
             // cleared user_settings, user_group_member, api_tokens and oauth_token
@@ -460,7 +460,7 @@ class Admin extends AdminResponse {
                     exit;
                 } else {
                     // Create new group
-                    $newGroupId = \Zero\Core\Group::create($data)->group_id;
+                    $newGroupId = \Zero\Core\Access\Group::create($data)->group_id;
                     $this->success('Group created successfully', ['group_id' => $newGroupId]);
                     header("Location: /admin/manage/groups");
                     exit;
@@ -490,8 +490,8 @@ class Admin extends AdminResponse {
      * @param int|string $groupId From the URL or a form
      * @throws \Zero\Core\Exception\HTTPError 404 when no group has that id
      */
-    private function findGroup($groupId): \Zero\Core\Group {
-        $group = ctype_digit((string) $groupId) ? \Zero\Core\Group::find((int) $groupId) : null;
+    private function findGroup($groupId): \Zero\Core\Access\Group {
+        $group = ctype_digit((string) $groupId) ? \Zero\Core\Access\Group::find((int) $groupId) : null;
         if (!$group) {
             throw new \Zero\Core\Exception\HTTPError(404, 'Group not found');
         }

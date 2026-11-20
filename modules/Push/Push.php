@@ -3,7 +3,7 @@
 namespace Zero\Module;
 
 use \Zero\Core\Database;
-use Zero\Core\User;
+use Zero\Core\Access\User;
 use Zero\Core\Session;
 use \Zero\Core\Attribute\RequireLogin;
 use \Zero\Lib\Push\PushHelper;

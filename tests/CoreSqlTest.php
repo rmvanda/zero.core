@@ -134,7 +134,7 @@ class CoreSqlTest extends TestCase
     private function scannedFiles(): array
     {
         $files = glob(self::$root . 'core/*.php');
-        $dirs = [self::$root . 'core/attribute'];
+        $dirs = [self::$root . 'core/attribute', self::$root . 'core/access'];
 
         $libBase = $this->firstDir('core/lib', 'lib');
         foreach (self::LIBS as $lib) {

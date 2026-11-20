@@ -2,7 +2,7 @@
 namespace Zero\Tests\Core;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use Zero\Core\User;
+use Zero\Core\Access\User;
 use Zero\Core\Session;
 use Zero\Core\Database;
 

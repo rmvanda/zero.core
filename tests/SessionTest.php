@@ -57,7 +57,7 @@ class SessionTest extends ZeroTestCase
 
     /*
      * The session user's name, email, picture and verified flag are read
-     * from Session::user(), a Zero\Core\User built from the session. There
+     * from Session::user(), a Zero\Core\Access\User built from the session. There
      * are no per-field statics, which is what stops a call like
      * `getName($someoneElseId)` from silently discarding its argument and
      * answering for the session user instead. That session projection is
@@ -124,7 +124,7 @@ class SessionTest extends ZeroTestCase
     }
 
     /*
-     * What a user holds, whoever is logged in, is Zero\Core\User's:
+     * What a user holds, whoever is logged in, is Zero\Core\Access\User's:
      * can(), capabilities(), grant(), revoke(), authLevel() and setSetting().
      * Those, and Session::can() against real rows, are covered by
      * core/tests/UserPermissionTest.php.

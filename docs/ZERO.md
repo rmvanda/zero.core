@@ -80,8 +80,8 @@ The entity framework (`Entity`, `GenericEntity`, `Event`) is in `core/entity/`. 
   session. For a Bearer-token caller (`#[AllowWithToken]`) the session exists only after the
   endpoint's attributes run, so a module builds a `lib/` object when an endpoint first needs it,
   not in its constructor.
-- **Groups and permissions come from core.** `Zero\Core\Group` owns the `user_group` and
-  `user_group_member` tables and `Zero\Core\Permission` owns `permission`. A module calls those
+- **Groups and permissions come from core.** `Zero\Core\Access\Group` owns the `user_group` and
+  `user_group_member` tables and `Zero\Core\Access\Permission` owns `permission`. A module calls those
   classes (`Group::forUser($userId)`, `$perm->can(...)`, `$perm->sqlCan(...)` for a
   listing) and never writes SQL against the tables. No module depends on the Admin module; its
   screens use the same classes. See `core/PERMISSIONS.md`.
@@ -171,7 +171,7 @@ Two independent systems — they answer different questions.
 
 **Capabilities** — "may this user use this feature at all?" Named `allow.*` keys, held as rows in the core `permission` table by a user or a group, gated declaratively with `#[RequirePermission('allow.admin')]` and read with `Session::can()`. Read through to the database on every request; a grant or revocation takes effect on the user's next request. See `core/docs/attributes/RequirePermission.md`.
 
-**Sharing** — "may this user read, update or delete *this item*?" Rows in core's `permission` table, read and written only through `Zero\Core\Permission`. A grant goes to a holder (a `Group` or a `User`), under a key of `{module}.{entity}` (`lists.list`, `kanban.board`). The module checks ownership itself: "is the owner, or `$perm->can($id, $userId, 'update')`". Used by Lists, Notebook, Notes, Kanban and Comfy. A module keeps no permission table of its own. See `core/PERMISSIONS.md`.
+**Sharing** — "may this user read, update or delete *this item*?" Rows in core's `permission` table, read and written only through `Zero\Core\Access\Permission`. A grant goes to a holder (a `Group` or a `User`), under a key of `{module}.{entity}` (`lists.list`, `kanban.board`). The module checks ownership itself: "is the owner, or `$perm->can($id, $userId, 'update')`". Used by Lists, Notebook, Notes, Kanban and Comfy. A module keeps no permission table of its own. See `core/PERMISSIONS.md`.
 
 An attribute cannot express the second one — it runs before the row is loaded — so entity checks live in the endpoint body.
 

@@ -3,7 +3,7 @@ namespace Zero\Tests\Core;
 
 use Zero\Lib\Crypto;
 use Zero\Core\Database;
-use Zero\Core\User;
+use Zero\Core\Access\User;
 
 class UserProfileTest extends ZeroTestCase
 {

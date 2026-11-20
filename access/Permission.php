@@ -1,5 +1,8 @@
 <?php
-namespace Zero\Core;
+namespace Zero\Core\Access;
+use Zero\Core\Database;
+use Zero\Core\Console;
+use Zero\Core\Session;
 
 /**
  * Who may read, update or delete a module's things: the `permission` table

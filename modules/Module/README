@@ -121,7 +121,7 @@ Users, groups and permissions
 -----------------------------
 
 These belong to core, not to a module: Zero\Core\Session (who is making this
-request), Zero\Core\User, Zero\Core\Group and Zero\Core\Permission. A module
+request), Zero\Core\Access\User, Zero\Core\Access\Group and Zero\Core\Access\Permission. A module
 asks Session::userId() who is logged in. A module that shares its things with
 groups or users builds a Permission with its own name and the thing's name,
 

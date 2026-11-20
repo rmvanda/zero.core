@@ -1,12 +1,12 @@
 <?php
-namespace Zero\Core;
+namespace Zero\Core\Access;
 
 /**
  * Something a permission can be granted to: a user or a group.
  *
  * The `permission` table has one column for each kind of holder (user_id,
  * group_id) and exactly one of them is set on a row. A holder says which
- * column is its own and what its id is; Zero\Core\Permission needs nothing
+ * column is its own and what its id is; Zero\Core\Access\Permission needs nothing
  * else to grant to it, revoke from it or forget it.
  */
 interface Holder

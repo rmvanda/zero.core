@@ -2,14 +2,14 @@
 namespace Zero\Tests\Core;
 
 use Zero\Core\Database;
-use Zero\Core\Group;
-use Zero\Core\Holder;
+use Zero\Core\Access\Group;
+use Zero\Core\Access\Holder;
 use Zero\Core\Model;
-use Zero\Core\Permission;
-use Zero\Core\User;
+use Zero\Core\Access\Permission;
+use Zero\Core\Access\User;
 
 /**
- * Zero\Core\Group against the real `user_group` and `user_group_member` tables, with a
+ * Zero\Core\Access\Group against the real `user_group` and `user_group_member` tables, with a
  * real group and a real member. Every row it makes is named zerotest-* and is
  * removed again in cleanup().
  */

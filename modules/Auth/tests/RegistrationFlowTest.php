@@ -4,7 +4,7 @@ namespace Zero\Module\Auth\Tests;
 use Zero\Tests\Core\ZeroTestCase;
 use Zero\Module\Auth\Model\AuthToken;
 use Zero\Module\Auth\Model\RegistrationFields;
-use Zero\Core\User;
+use Zero\Core\Access\User;
 use Zero\Core\Database;
 
 /**

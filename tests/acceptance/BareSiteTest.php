@@ -371,7 +371,7 @@ final class BareSiteTest extends TestCase
         );
 
         $id = (int) $this->dbValue("SELECT id FROM users WHERE email='" . self::$email . "'");
-        $this->request('/', 'GET', [], null, '(\\Zero\\Core\\User::find(' . $id . '))->grant("allow.admin");');
+        $this->request('/', 'GET', [], null, '(\\Zero\\Core\\Access\\User::find(' . $id . '))->grant("allow.admin");');
         $this->assertSame('1', $this->dbValue("SELECT COUNT(*) FROM permission WHERE permission_key='allow.admin'"));
 
         $ok = $this->page('/admin', 'GET', [], $sid);
@@ -390,7 +390,7 @@ final class BareSiteTest extends TestCase
         try {
             // Sitemap is #[RequireAuthLevel(1)] and a new account has level 0: raise it
             $id = (int) $this->dbValue("SELECT id FROM users WHERE email='" . self::$email . "'");
-            $this->request('/', 'GET', [], null, '(\\Zero\\Core\\User::find(' . $id . '))->setSetting("auth.level", "1");');
+            $this->request('/', 'GET', [], null, '(\\Zero\\Core\\Access\\User::find(' . $id . '))->setSetting("auth.level", "1");');
             $this->assertSame(200, $this->page('/sitemap', 'GET', [], $sid)['status'], 'Sitemap is on by default');
             file_put_contents($ini, $before . "\n[enabled]\nSitemap = off\n");
             $this->assertSame(404, $this->page('/sitemap', 'GET', [], $sid)['status']);

@@ -2,7 +2,7 @@
 namespace Zero\Module\Admin\Model;
 
 use Zero\Core\Modules;
-use Zero\Core\Permission;
+use Zero\Core\Access\Permission;
 
 /**
  * The capability keys an admin can grant: every key a module gates an

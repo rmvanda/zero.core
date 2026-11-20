@@ -10,6 +10,22 @@ that text belongs in this file.
 
 Newest first.
 
+## 2026-11 — Users, groups and permissions are in `core/access/`
+
+The five classes moved, and their namespace follows the folder. There are no aliases: code
+that names an old class does not load.
+
+| Was | Is | File |
+|---|---|---|
+| `Zero\Core\User` | `Zero\Core\Access\User` | `core/access/User.php` |
+| `Zero\Core\Group` | `Zero\Core\Access\Group` | `core/access/Group.php` |
+| `Zero\Core\Permission` | `Zero\Core\Access\Permission` | `core/access/Permission.php` |
+| `Zero\Core\Holder` | `Zero\Core\Access\Holder` | `core/access/Holder.php` |
+| `Zero\Core\HoldsCapabilities` | `Zero\Core\Access\HoldsCapabilities` | `core/access/HoldsCapabilities.php` |
+
+`Zero\Core\Session` stays where it is. A site's `composer.json` maps
+`Zero\Core\Access\` to `core/access/`.
+
 ## 2026-11 — The ban check has a name and an allow-list
 
 ### `Application::banmotherfuckers()` — RENAMED to `Application::banNefariousRequest()`

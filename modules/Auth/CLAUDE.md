@@ -228,7 +228,7 @@ registration form and are collected and written directly to `users`, not as conf
 fields — `full_name` is in `RegistrationFields::RESERVED` so it cannot be declared in the config.
 The `RegistrationFields` machinery that reads the config and renders extra fields is intact,
 just dormant while the config is empty. `user_profile` rows are written and read through the
-`Zero\Core\User` instance API: `->storeProfile($values, $fieldDefs)` and `->profile()`.
+`Zero\Core\Access\User` instance API: `->storeProfile($values, $fieldDefs)` and `->profile()`.
 
 **Passwords are still not implemented.** `user_credential` is specced but not built — see
 `docs/superpowers/specs/2026-08-07-auth-manual-registration-design.md` §4.3.
@@ -243,7 +243,7 @@ by hand after touching `register()`:
 
 ## Reference
 
-- `core/` + `docs/superpowers/specs/2026-08-07-zero-model-user-migration-design.md` — the `user` record lives in the `users` table via `Zero\Core\User`; `user_view` is a compatibility view over it
+- `core/` + `docs/superpowers/specs/2026-08-07-zero-model-user-migration-design.md` — the `user` record lives in the `users` table via `Zero\Core\Access\User`; `user_view` is a compatibility view over it
 - `entity/CLAUDE.md`, `/entityframework` skill — the EAV framework, which `user` does not use
 - `core/ADMIN_ARCHITECTURE.md` — the `/admin/auth` panel
 - `docs/superpowers/specs/2026-06-26-keycloak-oidc-test-integration-design.md`

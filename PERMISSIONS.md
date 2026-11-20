@@ -6,11 +6,11 @@ SQL against core's, and never depends on the Admin module for them.
 | Class | What it is | Tables | Schema |
 |---|---|---|---|
 | `Zero\Core\Session` | Who is making this request | none (`$_SESSION`) | |
-| `Zero\Core\User` | An account | `users`, `user_profile`, `user_settings` | `core/sql/core.sql` (design notes: `core/sql/migrations/users.sql`, `user_profile.sql`) |
-| `Zero\Core\Group` | A group of users | `user_group`, `user_group_member` | `core/sql/core.sql` (design notes: `core/sql/migrations/group.sql`) |
-| `Zero\Core\Permission` | Who may do what | `permission` | `core/sql/core.sql` (design notes: `core/sql/migrations/permission.sql`) |
+| `Zero\Core\Access\User` | An account | `users`, `user_profile`, `user_settings` | `core/sql/core.sql` (design notes: `core/sql/migrations/users.sql`, `user_profile.sql`) |
+| `Zero\Core\Access\Group` | A group of users | `user_group`, `user_group_member` | `core/sql/core.sql` (design notes: `core/sql/migrations/group.sql`) |
+| `Zero\Core\Access\Permission` | Who may do what | `permission` | `core/sql/core.sql` (design notes: `core/sql/migrations/permission.sql`) |
 
-`User` and `Group` are both `Zero\Core\Model` row objects, and both are a `Zero\Core\Holder`:
+`User` and `Group` are both `Zero\Core\Model` row objects, and both are a `Zero\Core\Access\Holder`:
 something a permission can be granted to. The Admin module's screens edit users and groups
 through these classes. A site without the Admin module loses those screens and nothing else.
 
@@ -42,7 +42,7 @@ gated with `#[RequirePermission('allow.polly')]` and read with `$user->can()`. S
 [Capabilities](#capabilities) below and `core/docs/attributes/RequirePermission.md`.
 
 **Sharing**: "may this user read, update or delete *this item*?" A key of `{module}.{entity}`
-and an item id, read and written through `Zero\Core\Permission`.
+and an item id, read and written through `Zero\Core\Access\Permission`.
 
 A user's settings (`auth.level`, a module's per-user preference) are values, not permissions.
 They live in `user_settings` and are read with `$user->settings()`.
@@ -154,8 +154,8 @@ an item needs no row; the module checks "is the owner, or `can()`".
 ## Sharing in a module
 
 ```php
-use Zero\Core\Group;
-use Zero\Core\Permission;
+use Zero\Core\Access\Group;
+use Zero\Core\Access\Permission;
 
 $perm = new Permission('lists', 'list');
 
@@ -211,7 +211,7 @@ Things to know:
 `Group` is a row object for `user_group`, with the group's members as methods.
 
 ```php
-use Zero\Core\Group;
+use Zero\Core\Access\Group;
 
 Group::forUser($userId);          // the user's active groups; each has ->role, ->member_count
 $user->groups();                  // the same

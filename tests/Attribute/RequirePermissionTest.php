@@ -4,10 +4,10 @@ namespace Zero\Tests\Core\Attribute;
 
 use Zero\Tests\Core\ZeroTestCase;
 use Zero\Core\Attribute\RequirePermission;
-use Zero\Core\User;
+use Zero\Core\Access\User;
 use Zero\Core\Session;
 use Zero\Core\Database;
-use Zero\Core\Group;
+use Zero\Core\Access\Group;
 use Zero\Core\Request;
 use Zero\Core\Exception\HTTPError;
 use Zero\Core\Application;
@@ -87,7 +87,7 @@ class RequirePermissionTest extends ZeroTestCase
 
     private function grant(string $key): void
     {
-        \Zero\Core\Permission::capability($key)
+        \Zero\Core\Access\Permission::capability($key)
             ->grant(0, User::find($this->userId), true, false, false, $this->userId);
     }
 

@@ -1,5 +1,8 @@
 <?php
-namespace Zero\Core;
+namespace Zero\Core\Access;
+use Zero\Core\Model;
+use Zero\Core\Session;
+use Zero\Core\Database;
 
 /**
  * A user group: the row gateway for `user_group`, and the group's members in
@@ -19,7 +22,7 @@ namespace Zero\Core;
  * return them, so the Admin screens can show and reactivate them.
  *
  * A group is a Holder: permissions are granted to it (see
- * Zero\Core\Permission), and every active member holds what it holds.
+ * Zero\Core\Access\Permission), and every active member holds what it holds.
  */
 class Group extends Model implements Holder
 {
@@ -118,7 +121,7 @@ class Group extends Model implements Holder
      * A subquery for the ids of the active groups a user belongs to, with one
      * `?` placeholder for the user id.
      *
-     * For code that has to stay in SQL (Zero\Core\Permission's checks and
+     * For code that has to stay in SQL (Zero\Core\Access\Permission's checks and
      * listings). It is the one definition of "the groups this user is in":
      * use it as `x.group_id IN (` . Group::activeIdsSql() . `)` instead of
      * joining user_group_member.
@@ -192,7 +195,7 @@ class Group extends Model implements Holder
     /**
      * May this user share things with the group, or attach things to it? A
      * member of the group while it is active may, and so may an admin
-     * (allow.admin). Zero\Core\Permission refuses a grant to a group from
+     * (allow.admin). Zero\Core\Access\Permission refuses a grant to a group from
      * anyone else.
      */
     public function usableBy(int|User $user): bool

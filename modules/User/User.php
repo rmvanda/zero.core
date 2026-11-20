@@ -233,7 +233,7 @@ class User extends \Zero\Core\Module {
         } catch (\Throwable $e) {
             // \Throwable, not \Exception: Database::getConnection() throws
             // \Error on a misconfiguration, same reasoning as
-            // Zero\Core\User::settings() and getAllPermissions() below.
+            // Zero\Core\Access\User::settings() and getAllPermissions() below.
             error_log("Error fetching permission: " . $e->getMessage());
             return null;
         }
@@ -247,7 +247,7 @@ class User extends \Zero\Core\Module {
      */
     private function getAllPermissions(int $userId): array {
         try {
-            $user = \Zero\Core\User::find($userId);
+            $user = \Zero\Core\Access\User::find($userId);
             if (!$user) {
                 return [];
             }
@@ -257,7 +257,7 @@ class User extends \Zero\Core\Module {
         } catch (\Throwable $e) {
             // \Throwable, not \Exception: Database::getConnection() throws
             // \Error on a misconfiguration, same reasoning as
-            // Zero\Core\User::settings().
+            // Zero\Core\Access\User::settings().
             error_log("Error fetching permissions: " . $e->getMessage());
             return [];
         }

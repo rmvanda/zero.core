@@ -4,7 +4,7 @@ namespace Zero\Module\Admin\Model;
 /**
  * Administrative operations on arbitrary user accounts.
  *
- * Zero\Core\User covers reading any user and mutating the current one. The
+ * Zero\Core\Access\User covers reading any user and mutating the current one. The
  * operations that act on SOMEONE ELSE's account live here, behind the Admin
  * module's permission gate — a boundary drawn by operation rather than by
  * subject, because reading other users (bylines, notification contacts,
@@ -18,7 +18,7 @@ class UserAdmin
      *
      * Group memberships, permissions granted to the user, their settings and
      * their profile are core's tables and are cleared by
-     * Zero\Core\User::delete(), which delete() calls, not from this list.
+     * Zero\Core\Access\User::delete(), which delete() calls, not from this list.
      *
      * This is not the full picture: roughly 44 tables in the schema carry a
      * user key (user_id, owner_id, or created_by), and delete() clears 9 of
@@ -48,7 +48,7 @@ class UserAdmin
      *
      * The CALLER owns the transaction: this is one step of an admin action that
      * may need to succeed or fail alongside others, and a service that commits
-     * on its own behalf cannot be composed. Zero\Core\User::delete() runs on
+     * on its own behalf cannot be composed. Zero\Core\Access\User::delete() runs on
      * the framework's connection (Zero\Core\Database::getConnection()), so the
      * transaction has to be on that connection to cover the whole delete.
      *
@@ -56,7 +56,7 @@ class UserAdmin
      */
     public function delete(int $userId): void
     {
-        $user = \Zero\Core\User::find($userId);
+        $user = \Zero\Core\Access\User::find($userId);
 
         // This guard exists because a previous version of this code targeted the
         // EAV `entity` table (type 4 = user) instead of `users`. Deleting those

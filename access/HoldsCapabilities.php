@@ -1,5 +1,5 @@
 <?php
-namespace Zero\Core;
+namespace Zero\Core\Access;
 
 /**
  * Capabilities for a Holder: can(), capabilities(), grant() and revoke().

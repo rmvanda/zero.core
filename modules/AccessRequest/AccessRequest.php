@@ -254,7 +254,7 @@ class AccessRequest extends Module {
             // User::grant() so the write path matches the read in
             // User::can() — $adminId is the approving admin, recorded as
             // granted_by via grant()'s $actorId parameter.
-            $targetUser = \Zero\Core\User::find($request['user_id']);
+            $targetUser = \Zero\Core\Access\User::find($request['user_id']);
             if (!$targetUser || !$targetUser->grant($request['requested_permission'], $adminId)) {
                 $this->error("Failed to grant the requested permission. Please try again later.");
                 return;

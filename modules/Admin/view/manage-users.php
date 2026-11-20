@@ -11,11 +11,11 @@
     $userMeta = [];
     foreach ($users as $u) {
         $sid = $u['id'];
-        $account = \Zero\Core\User::find((int) $sid);
-        $permCount = count(\Zero\Core\Permission::capabilities($account));
+        $account = \Zero\Core\Access\User::find((int) $sid);
+        $permCount = count(\Zero\Core\Access\Permission::capabilities($account));
 
         // Inactive groups too: this screen manages them.
-        $groups = array_map(fn(\Zero\Core\Group $group) => $group->group_name, $account->groups(false));
+        $groups = array_map(fn(\Zero\Core\Access\Group $group) => $group->group_name, $account->groups(false));
 
         $userMeta[$sid] = ['perm_count' => $permCount, 'groups' => $groups];
     }

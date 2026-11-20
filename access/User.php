@@ -1,6 +1,8 @@
 <?php
 
-namespace Zero\Core;
+namespace Zero\Core\Access;
+use Zero\Core\Model;
+use Zero\Core\Database;
 use Zero\Lib\Crypto;
 
 /**
@@ -12,7 +14,7 @@ use Zero\Lib\Crypto;
  * `->groups()`. Nothing here reads the session. "Who is making this request"
  * is Zero\Core\Session's question: Session::user(), Session::userId().
  *
- * A user is a Holder: permissions are granted to it (see Zero\Core\Permission).
+ * A user is a Holder: permissions are granted to it (see Zero\Core\Access\Permission).
  *
  * Replaces the EAV `user` entity type. `users.email` carries a real UNIQUE
  * KEY, so a duplicate raises a PDOException that Model::isDuplicateKey()

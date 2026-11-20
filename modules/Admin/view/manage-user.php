@@ -22,9 +22,9 @@
     // Capabilities: every key that can be granted, the ones this user holds
     // directly, and the ones they hold at all (their groups' included)
     $capabilityKeys = \Zero\Module\Admin\Model\CapabilityKeys::all();
-    $holder = \Zero\Core\User::find((int) $userId);
-    $ownCapabilities = \Zero\Core\Permission::capabilities($holder, true);
-    $heldCapabilities = \Zero\Core\Permission::capabilities($holder);
+    $holder = \Zero\Core\Access\User::find((int) $userId);
+    $ownCapabilities = \Zero\Core\Access\Permission::capabilities($holder, true);
+    $heldCapabilities = \Zero\Core\Access\Permission::capabilities($holder);
 
     // Get all available settings in the system
     $stmt = $db->query("SELECT DISTINCT setting_key FROM user_settings ORDER BY setting_key");

@@ -5,7 +5,7 @@
 
     <?php
     // Get all groups
-    $groups = \Zero\Core\Group::all();
+    $groups = \Zero\Core\Access\Group::all();
 
     // Pre-fetch members for each group
     $groupMembers = [];

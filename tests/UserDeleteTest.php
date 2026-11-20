@@ -2,12 +2,12 @@
 namespace Zero\Tests\Core;
 
 use Zero\Core\Database;
-use Zero\Core\Group;
-use Zero\Core\Permission;
-use Zero\Core\User;
+use Zero\Core\Access\Group;
+use Zero\Core\Access\Permission;
+use Zero\Core\Access\User;
 
 /**
- * Zero\Core\User::delete() removes the account and everything core keeps
+ * Zero\Core\Access\User::delete() removes the account and everything core keeps
  * about it: group memberships, the permissions granted to the user, their
  * `user_settings` rows and their profile. What was granted to a group the
  * user was in is the group's, and stays.

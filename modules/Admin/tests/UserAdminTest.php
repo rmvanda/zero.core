@@ -4,13 +4,13 @@ namespace Zero\Module\Admin\Tests;
 use Zero\Tests\Core\ZeroTestCase;
 use Zero\Module\Admin\Model\UserAdmin;
 use Zero\Core\Database;
-use Zero\Core\Group;
-use Zero\Core\Permission;
-use Zero\Core\User;
+use Zero\Core\Access\Group;
+use Zero\Core\Access\Permission;
+use Zero\Core\Access\User;
 
 /**
  * Verifies that the nine tables UserAdmin::delete() clears (the five in
- * UserAdmin::CASCADE and the four Zero\Core\User::delete() owns) are empty
+ * UserAdmin::CASCADE and the four Zero\Core\Access\User::delete() owns) are empty
  * when an account is deleted. This test's table list is hardcoded independently of
  * CASCADE, so it catches a table being removed from CASCADE — it does NOT
  * catch the schema growing a tenth user-keyed table, since that would
