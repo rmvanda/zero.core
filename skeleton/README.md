@@ -34,7 +34,7 @@ again is safe.
 | `strings/site.ini` | The site's wording: `SITE_NAME` and the labels the frames show. |
 | `modules.ini` | Which modules are on; lists only departures from the defaults. |
 | `modules/Index/` | The landing page module. |
-| `_config_templates/` | Blank `config.ini`, `database.ini`, `constants.ini`. Copied to `app/config-tmpl/` (committed) and `app/config/` (never committed). |
+| `config-templates/` | Blank `config.ini`, `database.ini`, `constants.ini`, and `allowed-ips.lst` (the clients that are never banned). Copied to `app/config-tmpl/` (committed) and `app/config/` (never committed). |
 | `config/` | Defaults core itself reads when `app/config/` has no file of the same name. |
 | `etc/` | Apache and nginx vhost samples (`{{DOMAIN}}` and `{{SITE_DIR}}` are filled in). |
 | `zero-init.sh` | Builds the site folder from the above. |

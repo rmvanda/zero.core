@@ -38,7 +38,7 @@ How the Zero Framework works under the hood. For building modules, use the `/zer
 - Frame pieces (`head`, `header`, `sideNav`, `footer`): looked up as in step 9 above, ending at `core/skeleton/frontend/frame/`. Partials a module view includes from the site's frame folder (such as `_google-signin.php`) are the site's own and have no skeleton copy.
 - `app/config/error_codes.ini`: `Application::defineConstants()` reads every `app/config/*.ini`, then each file in `core/skeleton/config/` the site does not have (`Application::configFiles()`). A site that has its own `error_codes.ini` is not also given the skeleton's, so no constant is defined twice.
 
-`core/skeleton/config/` holds defaults core itself reads; `core/skeleton/_config_templates/` holds blank templates a new site copies and fills in.
+`core/skeleton/config/` holds defaults core itself reads; `core/skeleton/config-templates/` holds blank templates a new site copies and fills in.
 
 ## Error Handling
 
@@ -113,6 +113,7 @@ A module that is off is treated at every step exactly as a module that does not 
 ## Configuration System
 
 - Global: `app/config/*.ini` → parsed as PHP constants
+- Only `.ini` files in `app/config/` are config files; any other file there is left alone
 - Module: `{Module}/config.ini` and `{Module}/config/*.ini` → loaded on access to a module that is switched on
 - Paths in `paths.ini` are auto-prefixed with `ZERO_ROOT`
 - A config file does not redefine a constant that already exists (a strings file defined it first): the repeat is logged with the key and file, and the first value stays
@@ -130,6 +131,24 @@ Write each value wrapped in double quotes: `KEY="We'll email you a link; it says
 - `VIEW_PATH` — Global views
 - `WEB_ROOT` — Public web root
 - `DEVMODE` — True when IP matches `DEV_SUBNET`
+
+## Banned requests and `allowed-ips.lst`
+
+`Application::run()` starts with `banNefariousRequest()`. A request whose URL contains `.php`, `.env` or `wp-` is one no legitimate client makes: the client's IP (`Request::clientIp()`) is blocked at Cloudflare with `CloudFlare::block()` and the request ends.
+
+`app/config/allowed-ips.lst` lists the clients that are never banned. Such a client's request carries on and is answered like any other.
+
+```
+# one entry per line; `#` starts a comment
+203.0.113.5          # a plain IP
+198.51.100.0/24      # a CIDR range
+2001:db8::/32        # IPv6 works the same way
+```
+
+- Matching is `Zero\Lib\Net\Cidr`. An entry that is not a valid IP or range matches nothing.
+- The file is read only when a request is about to be banned, and no database is involved.
+- With no file, nobody is exempt.
+- The file is not committed (`app/config/` is ignored). The commented template is `core/skeleton/config-templates/allowed-ips.lst`; `zero-init.sh` copies it into a new site.
 
 ## Asset System (overview)
 

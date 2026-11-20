@@ -221,7 +221,7 @@ and what to do if the `method` called does not exist (throw 404 page, automatica
     Small curl wrapper for calling third-party APIs. Used by Dictionary and Thingiverse.
 
 - **Error.php**
-    Deprecated. Use `HTTPError`. See `DEPRECATING_CHANGES.md`.
+    Deprecated. Use `HTTPError`. See `docs/DEPRECATING_CHANGES.md`.
 
 - **deprecated/SQLAdapter.php**
     Dead code — it extends an `Adapter` class that does not exist in this repo, and nothing

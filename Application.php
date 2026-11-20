@@ -177,7 +177,20 @@ class Application {
         return $this;
     }
 
-    public function banmotherfuckers(){
+    /**
+     * Bans the client of a request no legitimate client makes: a probe for a
+     * .php file, a .env file or a WordPress path. The ban is a Cloudflare
+     * block rule and the request ends here.
+     *
+     * A client listed in app/config/allowed-ips.lst is never banned: its
+     * request carries on and is answered like any other (a 404, usually).
+     */
+    public function banNefariousRequest(){
+        $reason = self::nefariousReason($_SERVER['REQUEST_URI'] ?? '');
+        if($reason === null){
+            return;
+        }
+
         // CF-Connecting-IP is the true client IP behind Cloudflare (single, reliable)
         // X-Forwarded-For can be a chain; grab the first entry as fallback
         //
@@ -189,18 +202,63 @@ class Application {
         // straight at the origin was never actually banned, repeatably.
         $ip = Request::clientIp();
 
-        if(str_contains($_SERVER['REQUEST_URI'], ".php")){
-            CloudFlare::block($ip, "trying to call some .php file. ({$_SERVER['REQUEST_URI']})");
-            die("permabanned");
+        // The list is read only here, once a request is about to be banned, so
+        // an ordinary request never opens the file. No database is involved:
+        // this runs before anything connects to one.
+        if(self::isAllowedIp($ip, ZERO_ROOT . 'app/config/allowed-ips.lst')){
+            return;
         }
-        if(str_contains($_SERVER['REQUEST_URI'], ".env")){
-            CloudFlare::block($ip, "trying to call some .env file. ({$_SERVER['REQUEST_URI']})");
-            die("permabanned");
+
+        CloudFlare::block($ip, "{$reason} ({$_SERVER['REQUEST_URI']})");
+        die("permabanned");
+    }
+
+    /**
+     * Why a request for $uri gets its client banned, or null when it does not.
+     */
+    public static function nefariousReason(string $uri): ?string
+    {
+        if(str_contains($uri, ".php")){
+            return "trying to call some .php file.";
         }
-        if(str_contains($_SERVER['REQUEST_URI'], "wp-")){
-            CloudFlare::block($ip, "trying to call some wordpress file. ({$_SERVER['REQUEST_URI']})");
-            die("permabanned");
+        if(str_contains($uri, ".env")){
+            return "trying to call some .env file.";
         }
+        if(str_contains($uri, "wp-")){
+            return "trying to call some wordpress file.";
+        }
+        return null;
+    }
+
+    /**
+     * The entries of an allowed-ips list file: one plain IP or CIDR range per
+     * line. Blank lines are skipped and `#` starts a comment, on its own line
+     * or after an entry. A file that is missing or unreadable is an empty list.
+     *
+     * @return string[]
+     */
+    public static function allowedIps(string $file): array
+    {
+        if(!is_file($file) || !is_readable($file)){
+            return [];
+        }
+        $entries = [];
+        foreach(file($file, FILE_IGNORE_NEW_LINES) ?: [] as $line){
+            $entry = trim(explode('#', $line, 2)[0]);
+            if($entry !== ''){
+                $entries[] = $entry;
+            }
+        }
+        return $entries;
+    }
+
+    /**
+     * Is $ip on the allowed-ips list in $file? An entry that is not a valid
+     * IP or range matches nothing, and so does an empty $ip.
+     */
+    public static function isAllowedIp(string $ip, string $file): bool
+    {
+        return $ip !== '' && \Zero\Lib\Net\Cidr::matchesAny($ip, self::allowedIps($file));
     }
 
 
@@ -214,7 +272,7 @@ class Application {
      *
      */
     public function run($module, $endpoint, $args){
-        $this->banmotherfuckers(); 
+        $this->banNefariousRequest(); 
 
         // Two modules of one name in two folders is a configuration error, not
         // a missing page: the request fails with a bare 500 and nothing else.
@@ -636,11 +694,17 @@ class Application {
     public static function configFiles(string $siteDir, string $skeletonDir): array
     {
         $files = [];
+        // Only .ini files hold constants. Anything else in the folder
+        // (allowed-ips.lst, an editor's swap file) is not a config file.
         foreach (is_dir($siteDir) ? array_diff(scandir($siteDir), ['.', '..']) : [] as $name) {
-            $files[$name] = $siteDir . $name;
+            if (str_ends_with($name, '.ini')) {
+                $files[$name] = $siteDir . $name;
+            }
         }
         foreach (is_dir($skeletonDir) ? array_diff(scandir($skeletonDir), ['.', '..']) : [] as $name) {
-            $files[$name] ??= $skeletonDir . $name;
+            if (str_ends_with($name, '.ini')) {
+                $files[$name] ??= $skeletonDir . $name;
+            }
         }
         return array_values($files);
     }

@@ -133,7 +133,7 @@ for PATTERN in 'modules.ini.lock' '.modules.ini.*.tmp'; do
 done
 
 # Blank templates, committed; the editable copy in app/config/ is never committed.
-for TPL in "$SKEL/_config_templates/"*.ini; do
+for TPL in "$SKEL/config-templates/"*.ini "$SKEL/config-templates/"*.lst; do
     NAME="$(basename "$TPL")"
     copy_file "$TPL" "$SITE_DIR/app/config-tmpl/$NAME"
     copy_file "$TPL" "$SITE_DIR/app/config/$NAME"

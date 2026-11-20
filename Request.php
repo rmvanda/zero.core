@@ -195,7 +195,7 @@ class Request
      * Behind Cloudflare, REMOTE_ADDR is only the POP's egress address, so
      * anything that rate-limits or bans on REMOTE_ADDR is really acting on
      * every visitor through that POP at once. This is the ONE resolver —
-     * Application::banmotherfuckers(), RestrictIP::clientIp(), Auth::throttle()
+     * Application::banNefariousRequest(), RestrictIP::clientIp(), Auth::throttle()
      * and AuthToken::issue() all delegate here, so the write and read sides of
      * the auth throttle cannot drift apart again.
      *
@@ -225,7 +225,7 @@ class Request
         // than null, so any `?? $_SERVER['REMOTE_ADDR']` after it is dead code
         // and a direct-to-origin request resolves to ''. Both older call sites
         // carried exactly that bug before they were folded into this method —
-        // RestrictIP failed closed on it, banmotherfuckers() failed open by
+        // RestrictIP failed closed on it, banNefariousRequest() failed open by
         // calling CloudFlare::block('').
         $cf = trim($_SERVER['HTTP_CF_CONNECTING_IP'] ?? '');
         if ($cf !== '') {

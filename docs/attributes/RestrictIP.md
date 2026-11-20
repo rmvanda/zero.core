@@ -54,7 +54,7 @@ class Ops extends Module {
 
 ## Client IP Resolution
 
-The attribute resolves the client IP using the same precedence as `Application::banmotherfuckers()`:
+The attribute resolves the client IP using the same precedence as `Application::banNefariousRequest()`:
 
 1. `HTTP_CF_CONNECTING_IP` — the Cloudflare-verified client IP (authoritative behind Cloudflare)
 2. First hop of `HTTP_X_FORWARDED_FOR` — fallback
