@@ -1,8 +1,6 @@
 -- OAuth provider registry — the agnostic, admin-toggleable source of truth for
 -- which providers exist and whether they're available. The (future) admin
 -- dashboard flips `enabled`; login buttons and /user/profile read from this.
--- Keycloak (test-only OIDC) is intentionally NOT listed — it isn't a
--- user-facing token provider.
 CREATE TABLE IF NOT EXISTS oauth_provider (
   id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
   slug       VARCHAR(32)  NOT NULL,               -- 'google' | 'github' | 'discord' | 'gitlab'

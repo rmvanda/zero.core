@@ -17,21 +17,19 @@ Third-party (OAuth2/OIDC) sign-in, provider connection management, and logout.
 | `/auth/signin` | GET/POST | Request a one-time sign-in link by email |
 | `/auth/token` | GET/POST | GET confirms, POST consumes the emailed token and establishes the session |
 | `/auth/disconnect` | POST | Forget a provider's stored tokens (`#[RequireLogin]`, `#[AllowedMethods('POST')]`) |
-| `/auth/keycloak-test` | GET | Keycloak OIDC test page — deliberately unlinked from the normal UI |
 | `/auth/logout` | GET | Destroy session, redirect to `/` |
 
 `/auth/complete` takes **no `?via`** in the normal flow: the provider's via-code is prefixed onto
 the OAuth `state` as `"{via}:{random}"` and recovered in `complete()`. Google one-tap (a `credential`
-POST) and the Keycloak test path still arrive with `?via`, so `loadAdapter()` falls back to the query
-param.
+POST) still arrives with `?via`, so `loadAdapter()` falls back to the query param.
 
 ## Adapter architecture
 
-Adapters are **global-namespace classes**, `require`d by filename — *not* autoloaded:
+Adapters are classes of `Zero\Module\Auth\Adapters` in `adapters/`. The autoloader finds them:
 
 ```php
-$ac = $this->smids[$via] . "Adapter";   // e.g. 12 => "GitHub" => "GitHubAdapter"
-require __DIR__."/adapters/$ac.php";
+// e.g. 12 => "GitHub" => Zero\Module\Auth\Adapters\GitHubAdapter
+$ac = self::ADAPTER_NAMESPACE . $this->smids[$via] . "Adapter";
 $this->auth = new $ac();
 ```
 
@@ -49,13 +47,6 @@ Three shapes of adapter live in `adapters/`:
   `adapters/config/google_api.json` (untracked) and `GP_REDIRECT_URI`. It also serves Google Sign-In
   one-tap via `verifyIdToken()`. Guard any use of `GP_REDIRECT_URI` — that constant only exists when
   the Auth module is the live module (see below).
-- **`KeycloakAdapter`** — **DEPRECATED (2026-08-08), unmaintained.** Standalone OIDC
-  implementation (ID-token validation, nonce, azp). Config from
-  `adapters/config/keycloak.json` (untracked, server-local). Reachable only via
-  `/auth/keycloak-test`, unlinked from the login UI, absent from `oauth_provider` — so
-  nothing routes to it in normal use. Kept rather than deleted in case the OIDC surface
-  is wanted again. It is also the one adapter still enforcing the verified-email
-  invariant itself; see below.
 
 ### Adding a provider
 
@@ -81,7 +72,7 @@ reserved and a revival keeps its old URLs — **do not renumber around them.**
 Leftover Twitter credentials still sit in `config/config.ini` (`X_CONSUMER_*`).
 Recovering an adapter: see `DEPRECATING_CHANGES.md`.
 
-Live adapters: Google (3), Keycloak (11), GitHub (12), Discord (13), GitLab (14).
+Live adapters: Google (3), GitHub (12), Discord (13), GitLab (14).
 
 ## The verified-email invariant
 
@@ -108,10 +99,6 @@ Adapters must therefore report `verified` **faithfully**, including `false`. Nor
 provider's shape is loose — `GoogleAdapter` does, because Google returns `verified_email` on the
 userinfo path and `email_verified` on the ID token and neither is guaranteed to be a bool.
 
-The one exception is the deprecated `KeycloakAdapter`, which still enforces inline during
-ID-token validation alongside its nonce/azp claim checks. Deliberately not migrated, but it does
-mean the rule exists in two places — reconcile before reviving that adapter.
-
 ## Provider registry (`oauth_provider`)
 
 `Zero\Module\Auth\OAuth\Provider` (`OAuth/Provider.php`; schema `core/sql/migrations/auth_oauth_provider.sql`, created by `core/sql/core.sql`) — a plain table, not an EAV entity.
@@ -120,7 +107,7 @@ mean the rule exists in two places — reconcile before reviving that adapter.
 - `Auth::assertProviderAvailable()` re-checks the same gate server-side, so a disabled provider
   cannot be used via a hand-typed `/auth/user?via=` link. It **fails open** on a registry error;
   missing credentials are the backstop.
-- Unregistered providers (Keycloak) are not gated by this at all.
+- A provider that is not registered is not gated by this at all.
 - `/admin/auth` toggles `enabled`; the flag takes effect everywhere immediately.
 
 ## Token persistence (`oauth_token`)
@@ -193,14 +180,14 @@ comes from `core/modules/Auth/config/config.ini`, so it is undefined when `Googl
 from Calendar/Dashboard — hence the `defined()` guard in its constructor. Prefer `app/config/` for
 anything another module might need.
 
-Untracked, server-local secrets: `adapters/config/keycloak.json`, `adapters/config/google_api.json`.
+Untracked, server-local secrets: `adapters/config/google_api.json`.
 
 ## Tests
 
 PHPUnit, in `core/modules/Auth/tests/` (picked up by the `Modules` suite in `phpunit.xml`):
 
 ```bash
-vendor/bin/phpunit --testsuite Modules --filter 'Auth|OAuth|Keycloak'
+vendor/bin/phpunit --testsuite Modules --filter 'Auth|OAuth'
 ```
 
 Adapters take an injected `$config` array and `setHttpClient()` as test seams, so nothing hits the

@@ -10,7 +10,7 @@
  * Usage: php core/modules/Auth/bin/purge-auth-tokens.php [retention-seconds]
  */
 // this file is {site}/core/modules/Auth/bin/: the site root is four levels up
-require __DIR__ . '/../../../../vendor/autoload.php';
+require __DIR__ . '/../../../autoload.php';
 
 $root = dirname(__DIR__, 4);
 $ini  = parse_ini_file($root . '/app/config/database.ini', false, INI_SCANNER_RAW);

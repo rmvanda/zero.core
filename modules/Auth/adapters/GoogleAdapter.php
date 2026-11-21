@@ -1,4 +1,6 @@
 <?php
+namespace Zero\Module\Auth\Adapters;
+
 use \Zero\Core\Console as Console;
 
 /**
@@ -7,7 +9,7 @@ use \Zero\Core\Console as Console;
  * Handles Google OAuth authentication flow.
  * Extends Google_Client from the Google API PHP Client library.
  */
-class GoogleAdapter extends Google_Client
+class GoogleAdapter extends \Google_Client
 {
     public $user;
     private $path;
@@ -26,8 +28,8 @@ class GoogleAdapter extends Google_Client
         }
 
         $this->setAuthConfigFile($this->path);
-        $this->addScope(Google_Service_Oauth2::USERINFO_EMAIL);
-        $this->addScope(Google_Service_Oauth2::USERINFO_PROFILE);
+        $this->addScope(\Google_Service_Oauth2::USERINFO_EMAIL);
+        $this->addScope(\Google_Service_Oauth2::USERINFO_PROFILE);
 //        $this->addScope(\Google\Service\Calendar::CALENDAR_READONLY);
 //        $this->addScope(\Google\Service\Calendar::CALENDAR_EVENTS_READONLY);
         // redirect_uri is only needed for the interactive auth-code login (Auth
@@ -62,7 +64,7 @@ class GoogleAdapter extends Google_Client
     public function getCurrentUser()
     {
         $this->authenticate($_GET['code']);
-        $oauth = new Google_Service_Oauth2($this);
+        $oauth = new \Google_Service_Oauth2($this);
         $this->user = $oauth->userinfo_v2_me->get();
 
         $this->user = $this->format($this->user);

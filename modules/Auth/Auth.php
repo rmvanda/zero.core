@@ -42,7 +42,7 @@ class Auth extends \Zero\Core\Module {
         8 => "LinkedIn",
         9 => "Pinterest",
         10 => "Tumblr",
-        11 => "Keycloak",
+        11 => "",
         12 => "GitHub",
         13 => "Discord",
         14 => "GitLab"
@@ -50,10 +50,12 @@ class Auth extends \Zero\Core\Module {
 
     /**
      * Providers whose tokens are persisted and that can be resolved by slug for
-     * refresh (Broker). Keycloak (OIDC test surface) is intentionally
-     * excluded. Keep display names in sync with $smids.
+     * refresh (Broker). Keep display names in sync with $smids.
      */
     private const PERSISTED_PROVIDERS = ['Google', 'GitHub', 'Discord', 'GitLab'];
+
+    /** The namespace of the provider adapters in adapters/. */
+    private const ADAPTER_NAMESPACE = "\\Zero\\Module\\Auth\\Adapters\\";
 
     /** Magic-link TTL: short, because it is a live credential. */
     private const TOKEN_TTL_LOGIN = 900;        // 15 minutes
@@ -132,8 +134,8 @@ class Auth extends \Zero\Core\Module {
     {
         // The callback no longer needs ?via — the provider's via code is encoded in
         // the OAuth `state` we issued (as "{via}:..."). Google one-tap (credential
-        // POST) and the legacy Keycloak test path still arrive with ?via, so
-        // loadAdapter() falls back to that when state carries no via prefix.
+        // POST) still arrives with ?via, so loadAdapter() falls back to that when
+        // state carries no via prefix.
         $via = null;
         if (!empty($_GET['state']) && is_string($_GET['state'])
             && preg_match('/^(\d+):/', $_GET['state'], $m)) {
@@ -366,7 +368,7 @@ class Auth extends \Zero\Core\Module {
      * Enforce the admin enable/configured gate for a REGISTERED provider so the
      * oauth_provider registry is authoritative, not just UI-level hiding — a
      * disabled provider can't be used via a direct /auth/user or /auth/connect
-     * link. Unregistered providers (e.g. the Keycloak test surface) are not gated.
+     * link. A provider that is not registered is not gated.
      * Fails open if the registry itself errors; provider credentials still gate use.
      */
     private function assertProviderAvailable(): void
@@ -382,22 +384,6 @@ class Auth extends \Zero\Core\Module {
         } catch (\Throwable $e) {
             Console::warn("Provider availability check failed: " . $e->getMessage());
         }
-    }
-
-    /**
-     * Keycloak TEST page.
-     *
-     * Entry point (login button → /auth/user?via=11) and post-login confirmation page.
-     * This is the ONLY surface that exposes Keycloak login — it is deliberately not
-     * linked anywhere in the normal login UI or navigation.
-     */
-    public function keycloakTest()
-    {
-        // After Keycloak login completes, complete() redirects to this stored URL,
-        // landing back here in the "logged in" confirmation state.
-        $_SESSION['return_url'] = '/auth/keycloak-test';
-
-        $this->respond($this->viewPath . 'keycloak-test.php');
     }
 
     /**
@@ -831,33 +817,29 @@ class Auth extends \Zero\Core\Module {
             throw new \Zero\Core\Exception\HTTPError(404, "Unknown auth provider");
         }
 
-        $ac   = $this->smids[$via] . "Adapter";
-        $path = __DIR__."/adapters/".$ac.".php";
-        if (!is_file($path)) {
+        // The adapter is Zero\Module\Auth\Adapters\{Name}Adapter in adapters/.
+        // classFile() answers without a log line for a provider that has none.
+        $ac = self::ADAPTER_NAMESPACE . $this->smids[$via] . "Adapter";
+        if (\Zero\Core\Application::classFile($ac) === null) {
             throw new \Zero\Core\Exception\HTTPError(404, "Unknown auth provider");
         }
 
         $this->workingSmid = $via;
-        require $path;
         $this->auth = new $ac();
     }
 
     /**
      * Resolve an OAuth adapter instance by provider slug (e.g. 'github'), for
      * token refresh outside the login flow. Returns null if the provider isn't
-     * persist-capable. Shares the require-by-name convention with loadAdapter().
+     * persist-capable. Names the adapter class as loadAdapter() does.
      */
     public static function adapterForProvider(string $provider): ?object
     {
         foreach (self::PERSISTED_PROVIDERS as $name) {
             if (strtolower($name) === strtolower($provider)) {
-                $class = $name . 'Adapter';
-                $path  = __DIR__ . '/adapters/' . $class . '.php';
-                if (is_file($path)) {
-                    require_once $path;
-                    if (class_exists($class)) {
-                        return new $class();
-                    }
+                $class = self::ADAPTER_NAMESPACE . $name . 'Adapter';
+                if (\Zero\Core\Application::classFile($class) !== null) {
+                    return new $class();
                 }
                 return null;
             }

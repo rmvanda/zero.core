@@ -13,7 +13,7 @@
  *
  * Usage: php core/bin/refresh-cloudflare-ips.php
  */
-require __DIR__ . '/../../vendor/autoload.php';
+require __DIR__ . '/../autoload.php';
 
 use Zero\Lib\Net\TrustedProxy;
 

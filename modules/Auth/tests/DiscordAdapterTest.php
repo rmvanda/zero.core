@@ -4,7 +4,7 @@ namespace Zero\Module\Auth\Tests;
 
 use Zero\Tests\Core\ZeroTestCase;
 
-require_once __DIR__ . '/../adapters/DiscordAdapter.php';
+use Zero\Module\Auth\Adapters\DiscordAdapter;
 
 class DiscordAdapterTest extends ZeroTestCase
 {
@@ -31,7 +31,7 @@ class DiscordAdapterTest extends ZeroTestCase
 
     public function testFormatMapsDiscordUserToStandardShape(): void
     {
-        $adapter = new \DiscordAdapter($this->config());
+        $adapter = new DiscordAdapter($this->config());
         $fuser = $adapter->format($this->rawUser());
 
         $this->assertSame('Nelly', $fuser['full_name']);
@@ -46,7 +46,7 @@ class DiscordAdapterTest extends ZeroTestCase
 
     public function testFormatFallsBackToUsernameWhenGlobalNameMissing(): void
     {
-        $adapter = new \DiscordAdapter($this->config());
+        $adapter = new DiscordAdapter($this->config());
         $raw = $this->rawUser();
         unset($raw['global_name']);
 
@@ -56,7 +56,7 @@ class DiscordAdapterTest extends ZeroTestCase
 
     public function testFormatMarksUnverifiedWhenVerifiedFalse(): void
     {
-        $adapter = new \DiscordAdapter($this->config());
+        $adapter = new DiscordAdapter($this->config());
         $raw = $this->rawUser();
         $raw['verified'] = false;
 
@@ -66,7 +66,7 @@ class DiscordAdapterTest extends ZeroTestCase
 
     public function testFormatPicNullWhenNoAvatar(): void
     {
-        $adapter = new \DiscordAdapter($this->config());
+        $adapter = new DiscordAdapter($this->config());
         $raw = $this->rawUser();
         $raw['avatar'] = null;
 

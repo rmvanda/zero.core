@@ -5,10 +5,10 @@ use Zero\Tests\Core\ZeroTestCase;
 use Zero\Lib\Http\Client;
 use Zero\Lib\Http\Response;
 
-require_once __DIR__ . '/../adapters/OAuth2Adapter.php';
+use Zero\Module\Auth\Adapters\OAuth2Adapter;
 
 /** Fake adapter with a fixed verified identity, for token-capture tests. */
-class TokenFakeAdapter extends \OAuth2Adapter
+class TokenFakeAdapter extends OAuth2Adapter
 {
     protected string $provider      = 'fake';
     protected int    $via           = 99;

@@ -458,9 +458,8 @@ concrete endpoint needs "logged in, unverified is fine" — none does.
 The comment inside `findOrCreateUser()` says Google `format()` "passes Google's value straight
 through with no normalization (`$user['verified_email'] ?: $user['email_verified']`)".
 `GoogleAdapter.php:96` has since been changed to `filter_var(… ?? … ?? false, FILTER_VALIDATE_BOOLEAN)`.
-The unnormalized adapter is now **Keycloak** (`KeycloakAdapter.php:258`, raw
-`$claims['email_verified']`), which is what the `filter_var` in that block actually guards. The
-code is right; the comment names the wrong provider.
+No adapter passes a raw value through. The `filter_var` in that block is a guard at the
+boundary. The code is right; the comment names the wrong provider.
 
 For reference, how each adapter derives `verified` — no provider emits a uniform claim:
 
@@ -470,10 +469,9 @@ For reference, how each adapter derives `verified` — no provider emits a unifo
 | GitLab | `!empty($raw['confirmed_at'])` from `/api/v4/user` | truthiness |
 | Discord | `$raw['verified']` | `=== true` |
 | Google | `verified_email ?? email_verified` | `filter_var(…, BOOLEAN)` |
-| Keycloak | `$claims['email_verified']` | none — raw passthrough |
 
-`Auth::enforceVerifiedEmail()` applies `FILTER_VALIDATE_BOOLEAN` at the boundary, which is what
-catches Keycloak's unnormalized value.
+`Auth::enforceVerifiedEmail()` applies `FILTER_VALIDATE_BOOLEAN` at the boundary, which
+catches a value an adapter did not normalize.
 
 ---
 

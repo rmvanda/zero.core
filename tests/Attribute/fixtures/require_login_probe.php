@@ -54,7 +54,7 @@ namespace Zero\Core\Attribute {
 }
 
 namespace {
-    require __DIR__ . '/../../../../vendor/autoload.php';
+    require __DIR__ . '/../../../autoload.php';
 
     set_error_handler(function (int $errno, string $errstr): bool {
         echo "WARN:{$errstr}\n";

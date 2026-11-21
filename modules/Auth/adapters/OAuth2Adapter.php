@@ -1,4 +1,6 @@
 <?php
+namespace Zero\Module\Auth\Adapters;
+
 use \Zero\Core\Console;
 use \Zero\Core\Exception\HTTPError;
 use \Zero\Lib\Http\Client;
@@ -12,8 +14,8 @@ use \Zero\Lib\Http\Client;
  * on. Subclasses supply endpoints, scopes, and the provider-specific identity
  * fetch + mapping.
  *
- * Mirrors the KeycloakAdapter shape: global-namespace class, required (not
- * autoloaded), instantiated via `new $adapterClass()` from Auth::loadAdapter().
+ * An adapter is a class of Zero\Module\Auth\Adapters in adapters/, found by
+ * the autoloader and instantiated by name from Auth::loadAdapter().
  */
 abstract class OAuth2Adapter
 {

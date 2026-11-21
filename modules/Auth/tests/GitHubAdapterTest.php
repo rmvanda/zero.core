@@ -4,7 +4,7 @@ namespace Zero\Module\Auth\Tests;
 
 use Zero\Tests\Core\ZeroTestCase;
 
-require_once __DIR__ . '/../adapters/GitHubAdapter.php';
+use Zero\Module\Auth\Adapters\GitHubAdapter;
 
 class GitHubAdapterTest extends ZeroTestCase
 {
@@ -32,7 +32,7 @@ class GitHubAdapterTest extends ZeroTestCase
 
     public function testFormatMapsGithubProfileToStandardShape(): void
     {
-        $adapter = new \GitHubAdapter($this->config());
+        $adapter = new GitHubAdapter($this->config());
         $fuser = $adapter->format($this->rawProfile());
 
         $this->assertSame('The Octocat', $fuser['full_name']);
@@ -44,7 +44,7 @@ class GitHubAdapterTest extends ZeroTestCase
 
     public function testFormatFallsBackToLoginWhenNameNull(): void
     {
-        $adapter = new \GitHubAdapter($this->config());
+        $adapter = new GitHubAdapter($this->config());
         $raw = $this->rawProfile();
         $raw['name'] = null;
 
@@ -54,7 +54,7 @@ class GitHubAdapterTest extends ZeroTestCase
 
     public function testSelectVerifiedPrimaryEmailReturnsPrimaryVerified(): void
     {
-        $adapter = new \GitHubAdapter($this->config());
+        $adapter = new GitHubAdapter($this->config());
         $emails = [
             ['email' => 'alt@github.com',  'primary' => false, 'verified' => true],
             ['email' => 'octo@github.com', 'primary' => true,  'verified' => true],
@@ -66,7 +66,7 @@ class GitHubAdapterTest extends ZeroTestCase
 
     public function testSelectVerifiedPrimaryEmailReturnsNullWhenPrimaryUnverified(): void
     {
-        $adapter = new \GitHubAdapter($this->config());
+        $adapter = new GitHubAdapter($this->config());
         $emails = [
             ['email' => 'octo@github.com', 'primary' => true,  'verified' => false],
             ['email' => 'alt@github.com',  'primary' => false, 'verified' => true],
@@ -77,7 +77,7 @@ class GitHubAdapterTest extends ZeroTestCase
 
     public function testFormatMarksUnverifiedWhenNoPrimaryEmailResolved(): void
     {
-        $adapter = new \GitHubAdapter($this->config());
+        $adapter = new GitHubAdapter($this->config());
         $raw = $this->rawProfile();
         $raw['email'] = null;
         $raw['email_verified'] = false;

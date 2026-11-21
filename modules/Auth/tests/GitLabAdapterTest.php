@@ -4,7 +4,7 @@ namespace Zero\Module\Auth\Tests;
 
 use Zero\Tests\Core\ZeroTestCase;
 
-require_once __DIR__ . '/../adapters/GitLabAdapter.php';
+use Zero\Module\Auth\Adapters\GitLabAdapter;
 
 class GitLabAdapterTest extends ZeroTestCase
 {
@@ -31,7 +31,7 @@ class GitLabAdapterTest extends ZeroTestCase
 
     public function testFormatMapsGitlabUserToStandardShape(): void
     {
-        $adapter = new \GitLabAdapter($this->config());
+        $adapter = new GitLabAdapter($this->config());
         $fuser = $adapter->format($this->rawUser());
 
         $this->assertSame('Jane Doe', $fuser['full_name']);
@@ -43,7 +43,7 @@ class GitLabAdapterTest extends ZeroTestCase
 
     public function testFormatFallsBackToUsernameWhenNameMissing(): void
     {
-        $adapter = new \GitLabAdapter($this->config());
+        $adapter = new GitLabAdapter($this->config());
         $raw = $this->rawUser();
         unset($raw['name']);
 
@@ -53,7 +53,7 @@ class GitLabAdapterTest extends ZeroTestCase
 
     public function testFormatMarksUnverifiedWhenConfirmedAtEmpty(): void
     {
-        $adapter = new \GitLabAdapter($this->config());
+        $adapter = new GitLabAdapter($this->config());
         $raw = $this->rawUser();
         $raw['confirmed_at'] = null;
 

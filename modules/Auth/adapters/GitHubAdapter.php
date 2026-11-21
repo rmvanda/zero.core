@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/OAuth2Adapter.php';
+namespace Zero\Module\Auth\Adapters;
 
 use \Zero\Core\Exception\HTTPError;
 use \Zero\Lib\Http\Client;

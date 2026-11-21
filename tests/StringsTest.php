@@ -311,7 +311,7 @@ INI;
         if ($siteIni !== '') {
             file_put_contents($dir . 'site.ini', $siteIni);
         }
-        $autoload = dirname(__DIR__, 2) . '/vendor/autoload.php';
+        $autoload = dirname(__DIR__) . '/autoload.php';
         $code = 'require ' . var_export($autoload, true) . ';'
             . '\Zero\Core\Strings::loadSite(' . var_export($dir, true) . ');'
             . '\Zero\Core\Strings::defineSiteFallbacks();'

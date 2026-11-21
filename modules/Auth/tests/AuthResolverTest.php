@@ -5,7 +5,6 @@ namespace Zero\Module\Auth\Tests;
 use Zero\Tests\Core\ZeroTestCase;
 use Zero\Module\Auth;
 
-require_once __DIR__ . '/../Auth.php';
 
 class AuthResolverTest extends ZeroTestCase
 {
@@ -25,17 +24,11 @@ class AuthResolverTest extends ZeroTestCase
     public function testResolvesGithubAdapter(): void
     {
         $adapter = Auth::adapterForProvider('github');
-        $this->assertInstanceOf(\GitHubAdapter::class, $adapter);
+        $this->assertInstanceOf(\Zero\Module\Auth\Adapters\GitHubAdapter::class, $adapter);
     }
 
     public function testUnknownProviderReturnsNull(): void
     {
         $this->assertNull(Auth::adapterForProvider('myspace'));
-    }
-
-    public function testKeycloakIsNotPersistCapable(): void
-    {
-        // Keycloak is a test-only OIDC surface, excluded from token persistence.
-        $this->assertNull(Auth::adapterForProvider('keycloak'));
     }
 }

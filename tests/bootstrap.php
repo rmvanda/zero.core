@@ -2,52 +2,52 @@
 /**
  * PHPUnit bootstrap.
  *
- * Beyond Composer's autoloader, this registers module ENDPOINT classes, which
- * Composer cannot reach: they live at {modules folder}/{Name}/{Name}.php (the
- * site's modules/ or core/modules/, looked up directly so a test that points
- * Modules at throwaway folders still finds the real controllers), and PSR-4
- * cannot map the class Zero\Module\Auth to that path because the class is not
- * under a Zero\Module\Auth\ prefix. At request time the framework registers its
- * own autoloader (Response::registerAutoloaders()), which never runs here — so
- * without this, class_exists('Zero\Module\Auth') is false and no endpoint in
- * the codebase can be tested.
+ * core/autoload.php registers the rule a request uses to find a class
+ * (Application::classFile()), so a test loads a class of core or of a module
+ * exactly as the site does: Zero\Module\Auth, Zero\Module\Auth\Model\*,
+ * Zero\Module\Lists\Lib\*, a module's Tests\ classes in its tests/ folder.
+ * No module needs an entry in composer.json, and a test needs no require_once
+ * for a class that follows the convention.
  *
- * Sub-namespaces (Zero\Module\Auth\Model\*, ...\Tests\*) already resolve via
- * the per-module PSR-4 entries in composer.json and are deliberately skipped.
+ * Two rules are added here, for tests only:
  *
- * The one sub-namespace registered here is a module's lib/ (classes other
- * modules call, Zero\Module\{Name}\Lib\{Class} in {module folder}/lib/{Class}.php):
- * Composer's Zero\Module\ -> modules/ mapping would look for it in Lib/, and
- * the directory is lowercase.
+ *   - Zero\Tests\Core\{Class} is core/tests/{Class}.php (ZeroTestCase and the
+ *     other shared test classes).
+ *   - A test that points Modules at throwaway folders still finds the classes
+ *     of the real modules: when the request rule finds nothing for a
+ *     Zero\Module\ class, the real modules/ and core/modules/ are looked in
+ *     directly, with the same folder rule (the exact name, then lower case).
  */
 // dirname(__DIR__, 2) is the assembly root: this file is core/tests/bootstrap.php,
 // and vendor/ + modules/ are siblings of core/, not of this directory.
-require dirname(__DIR__, 2) . '/vendor/autoload.php';
+require dirname(__DIR__) . '/autoload.php';
 
 spl_autoload_register(static function (string $class): void {
-    $prefix = 'Zero\\Module\\';
-    if (!str_starts_with($class, $prefix)) {
-        return;
-    }
+    $root = dirname(__DIR__, 2);
 
-    $rest = substr($class, strlen($prefix));
-    if (preg_match('/^(\w+)\\\\Lib\\\\(.+)$/', $rest, $m)) {
-        foreach (['/modules/', '/core/modules/'] as $folder) {
-            $file = dirname(__DIR__, 2) . $folder . $m[1] . '/lib/' . str_replace('\\', '/', $m[2]) . '.php';
-            if (is_file($file)) {
-                require_once $file;
-                return;
-            }
+    if (str_starts_with($class, 'Zero\\Tests\\Core\\')) {
+        $file = __DIR__ . '/' . str_replace('\\', '/', substr($class, strlen('Zero\\Tests\\Core\\'))) . '.php';
+        if (is_file($file)) {
+            require_once $file;
         }
         return;
     }
-    if (str_contains($rest, '\\')) {
-        return;   // a sub-namespace — Composer's PSR-4 owns it
+
+    $prefix = 'Zero\\Module\\';
+    if (!str_starts_with($class, $prefix) || !\Zero\Core\Application::isQualifiedName($class)) {
+        return;
     }
 
+    $segments = explode('\\', substr($class, strlen($prefix)));
+    $name     = array_shift($segments);
+    $leaf     = $segments === [] ? $name : array_pop($segments);
+
     foreach (['/modules/', '/core/modules/'] as $folder) {
-        $file = dirname(__DIR__, 2) . $folder . $rest . '/' . $rest . '.php';
-        if (is_file($file)) {
+        $dir = $root . $folder . $name . '/';
+        foreach ($segments as $segment) {
+            $dir .= (is_dir($dir . $segment) ? $segment : strtolower($segment)) . '/';
+        }
+        if (is_file($file = $dir . $leaf . '.php')) {
             require_once $file;
             return;
         }

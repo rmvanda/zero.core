@@ -16,7 +16,7 @@ class RenderErrorTest extends ZeroTestCase
 [, $core, $detail] = $argv + [2 => null];
 require $core . '/exception/HTTPError.php';
 require $core . '/Response.php';
-require dirname($core) . '/vendor/autoload.php';
+require $core . '/autoload.php';
 define('ZERO_ROOT', dirname($core) . '/');
 define('MODULE_PATH', ZERO_ROOT . 'modules/');
 \Zero\Core\Console::$defaultLogFile = '/dev/null';

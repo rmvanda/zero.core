@@ -4,10 +4,10 @@ namespace Zero\Module\Auth\Tests;
 
 use Zero\Tests\Core\ZeroTestCase;
 
-require_once __DIR__ . '/../adapters/OAuth2Adapter.php';
+use Zero\Module\Auth\Adapters\OAuth2Adapter;
 
 /** Minimal concrete subclass to exercise the shared base behavior. */
-class FakeOAuth2Adapter extends \OAuth2Adapter
+class FakeOAuth2Adapter extends OAuth2Adapter
 {
     protected string $provider      = 'fake';
     protected int    $via           = 99;

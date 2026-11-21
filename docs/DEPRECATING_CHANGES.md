@@ -10,6 +10,54 @@ that text belongs in this file.
 
 Newest first.
 
+## 2026-11 — Auth adapters have a namespace; Keycloak is gone
+
+### Global adapter classes (`\\GitHubAdapter`) — REPLACED by `Zero\Module\Auth\Adapters\`
+
+`GoogleAdapter`, `GitHubAdapter`, `DiscordAdapter`, `GitLabAdapter` and `OAuth2Adapter` are
+classes of `Zero\Module\Auth\Adapters` in `core/modules/Auth/adapters/`. The autoloader
+finds them; nothing loads an adapter file by path.
+
+```php
+// gone
+require_once __DIR__ . '/../adapters/GitHubAdapter.php';
+new \GitHubAdapter($config);
+
+// use
+use Zero\Module\Auth\Adapters\GitHubAdapter;
+new GitHubAdapter($config);
+```
+
+### `KeycloakAdapter`, `/auth/keycloak-test` and via code 11 — REMOVED
+
+The Keycloak OIDC test surface is gone: the adapter, its test, the `/auth/keycloak-test`
+page and its stylesheet, and the `adapters/config-tmpl/keycloak.json` template. Via code 11
+names no provider and answers 404. There is no replacement; a new OIDC provider is a new
+adapter that extends `OAuth2Adapter`.
+
+## 2026-11 — Tests and scripts load classes by the request's rule
+
+### `Zero\...` entries in a site's `composer.json` — REMOVED
+
+A site's `composer.json` has no `autoload` or `autoload-dev` section for the framework or
+for a module (`"Zero\\Module\\Lists\\Model\\": "modules/Lists/model/"` and the like).
+Composer loads third-party packages only. `core/autoload.php` registers
+`Application::classFile()`, the rule a request uses, and the test bootstrap and every
+command-line script include it:
+
+```php
+// gone
+require __DIR__ . '/../../vendor/autoload.php';
+
+// use
+require __DIR__ . '/../../core/autoload.php';
+```
+
+### `require_once` of a module's class in its tests — REMOVED
+
+A test names the class in a `use` line and nothing else. A `require_once` stays only for
+a file whose class does not follow the naming convention.
+
 ## 2026-11 — Users, groups and permissions are in `core/access/`
 
 The five classes moved, and their namespace follows the folder. There are no aliases: code
