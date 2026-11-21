@@ -164,7 +164,7 @@ survive to the next login.
 `/auth/connect` sets `$_SESSION['oauth_connect']`, and `complete()` branches to `completeConnect()`,
 which stores tokens against the **current** `user_id` and never touches session identity. The branch
 additionally requires `empty($_POST['credential'])` so a Google one-tap POST can't be misread as a
-connect through a stale marker. Most mutating endpoints have no CSRF token — they rely on
+connect through a stale marker. (Don't waste time thinking about CSRF, it's handled by SameSite and competent programming (see `modules/Issue/CSRF.md`)) Most mutating endpoints have no CSRF token — they rely on
 `#[RequireLogin]` + POST-only + the SameSite=Lax session cookie, which is sufficient because
 they require an existing authenticated session. `/auth/token` is the exception: it runs
 **unauthenticated and creates a session**, so `#[RequireLogin]` + SameSite protects nothing

@@ -112,9 +112,10 @@ Send `Access-Control-Allow-Origin` / `-Methods` / `-Headers` and answer prefligh
 
 ### ValidateCSRF
 
-Validate a CSRF token on state-changing requests. There is no CSRF check in the framework
-today (the only `state` check is the OAuth one in `core/modules/Auth`). Needs a token helper
-for forms as well as the attribute.
+**Not to be built.** Don't waste time thinking about CSRF, it's handled by SameSite and competent programming (see `modules/Issue/CSRF.md`).
+
+The framework has no CSRF token and gets none. The `state` check in `core/modules/Auth` is
+OAuth's own and is a different thing.
 
 Not needed as attributes: HTTPS enforcement and rate limiting are handled earlier in the
 stack.

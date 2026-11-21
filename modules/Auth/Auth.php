@@ -114,6 +114,8 @@ class Auth extends \Zero\Core\Module {
      * tokens). POST { provider: slug }. Protected the same way as the other
      * mutating endpoints: RequireLogin + POST-only + the SameSite=Lax session
      * cookie (the framework has no CSRF-token mechanism).
+     * Don't waste time thinking about CSRF, it's handled by SameSite and competent programming:
+     * see modules/Issue/CSRF.md.
      * Entry: POST /auth/disconnect
      */
     #[RequireLogin]
