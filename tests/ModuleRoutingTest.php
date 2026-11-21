@@ -146,17 +146,17 @@ class ModuleRoutingTest extends TestCase
 
     public function testTheViewFallbackFindsNoViewInADisabledModule(): void
     {
-        $this->assertNull(Response::findModuleView('Gone', 'page'));
-        $this->assertNull(Response::findModuleView('gone', 'page'));
-        $this->assertNull(Response::findModuleView('Nope', 'page'));
-        $this->assertSame($this->site . 'Lists/view/page.php', Response::findModuleView('lists', 'page'));
-        $this->assertNull(Response::findModuleView('Lists', 'missing'));
-        $this->assertNull(Response::findModuleView('Lists', '../../Gone/view/page'));
+        $this->assertNull(\Zero\Tests\Core\Reach::call(\Zero\Core\Response::class, 'findModuleView', 'Gone', 'page'));
+        $this->assertNull(\Zero\Tests\Core\Reach::call(\Zero\Core\Response::class, 'findModuleView', 'gone', 'page'));
+        $this->assertNull(\Zero\Tests\Core\Reach::call(\Zero\Core\Response::class, 'findModuleView', 'Nope', 'page'));
+        $this->assertSame($this->site . 'Lists/view/page.php', \Zero\Tests\Core\Reach::call(\Zero\Core\Response::class, 'findModuleView', 'lists', 'page'));
+        $this->assertNull(\Zero\Tests\Core\Reach::call(\Zero\Core\Response::class, 'findModuleView', 'Lists', 'missing'));
+        $this->assertNull(\Zero\Tests\Core\Reach::call(\Zero\Core\Response::class, 'findModuleView', 'Lists', '../../Gone/view/page'));
     }
 
     public function testAModuleInTheSecondRootResolvesViewsFrameAuxAndConfig(): void
     {
-        $this->assertSame($this->bundled . 'Shipped/view/page.php', Response::findModuleView('Shipped', 'page'));
+        $this->assertSame($this->bundled . 'Shipped/view/page.php', \Zero\Tests\Core\Reach::call(\Zero\Core\Response::class, 'findModuleView', 'Shipped', 'page'));
 
         Request::$Module = 'Shipped';
         $probe = $this->probe();
@@ -262,9 +262,9 @@ class ModuleRoutingTest extends TestCase
         mkdir($this->base . '/www/assets', 0777, true);
         $web = $this->base . '/www/assets/';
 
-        $this->assertFalse(\Zero\Core\Module::linkAssets('Gone', $this->site . 'Gone/assets', $web . 'gone'));
+        $this->assertFalse(\Zero\Tests\Core\Reach::call(\Zero\Core\Module::class, 'linkAssets', 'Gone', $this->site . 'Gone/assets', $web . 'gone'));
         $this->assertFalse(is_link($web . 'gone'));
-        $this->assertTrue(\Zero\Core\Module::linkAssets('Lists', $this->site . 'Lists/assets', $web . 'lists'));
+        $this->assertTrue(\Zero\Tests\Core\Reach::call(\Zero\Core\Module::class, 'linkAssets', 'Lists', $this->site . 'Lists/assets', $web . 'lists'));
         $this->assertTrue(is_link($web . 'lists'));
     }
 

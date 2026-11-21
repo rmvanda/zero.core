@@ -85,7 +85,7 @@ class BundledModulesTest extends TestCase
         mkdir("$dir/www/assets", 0777, true);
         symlink("$dir/old-place/assets", "$dir/www/assets/hello-world");
 
-        $this->assertTrue(Module::linkAssets('HelloWorld', "$dir/new-assets", "$dir/www/assets/hello-world"));
+        $this->assertTrue(\Zero\Tests\Core\Reach::call(\Zero\Core\Module::class, 'linkAssets', 'HelloWorld', "$dir/new-assets", "$dir/www/assets/hello-world"));
         $this->assertSame("$dir/new-assets", readlink("$dir/www/assets/hello-world"));
     }
 
@@ -98,11 +98,11 @@ class BundledModulesTest extends TestCase
         file_put_contents("$dir/www/assets/file", 'x');
         symlink("$dir/other", "$dir/www/assets/live");
 
-        $this->assertFalse(Module::linkAssets('HelloWorld', "$dir/target", "$dir/www/assets/live"));
+        $this->assertFalse(\Zero\Tests\Core\Reach::call(\Zero\Core\Module::class, 'linkAssets', 'HelloWorld', "$dir/target", "$dir/www/assets/live"));
         $this->assertSame("$dir/other", readlink("$dir/www/assets/live"));
-        $this->assertFalse(Module::linkAssets('HelloWorld', "$dir/target", "$dir/www/assets/real"));
+        $this->assertFalse(\Zero\Tests\Core\Reach::call(\Zero\Core\Module::class, 'linkAssets', 'HelloWorld', "$dir/target", "$dir/www/assets/real"));
         $this->assertFalse(is_link("$dir/www/assets/real"));
-        $this->assertFalse(Module::linkAssets('HelloWorld', "$dir/target", "$dir/www/assets/file"));
+        $this->assertFalse(\Zero\Tests\Core\Reach::call(\Zero\Core\Module::class, 'linkAssets', 'HelloWorld', "$dir/target", "$dir/www/assets/file"));
         $this->assertSame('x', file_get_contents("$dir/www/assets/file"));
     }
 
@@ -113,7 +113,7 @@ class BundledModulesTest extends TestCase
         mkdir("$dir/www/assets", 0777, true);
         symlink("$dir/old-place/assets", "$dir/www/assets/ghost");
 
-        $this->assertFalse(Module::linkAssets('NoSuchModuleAnywhere', "$dir/new-assets", "$dir/www/assets/ghost"));
+        $this->assertFalse(\Zero\Tests\Core\Reach::call(\Zero\Core\Module::class, 'linkAssets', 'NoSuchModuleAnywhere', "$dir/new-assets", "$dir/www/assets/ghost"));
         $this->assertSame("$dir/old-place/assets", readlink("$dir/www/assets/ghost"));
     }
 

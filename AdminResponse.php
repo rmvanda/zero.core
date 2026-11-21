@@ -396,6 +396,10 @@ abstract class AdminResponse extends Module {
         // constructor work.
         Application::checkAttributes($adminClass, $method);
 
+        // The offering's module is not the live module (that is Admin), so
+        // its wording and its constants are defined here, before construction.
+        Application::loadModuleConfig($moduleClassName);
+
         $controller = new $adminClass();
 
         return $controller->$method(...$params);

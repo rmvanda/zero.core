@@ -96,7 +96,7 @@ class ModuleTest extends ZeroTestCase
             public function __construct(private string $siteDir) {}
             public function framePiecePath(string $name): ?string
             {
-                return \Zero\Core\Response::framePieceFile($name, [$this->siteDir]);
+                return \Zero\Tests\Core\Reach::call(\Zero\Core\Response::class, 'framePieceFile', $name, [$this->siteDir]);
             }
             public function getStylesheets() {}
             public function getScripts() {}

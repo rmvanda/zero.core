@@ -10,6 +10,36 @@ that text belongs in this file.
 
 Newest first.
 
+## 2026-11 — Framework helpers are protected, not public
+
+### Public `getAuxiliary()`, `framePiecePath()`, `framePieceFile()`, `findModuleView()`, `linkAssets()` — now PROTECTED
+
+A public method of a module is an endpoint, and these five were public on `Response` and
+`Module`, so a URL reached them on every module: `/{module}/get-auxiliary/{file}` included a
+file of the module's `aux/` folder, and `/{module}/link-assets/{a}/{b}/{c}` made a symlink
+with no login. They are protected. They were only ever called from inside the object.
+
+```php
+// a frame, a view, a module: unchanged
+$this->getAuxiliary('nav');
+$this->framePiecePath('_oauth-brand');
+
+// gone: a call from outside the object
+Response::framePieceFile('footer', $dirs);
+Module::linkAssets($name, $target, $link);
+```
+
+A test that checks one of the static helpers calls it through
+`Zero\Tests\Core\Reach::call(Response::class, 'framePieceFile', ...)`.
+
+`renderError()` stays public: `Application::run()` calls it.
+
+### A module's own config under `/admin/{module}`
+
+`Application::loadModuleConfig()` defines a module's wording and constants. Admin calls it
+for the module whose screen it routes to. Before, only the live module's were defined, so
+an admin screen saw its module's constants only when a file in `app/config/` held them.
+
 ## 2026-11 — `PushHelper` belongs to the Push module
 
 ### `Zero\Lib\Push\PushHelper` (`core/lib/Push/`) — MOVED to `Zero\Module\Push\Lib\PushHelper`

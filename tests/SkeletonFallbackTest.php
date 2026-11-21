@@ -49,14 +49,14 @@ final class SkeletonFallbackTest extends ZeroTestCase
 
     public function testSkeletonFooterIsUsedWhenSiteHasNone(): void
     {
-        $path = Response::framePieceFile('footer', [$this->dir . 'frame/']);
+        $path = \Zero\Tests\Core\Reach::call(\Zero\Core\Response::class, 'framePieceFile', 'footer', [$this->dir . 'frame/']);
         $this->assertSame($this->skeletonFrame() . 'footer.php', $path);
     }
 
     public function testSiteFooterWinsOverSkeleton(): void
     {
         file_put_contents($this->dir . 'frame/footer.php', '<?php // site');
-        $path = Response::framePieceFile('footer', [$this->dir . 'frame/']);
+        $path = \Zero\Tests\Core\Reach::call(\Zero\Core\Response::class, 'framePieceFile', 'footer', [$this->dir . 'frame/']);
         $this->assertSame($this->dir . 'frame/footer.php', $path);
     }
 
@@ -65,7 +65,7 @@ final class SkeletonFallbackTest extends ZeroTestCase
         mkdir($this->dir . 'first');
         file_put_contents($this->dir . 'first/footer.php', '<?php // module');
         file_put_contents($this->dir . 'frame/footer.php', '<?php // site');
-        $path = Response::framePieceFile('footer', [$this->dir . 'first/', $this->dir . 'frame/']);
+        $path = \Zero\Tests\Core\Reach::call(\Zero\Core\Response::class, 'framePieceFile', 'footer', [$this->dir . 'first/', $this->dir . 'frame/']);
         $this->assertSame($this->dir . 'first/footer.php', $path);
         unlink($this->dir . 'first/footer.php');
         rmdir($this->dir . 'first');
@@ -73,7 +73,7 @@ final class SkeletonFallbackTest extends ZeroTestCase
 
     public function testUnknownPieceIsNull(): void
     {
-        $this->assertNull(Response::framePieceFile('zerotest-nothing', [$this->dir . 'frame/']));
+        $this->assertNull(\Zero\Tests\Core\Reach::call(\Zero\Core\Response::class, 'framePieceFile', 'zerotest-nothing', [$this->dir . 'frame/']));
     }
 
     public function testErrorCodesComeFromSkeletonWhenSiteHasNone(): void

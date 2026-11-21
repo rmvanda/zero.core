@@ -38,6 +38,15 @@ How the Zero Framework works under the hood. For what is in the repository and h
     4. `HTTPError(404)`.
 11. Response wraps the view with a frame. Each piece (`head`, `header`, `sideNav`, `footer`) is the first of: the module's `frame/`, the module's `view/`, the site's `app/frontend/frame/` (`VIEW_PATH`), then core's own copy in `core/skeleton/frontend/frame/`. A submodule without a `frame/` uses its parent's. A JSON client gets no frame and no view; an AJAX request gets the view without the frame.
 
+### A public method is an endpoint
+
+Step 8 calls the method from outside the module object, so PHP runs any **public** method the URL names: one the module declares, and one it inherits. A protected or private method is not reached that way; PHP gives its name to `__call()` (steps 9 and 10), which finds a view, a submodule or a 404.
+
+- Declare a method `public` only when a URL may call it. Every helper is `protected` or `private`, static helpers included.
+- The helpers of `Response` and `Module` are protected for this reason: `getAuxiliary()`, `framePiecePath()`, `framePieceFile()`, `findModuleView()`, `linkAssets()`, `respond()`, `build()`, `export()`. A frame or a view calls them as `$this->...`: it is included from inside the object, so a protected method is in reach.
+- `renderError()` is public, because `Application::run()` calls it.
+- An admin offering has a stricter rule of its own (`AdminResponse::isRoutableMethod()`).
+
 Plugin hooks fire along the way (`afterAutoloaders`, `afterParseRequest`, `afterConstants`, `beforeRun`, `afterRun`). See `core/docs/PLUGINS.md`.
 
 ### Standalone pages
@@ -195,7 +204,7 @@ Config is PHP constants from `.ini` files. `Application::defineConstants()` read
 2. Global config, `app/config/*.ini`, then the skeleton defaults the site has no file for. Only `.ini` files are config files; any other file in `app/config/` is left alone. The values of a file named `paths.ini` are prefixed with `ZERO_ROOT`.
 3. Core's default wording, `core/skeleton/strings/*.ini`.
 4. The array passed to `defineConstants()`, if any.
-5. The requested module's `strings/*.ini`, then its `config.ini` and every file in its `config/`, when the module is switched on.
+5. The requested module's `strings/*.ini`, then its `config.ini` and every file in its `config/`, when the module is switched on. An admin screen is served by the Admin module, so `/admin/{module}` also reads these for the module whose screen it is (`Application::loadModuleConfig()`).
 
 A config file does not redefine a constant that already exists (a strings file or an earlier config file defined it): the repeat is logged with the key and file, and the first value stays. A key that is not a valid constant name is skipped with a log line.
 

@@ -53,8 +53,11 @@ class Module extends Response {
      * is off has no public asset link. A link whose target no longer exists
      * (a module that moved folders) is replaced; a link to a live target, a
      * real directory and a real file stay. Returns whether a link was created.
+     *
+     * Protected: a public method of a module is an endpoint, because the
+     * dispatcher calls `$module->{$endpoint}()` from outside the object.
      */
-    public static function linkAssets(string $moduleName, string $target, string $link): bool
+    protected static function linkAssets(string $moduleName, string $target, string $link): bool
     {
         if (!Modules::enabled($moduleName)) {
             return false;
@@ -149,8 +152,11 @@ class Module extends Response {
 
     /**
      * Include an auxiliary file from the current module's aux/ directory
+     *
+     * Protected: a public method of a module is an endpoint, because the
+     * dispatcher calls `$module->{$endpoint}()` from outside the object.
      */
-    public function getAuxiliary(string $file){
+    protected function getAuxiliary(string $file){
         $dir = self::moduleDir(Request::$Module);
         $auxFile = ($dir ?? "") . "aux/" . $file . ".php";
         Console::debug("Looking for aux file in $auxFile"); 

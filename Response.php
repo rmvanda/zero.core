@@ -186,8 +186,11 @@ class Response
      * The view file $file.php of a module that exists and is switched on, or
      * null. $file is one URL segment: anything holding a path separator finds
      * nothing.
+     *
+     * Protected: a public method of a module is an endpoint, because the
+     * dispatcher calls `$module->{$endpoint}()` from outside the object.
      */
-    public static function findModuleView(?string $module, ?string $file): ?string
+    protected static function findModuleView(?string $module, ?string $file): ?string
     {
         if ($file === null || $file === "" || str_contains($file, "/") || str_contains($file, "\\")) {
             return null;
@@ -436,8 +439,14 @@ class Response
      * frame, its view folder, the site's frame folder (VIEW_PATH), then core's
      * own copy in core/skeleton/frontend/frame/. Null when nowhere has it, so a
      * view includes the result only when there is one.
+     *
+     * Frames and views call it as `$this->framePiecePath()`. They are
+     * included from inside this object, so a protected method is in reach.
+     *
+     * Protected: a public method of a module is an endpoint, because the
+     * dispatcher calls `$module->{$endpoint}()` from outside the object.
      */
-    public function framePiecePath(string $name): ?string
+    protected function framePiecePath(string $name): ?string
     {
         return self::framePieceFile($name, [$this->framePath, $this->viewPath, VIEW_PATH]);
     }
@@ -448,8 +457,11 @@ class Response
      * A site overrides a piece by having the file. Null when nowhere has it.
      *
      * @param string[] $dirs directories with a trailing slash, in lookup order
+     *
+     * Protected: a public method of a module is an endpoint, because the
+     * dispatcher calls `$module->{$endpoint}()` from outside the object.
      */
-    public static function framePieceFile(string $piece, array $dirs): ?string
+    protected static function framePieceFile(string $piece, array $dirs): ?string
     {
         $dirs[] = __DIR__ . "/skeleton/frontend/frame/";
         foreach($dirs as $dir){
@@ -464,8 +476,14 @@ class Response
      * Auxiliary file loader — no-op at Response level.
      * Module overrides this with real functionality.
      * Exists here so frame templates can call it safely on any Response instance.
+     *
+     * A frame calls it as `$this->getAuxiliary()`. The frame is included from
+     * inside this object, so a protected method is in reach.
+     *
+     * Protected: a public method of a module is an endpoint, because the
+     * dispatcher calls `$module->{$endpoint}()` from outside the object.
      */
-    public function getAuxiliary(string $file){}
+    protected function getAuxiliary(string $file){}
 
     protected function getStylesheets()
     {

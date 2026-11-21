@@ -281,14 +281,14 @@ PHP);
     public function testAPartialNobodyHasIsNull(): void
     {
         $dirs = [$this->tmp . '/none/'];
-        $this->assertNull(\Zero\Core\Response::framePieceFile('_no-such-partial', $dirs));
+        $this->assertNull(\Zero\Tests\Core\Reach::call(\Zero\Core\Response::class, 'framePieceFile', '_no-such-partial', $dirs));
         $this->assertSame(
             self::$core . '/skeleton/frontend/frame/_oauth-brand.php',
-            \Zero\Core\Response::framePieceFile('_oauth-brand', $dirs)
+            \Zero\Tests\Core\Reach::call(\Zero\Core\Response::class, 'framePieceFile', '_oauth-brand', $dirs)
         );
         mkdir($dirs[0], 0777, true);
         file_put_contents($dirs[0] . '_oauth-brand.php', '<?php');
-        $this->assertSame($dirs[0] . '_oauth-brand.php', \Zero\Core\Response::framePieceFile('_oauth-brand', $dirs));
+        $this->assertSame($dirs[0] . '_oauth-brand.php', \Zero\Tests\Core\Reach::call(\Zero\Core\Response::class, 'framePieceFile', '_oauth-brand', $dirs));
     }
 
     public function testASiteStringOverridesCoresDefaultWording(): void

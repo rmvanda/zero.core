@@ -108,27 +108,7 @@ class Application {
         // contributes none.
         //$mp for module path
         //$mf for module folder
-        $mp = self::moduleConfigDir(Request::$Module);
-        if($mp !== null){
-            Strings::loadModule(Request::$Module);
-        }
-        if($mp !== null && file_exists($inifile=$mp."config.ini")){
-            $constants = parse_ini_file($inifile); 
-            foreach($constants as $constant=>$value){
-                self::defineOnce($constant,$value,$inifile) ;    
-            }
-        }
-        if($mp !== null && file_exists($mf=$mp."config/")){
-            $inis = array_diff(scandir($mf),['.','..']); 
-            foreach ($inis as $ini) {
-                $inifile   = $mf.$ini; 
-                $constants = parse_ini_file($inifile, false, INI_SCANNER_RAW); 
-                foreach ($constants as $constant => $value) {
-                    // if we're defining paths, auto-append the ZERO_ROOT
-                    self::defineOnce($constant,$value,$inifile);
-                }
-            }
-        }
+        self::loadModuleConfig(Request::$Module);
         /*
          * Application timezone.
          *
@@ -722,6 +702,40 @@ class Application {
     public static function configValue(string $file, mixed $value): mixed
     {
         return (basename($file) === 'paths.ini' ? ZERO_ROOT : '') . $value;
+    }
+
+    /**
+     * Define a module's own wording and constants: its strings/, its
+     * config.ini and each file of its config/. A module that is off or does
+     * not exist contributes none.
+     *
+     * The live module's are defined at the start of a request. Admin calls
+     * this for the module whose admin offering it routes to, because that
+     * module is not the live one. A constant that exists keeps its value.
+     */
+    public static function loadModuleConfig(string $module): void
+    {
+        $mp = self::moduleConfigDir($module);
+        if($mp !== null){
+            Strings::loadModule($module);
+        }
+        if($mp !== null && file_exists($inifile=$mp."config.ini")){
+            $constants = parse_ini_file($inifile); 
+            foreach($constants as $constant=>$value){
+                self::defineOnce($constant,$value,$inifile) ;    
+            }
+        }
+        if($mp !== null && file_exists($mf=$mp."config/")){
+            $inis = array_diff(scandir($mf),['.','..']); 
+            foreach ($inis as $ini) {
+                $inifile   = $mf.$ini; 
+                $constants = parse_ini_file($inifile, false, INI_SCANNER_RAW); 
+                foreach ($constants as $constant => $value) {
+                    // if we're defining paths, auto-append the ZERO_ROOT
+                    self::defineOnce($constant,$value,$inifile);
+                }
+            }
+        }
     }
 
     /**
