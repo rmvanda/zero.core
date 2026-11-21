@@ -11,31 +11,22 @@ Zero Routing
 Zero Configuration
 Zero Bloat
 
-# What a site installs
+# How to use it
 
-`core/composer.json` lists the Composer packages core uses and does not bring with it:
-`minishlink/web-push` (the Push library) and, suggested, `google/apiclient` (the Auth
-module's Google sign-in). A site requires them in its own `composer.json`. Nothing reads
-`core/composer.json` at runtime; it documents what to install.
+A site is a folder with core at `core/`. [skeleton/README.md](skeleton/README.md) builds one
+from nothing: `zero-init.sh` lays out the folder, [sql/core.sql](sql/README.md) creates the
+tables.
 
-# How to use it.
-
-First, you need to define some constants to let the Core Frame know where it is and what the things you want are.
-`core/skeleton/` has a working example of a whole site laid out this way.
-
-The only required paths are ZERO_ROOT, VIEW_PATH, and MODULE_PATH.
-ZERO_ROOT is the folder that you put the core/ into.
-ROOT_PATH is the parent of ZERO_ROOT; it is where the vendor autoload check looks.
-VIEW_PATH is the path of your global views, such as your head.php, header.php, sideNav.php, and footer.php
-MODULE_PATH is the base path of where your code lives.
-
-Inside of MODULE_PATH, you keep your modules. More on that, later.
-
-Once you have those constants defined, include `Application.php`, instantiate it, and call its
-four methods in order. This site's `app/frontend/www/index.php` is the reference:
+The web root's `index.php` defines four constants, includes `Application.php` and calls four
+methods in order. `skeleton/frontend/www/index.php` is the reference:
 
 ```php
-require ZERO_ROOT."core/Application.php";
+define("ZERO_ROOT", dirname(__DIR__, 3) . "/");     // the folder that holds core/
+define("ROOT_PATH", dirname(ZERO_ROOT) . "/");      // its parent
+define("VIEW_PATH", ZERO_ROOT . "app/frontend/frame/");  // head.php, header.php, sideNav.php, footer.php
+define("MODULE_PATH", ZERO_ROOT . "modules/");      // where your code lives
+
+require ZERO_ROOT . "core/Application.php";
 
 $app = new Zero\Core\Application();
 
@@ -50,196 +41,99 @@ $app->run(
 );
 ```
 
-The constructor takes no arguments — it starts output buffering and nothing else. The methods
-are called externally so it stays obvious what the class does. `registerAutoloaders()` optionally
-takes a string, callable, or array of extra autoloaders; `defineConstants()` optionally takes an
-array of constants to define alongside the `.ini` files.
+The methods are called externally so it stays obvious what the class does:
 
-`Application` does four things:
+1. **Registers autoloaders.** Its own, which maps a `Zero\` namespace to a folder, then any
+   you pass, then Composer's `vendor/autoload.php` (looked for in `ROOT_PATH` and `ZERO_ROOT`).
+   Plugins are loaded at the end of this step.
+2. **Parses the request.** Instantiates `Request`, which gives static access to the parts of
+   `$protocol://$sub.$domain.$tld/$module/$endpoint/$arg1/$arg2/$arg3`.
+3. **Defines constants** from `.ini` files: the site's, then the ones in the folder of the
+   module being called. A module's constants exist before its class is loaded, simply by
+   putting a `.ini` file into the module's folder.
+4. **Runs.** Puts all the above into motion to create a Response that suits the Request.
 
-1. **Registers autoloaders.** You can pass your own function, or an array of functions to be
-   added to the autoload stack. By default, it adds:
-    - its own PSR autoloader, which looks up classes according to ROOT_PATH and namespacing,
-    - [your passed-on-runtime autoloaders then go here]
-    - your vendor/autoloader
-    - an autoloader that throws in the towel and gives a 404 message.
+So for
 
-   Plugins are loaded at the end of this step, once the autoload stack is ready.
+    domain.com/class/method/arg1/arg2/argX/
 
-2. **Parses the request.** Really all this does is instantiate the Request class which gives you
-   static access to information about the request. For example:
+`Application` loads `Class` and calls `$module->method("arg1", "arg2", "argX")`.
 
-   `$protocol://$sub.$domain.$tld/$module/$endpoint/$arg1/$arg2/$arg3`
-
-3. **Defines constants.** This is where some of the "magic" happens, because in addition to
-   loading `.ini` files from a default location, it also looks into MODULE_PATH for configuration
-   files that may correspond with the module that's being called. Thus, if your application class
-   needs some constants defined, they can be defined before your class is even loaded, simply by
-   putting a `.ini` file into your module's folder.
-
-4. **Runs.** Now it puts all the above into motion to create a Response that suits the Request
-   given.
-
-For example:
-
-domain.com/class/method/arg1/arg2/argX/
-
-`Application` will try to load `Class` and execute `method`, splatting the URL segments into it as
-separate arguments — `$module->method("arg1", "arg2", "argX")`. So an endpoint declares named
-parameters matching the URL segments, not a single `$args` array. Extra segments are ignored;
-missing required ones raise `ArgumentCountError`, which `run()` catches and returns as a 400.
-
-Now, for security reasons, it will only load "Class" if it finds it in the MODULE_PATH.
-If the Class it finds also extends `\Zero\Core\Module` — then it will be armed with
+For security reasons, it will only load "Class" if it is a module: a folder in `MODULE_PATH`
+or in `core/modules/`. If the class also extends `\Zero\Core\Module`, it is armed with
 Reasonable Defaults ™ - such as where to load the header & footer from
-and what to do if the `method` called does not exist (throw 404 page, automatically).
+and what to do if the `method` called does not exist (look for a view of that name, then
+throw a 404 page, automatically).
 
-# Overview
+Code that does not run through `index.php` (a command-line script, a cron job, a test)
+includes `core/autoload.php` and loads classes by the same rule.
+
+[docs/ZERO.md](docs/ZERO.md) is the reference for all of this: the request flow, class
+loading, how a module is found and switched off, configuration, wording, assets.
+
+# What a site installs
+
+`composer.json` lists the Composer packages core uses and does not bring with it:
+`minishlink/web-push` (the Push library) and, suggested, `google/apiclient` (the Auth
+module's Google sign-in). A site requires them in its own `composer.json`. Nothing reads
+core's `composer.json` at runtime; it documents what to install.
+
+# What is here
 
 ## The front controller
 
-- **Application.php**
-    The main front controller. It registers autoloaders, instantiates the Request object,
-    defines constants, loads the requested module and executes the requested endpoint, and
-    controls output buffering. It also runs the attribute gates — `checkAttributes()` is public
-    and static so `Module::__call()` and `AdminResponse` can run them for their own levels too.
+| File | What it is |
+|---|---|
+| `Application.php` | The front controller: autoloaders, constants, the ban check, loading the module, running the attribute gates and the endpoint, output buffering. |
+| `autoload.php` | The same class loading for scripts, cron jobs and the test bootstrap. |
+| `Request.php` | The request, parsed once into static properties: module, endpoint, args, protocol, subdomain, whether the caller wants JSON, whether it came from AJAX. Also `clientIp()` and `redirect()`. |
+| `Response.php` | Decides what kind of response to give. Wraps a view in head, header, sideNav and footer and loads the module's css and scripts; answers JSON when the client asks for it; leaves the frame off for AJAX. Finds a view or a standalone page when the method does not exist, and renders error pages. |
+| `Module.php` | Response under the name your code extends. Semantics! Think Modular! *Be* Modular. Also links the module's public assets and resolves submodules. |
+| `AdminResponse.php` | Base class for admin controllers. A Module subclass whose assets are inlined, never web-accessible. See [ADMIN_ARCHITECTURE.md](ADMIN_ARCHITECTURE.md) and [ADMIN_ASSETS.md](ADMIN_ASSETS.md). |
+| `Modules.php`, `ModulesIni.php` | Where a module is and whether it is on; the one writer of `app/modules.ini`. |
+| `Strings.php` | Wording as constants, from `strings/*.ini`. |
+| `exception/` | The exceptions core throws (`Zero\Core\Exception`): `HTTPError`, `StaleFileException`, `FileNotWritableException`. `throw new HTTPError(404, $detail)` anywhere in a request renders the error page in the module's own frame; a JSON client gets `HTTPError::toArray()`. |
+| `attribute/` | The declarative gates: `RequireLogin`, `RequirePermission`, `AllowWithToken`, `AllowedMethods`, `RequiredParams`, `Sanitize`, `Validate`, `RestrictIP`, `AuditLog`, and the shelved `RequireAuthLevel`. See [docs/ATTRIBUTES.md](docs/ATTRIBUTES.md). |
 
-- **Request.php**
-    Holds information about the request: module, endpoint, args, protocol, subdomain, whether
-    the caller wants JSON, whether it came from AJAX. All static. Parsing only — path and
-    response state belong to Response.
+## Data and who may do what
 
-- **Response.php**
-    Determines what type of response to give and how to give it.
-    It automagically wraps an html head, header, and footer, automatically loading extra css or
-    scripts as the module requires. If it cannot do something automagically, it tries to default
-    to something reasonable like displaying an index page, but if it cannot do that, then it
-    displays a 404. Furthermore, based on the context of the Request, it may respond with JSON
-    instead of HTML — or in the case of AJAX, it leaves off the header and the footer.
-    As long as your module extends this class and calls `parent::__construct()` — the magic will happen.
-
-    When the requested method does not exist, `__call` resolves it in this order:
-
-    1. A view file in the requested module's own `view/` folder.
-    2. A public method on the Index module named after the *first* URL segment.
-    3. A view file in `Index/view/` named after that same segment.
-
-    2 and 3 are the "standalone page" case — a URL like `/about` with no module behind
-    it. 2 beats 3 on purpose: if Index has both an `about()` method and an `about.php`
-    view, the method is the page and the view is only its template. Building the
-    template on its own renders it with none of the data the method would have
-    fetched, and the result looks like a page that worked. 1 still beats 2, so a real
-    module's own view is never hijacked by a same-named page in Index.
-
-    Only methods Index itself declares as public are routable this way, and they go
-    through `Application::checkAttributes()` like any other dispatcher. Eligibility is
-    reflection, not `method_exists()` — the latter also matches everything inherited
-    from Module and Response, which would put `/renderError` and `/getAuxiliary` on
-    the web, and PHP's method lookup is case-insensitive so the URL would not even
-    have to match. The method is called with no arguments.
-
-- **Module.php**
-    Just an alias for Response so that code you write can be a "Module" and not a "Response".
-    Semantics! Think Modular! *Be* Modular. It also resolves submodules in `__call()`.
-
-- **AdminResponse.php**
-    Base class for admin controllers. A Module subclass with its own asset handling — admin
-    assets are inlined, never web-accessible. See `ADMIN_ARCHITECTURE.md` and `ADMIN_ASSETS.md`.
-
-- **exception/HTTPError.php** (`Zero\Core\Exception\HTTPError`)
-    Exception class for HTTP errors. `throw new HTTPError(404)` bubbles up to
-    `Application::run()`'s try/catch and renders an error page using the module's
-    existing Response instance — preserving framePath and all resolved paths.
-    Optionally takes a second parameter (detail string) for diagnostic messages. The error page
-    shows it, and a JSON client gets it as `detail`, beside the reason phrase in `message`
-    (`HTTPError::toArray()`).
-
-## Data
-
-- **Database.php**
-    PDO connection management. Its `TrackedStatement` subclass times and records every query,
-    so the DevToolbar can show you what a page actually ran.
-
-- **Model.php**
-    A thin typed row gateway over a real table. Deliberately not an ORM and deliberately not
-    `Zero\Entity` — for models that want a real schema with real constraints.
-
-- **User.php**
-    A site user: the row gateway for `users`, the user's settings and profile store, and what
-    the user may do (`can()`, `grant()`, `groups()`). Nothing in it reads the session.
-
-- **Session.php**
-    Who is making this request: `userId()`, `user()`, `isLoggedIn()`, `can()`. `establish()` is
-    the single writer of the login session and `end()` the single teardown. See
-    `core/modules/Auth/CLAUDE.md` for the session contract.
-
-- **Holder.php**, **HoldsCapabilities.php**
-    A holder is something a permission is granted to. `User` and `Group` are the two holders
-    and share the capability methods in the trait.
-
-- **Group.php**
-    A user group: the row gateway for `user_group` and the group's members. The only code that
-    reads or writes the `user_group` and `user_group_member` tables. Modules ask it for a user's
-    groups; the Admin module's group screens edit groups through it.
-    See `PERMISSIONS.md`.
-
-- **Permission.php**
-    Who may do what. The only code that reads or writes the `permission` table. Per-item
-    sharing: grants go to a group or a user under a `{module}.{entity}` key. Capabilities:
-    the `allow.*` keys that `#[RequirePermission]` gates on and a holder's `can()` reads. See
-    `PERMISSIONS.md`.
-
-## Auth and security
-
-- **lib/Crypto.php** (`Zero\Lib\Crypto`)
-    Authenticated at-rest encryption (AES-256-GCM). Table-agnostic: any column can store
-    `Crypto::encrypt($plain)` and recover it.
-
-- **lib/Net/TrustedProxy.php** (`Zero\Lib\Net\TrustedProxy`)
-    Which peers are entitled to tell us who the real client is. `X-Forwarded-For` and
-    `CF-Connecting-IP` are just request headers — anyone can send them.
-
-- **lib/Net/Cidr.php** (`Zero\Lib\Net\Cidr`)
-    IP address and CIDR range matching.
-
-- **attribute/**
-    The declarative gates: `RequireLogin`, `RequirePermission`, `AllowWithToken`,
-    `AllowedMethods`, `RequiredParams`, `Sanitize`, `Validate`, `RestrictIP`, `AuditLog`,
-    and the shelved `RequireAuthLevel`. See `core/docs/ATTRIBUTES.md`.
+| File | What it is |
+|---|---|
+| `Database.php` | PDO connection management. Its `TrackedStatement` times and records every query when query tracking is switched on, so the DevToolbar can show what a page actually ran. |
+| `Model.php` | A thin typed row gateway over a real table. Deliberately not an ORM and deliberately not `Zero\Entity`: for models that want a real schema with real constraints. |
+| `entity/` | The entity framework (`Zero\Entity`), a git submodule. See [entity/README.md](entity/README.md). |
+| `Session.php` | Who is making this request: `userId()`, `user()`, `isLoggedIn()`, `can()`. `establish()` is the single writer of the login session and `end()` the single teardown. See `modules/Auth/CLAUDE.md` for the session contract. |
+| `access/` | Users, groups and permissions (`Zero\Core\Access`): `User`, `Group`, `Permission`, the `Holder` interface and the `HoldsCapabilities` trait. The only code that reads or writes the `user_group`, `user_group_member` and `permission` tables. See [PERMISSIONS.md](PERMISSIONS.md). |
+| `sql/` | `core.sql`, the schema for an empty database, and older one-off scripts. See [sql/README.md](sql/README.md). |
 
 ## Everything else
 
-- **Console.php**
-    Threshold-based logging. `Console::warn()`, `Console::debug()` and friends via
-    `__callStatic`; messages are also retrievable in-process for the DevToolbar.
-
-- **PluginLoader.php**
-    Discovers and manages plugins. Scans `plugin/` for subdirectories containing a matching
-    `.php` file, and fires hooks such as `afterRun`. See `core/docs/PLUGINS.md`.
-
-- **lib/Http/ExternalRequest.php** (`Zero\Lib\Http\ExternalRequest`)
-    Small curl wrapper for calling third-party APIs. Used by Dictionary and Thingiverse.
-
-- **Error.php**
-    Deprecated. Use `HTTPError`. See `docs/DEPRECATING_CHANGES.md`.
-
-- **deprecated/SQLAdapter.php**
-    Dead code — it extends an `Adapter` class that does not exist in this repo, and nothing
-    references it. It would fatal if it were ever autoloaded.
-
-## Directories
-
 | Path | What it is |
 |---|---|
-| `attribute/` | The declarative gate attributes |
-| `exception/` | The exceptions core throws: `HTTPError`, `StaleFileException`, `FileNotWritableException` |
-| `lib/` | Libraries any site can use (`Zero\Lib\`) |
-| `docs/` | Framework documentation: routing, attributes, plugins, push |
-| `deprecated/` | Classes on their way out. Nothing loads them. |
-| `tests/` | PHPUnit suite for core |
-| `skeleton/` | A minimal working site layout, for standing up a new install |
-| `bin/` | Maintenance scripts (`refresh-cloudflare-ips.php`, `log_monitor.sh`) |
+| `modules/` | The modules every site gets: `Auth`, `User`, `Admin`, `AccessRequest`, `Sitemap`, `Push`, `Entity`, and the examples `Module`, `HelloWorld`, `Test`. `modules/Module/README` is the reference module. |
+| `lib/` | Libraries any site can use (`Zero\Lib`): `Crypto` (AES-256-GCM at-rest encryption), `Net\Cidr` (IP and CIDR matching), `Net\TrustedProxy` (which peers may say who the real client is), `Http` (`Client`, `Response`, `ExternalRequest`), `Mail`, `CloudFlare`, `Push`. |
+| `Console.php` | Threshold-based logging. `Console::warn()`, `Console::debug()` and friends via `__callStatic`; messages are also retrievable in-process for the DevToolbar. |
+| `PluginLoader.php` | Discovers the plugins in the site's `plugin/` folder and fires their hooks. See [docs/PLUGINS.md](docs/PLUGINS.md). |
+| `skeleton/` | The template for a new site, and the defaults core falls back to. See [skeleton/README.md](skeleton/README.md). |
+| `tests/` | PHPUnit suite for core. See [tests/README.md](tests/README.md). |
+| `docs/` | Framework documentation. |
+| `bin/` | Maintenance scripts (`refresh-cloudflare-ips.php`, `log_monitor.sh`). |
+| `deprecated/` | `Error.php` and `SQLAdapter.php`. Nothing loads them. `SQLAdapter` extends an `Adapter` class that does not exist in this repo. |
 | `archive/` | Superseded design notes. History, not documentation. |
+
+# Where to read next
+
+| Doc | For |
+|---|---|
+| [docs/ZERO.md](docs/ZERO.md) | How the framework works: the reference |
+| [modules/Module/README](modules/Module/README) | Writing a module; `mkmod` scaffolds one |
+| [docs/MODULE_PHILOSOPHY.md](docs/MODULE_PHILOSOPHY.md) | What makes a module worth writing |
+| [docs/ATTRIBUTES.md](docs/ATTRIBUTES.md) | The attribute gates |
+| [PERMISSIONS.md](PERMISSIONS.md) | Session, users, groups, capabilities, sharing |
+| [ADMIN_ARCHITECTURE.md](ADMIN_ARCHITECTURE.md), [ADMIN_ASSETS.md](ADMIN_ASSETS.md) | Admin screens |
+| [docs/PLUGINS.md](docs/PLUGINS.md) | Plugins and their hooks |
+| [docs/PUSH_NOTIFICATIONS.md](docs/PUSH_NOTIFICATIONS.md) | Web push |
+| [docs/DEPRECATING_CHANGES.md](docs/DEPRECATING_CHANGES.md) | What was removed or replaced, and what to use instead |
 
 # TODO
 
@@ -247,4 +141,3 @@ and what to do if the `method` called does not exist (throw 404 page, automatica
 - Better access control
 - Subdomain support
 - Delete `deprecated/SQLAdapter.php` or restore the `Adapter` base class it needs
-- Migrate the last `new Error()` call sites off the deprecated class

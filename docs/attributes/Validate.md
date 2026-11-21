@@ -1,112 +1,81 @@
 # Validate
 
-**Namespace:** `\Zero\Core\Attribute\Validate`
+**Class:** `Zero\Core\Attribute\Validate` (`core/attribute/Validate.php`)
 
-**Purpose:** Validate POST/GET parameters before method execution.
+Checks GET/POST parameters against rules before the endpoint runs, and refuses
+the request with a `400` when any fail.
 
-> **STATUS: STUB/PROPOSAL** - This attribute is partially implemented. Basic validators work but not all features are complete. Use with caution in production.
+> **Status: partial.** The class is marked a stub. The rules below work; a rule
+> name it does not know **passes** with a logged warning, so a typo in a rule
+> validates nothing.
 
 ## Usage
 
 ```php
 use Zero\Core\Attribute\Validate;
 
-// Built-in validators
 #[Validate(['email' => 'email'])]
-public function subscribe() {
-    // $_POST['email'] must be valid email format
-}
-
-// Multiple rules
 #[Validate(['password' => ['required', 'length:8,']])]
-public function register() {
-    // password is required and minimum 8 characters
-}
-
-// Value must be in list
 #[Validate(['status' => 'in:active,pending,closed'])]
-public function updateStatus() {
-    // status must be one of the listed values
-}
-
-// Regex pattern
 #[Validate(['slug' => '/^[a-z0-9-]+$/'])]
-public function lookup() {
-    // slug must match regex pattern
-}
+
+#[AllowedMethods('POST')]
+#[RequiredParams(['email', 'password'])]
+#[Sanitize(['email' => FILTER_SANITIZE_EMAIL])]
+#[Validate(['email' => 'email', 'password' => 'length:8,'])]
+public function register() {}
 ```
+
+Declare it last, so it judges the sanitized value; see
+[../ATTRIBUTES.md](../ATTRIBUTES.md#order).
 
 ## Parameters
 
-- `$rules` (array) - Validation rules per parameter
-  - `['field' => 'rule']` - Single rule
-  - `['field' => ['rule1', 'rule2']]` - Multiple rules
+- `$rules` (array): `['field' => 'rule']` or `['field' => ['rule1', 'rule2']]`.
 
-## Built-in Validators
+## Behaviour
 
-### Currently Implemented
+The value is `$_POST[field]`, else `$_GET[field]`. Every rule of every field is
+checked and all failures are reported together.
 
-| Validator | Description |
-|-----------|-------------|
-| `required` | Value must not be empty |
-| `email` | Valid email format |
-| `url` | Valid URL format |
-| `int` | Valid integer |
-| `float` | Valid float/decimal |
-| `bool` | Boolean value |
-| `in:a,b,c` | Value must be in comma-separated list |
-| `length:min,max` | String length between min and max |
-| `range:min,max` | Numeric value between min and max |
-| `/regex/` | Must match regex pattern |
+A value that is absent or `''` fails `required` and **passes every other rule**:
+a rule constrains a value only when one is sent. Add `required` to insist on it.
 
-### Proposed (Not Yet Implemented)
+## Rules
 
-| Validator | Description |
-|-----------|-------------|
-| `alpha` | Letters only |
-| `alphanumeric` | Letters and numbers only |
-| `date` | Valid date format |
-| `datetime` | Valid datetime format |
-| `json` | Valid JSON string |
-| `matches:field` | Must match another field |
+| Rule | Passes when | Failure message |
+|------|-------------|-----------------|
+| `required` | The value is not absent and not `''` (`'0'` passes) | `{field} is required` |
+| `email` | `FILTER_VALIDATE_EMAIL` accepts it | `{field} must be a valid email` |
+| `url` | `FILTER_VALIDATE_URL` accepts it | `{field} must be a valid url` |
+| `int` | `FILTER_VALIDATE_INT` accepts it | `{field} must be a valid int` |
+| `float` | `FILTER_VALIDATE_FLOAT` accepts it | `{field} must be a valid float` |
+| `bool` | The value is a **true** boolean: `1`, `true`, `on`, `yes`. `0`, `false`, `off` and `no` fail, as any non-boolean does. | `{field} must be a valid bool` |
+| `in:a,b,c` | The value is one of the comma-separated items | `{field} must be one of: a,b,c` |
+| `length:min,max` | `strlen()` (bytes) is within the bounds. Omit `max` for no upper bound (`length:8,`); an omitted `min` is 0 (`length:,255`). | `{field} must be at least {min} characters` / `at most {max} characters` |
+| `range:min,max` | The value, cast to float, is within the bounds. Either bound may be omitted. A non-numeric value counts as 0. | `{field} must be at least {min}` / `at most {max}` |
+| `/regex/` | `preg_match()` matches. Delimiters: `/ # ~ @ ! %`, with optional flags. | `{field} format is invalid` |
 
-## Error Response
+Not implemented: `alpha`, `alphanumeric`. Like any unknown rule they pass, and
+log at warn `Validate: Unknown rule 'alpha' for 'name'` (or
+`Validate: Unknown parameterized rule '…'` for an unknown `name:args` rule).
 
-- HTTP 400 Bad Request
-- Message: "Validation failed: email must be a valid email; password must be at least 8 characters"
+## Refusal
 
-## Design Considerations (Open Questions)
+`HTTPError(400)` with every failure, joined by `; `:
 
-1. **Error handling**: Should it throw `Error(400)` or return messages for the application to handle?
-2. **Custom validators**: Should we support callback functions?
-3. **Conditional validation**: How to validate X only if Y is present?
-4. **Custom error messages**: Should validators support custom messages?
-5. **Chainable syntax**: Should we support `'required|email|length:,255'` format?
-
-## When to Use
-
-- Form submission validation
-- API input validation
-- Reducing boilerplate validation code
-- Use AFTER `Sanitize` attribute
-
-## Recommended Order
-
-```php
-#[AllowedMethods('POST')]
-#[RequiredParams(['email', 'password'])]
-#[Sanitize(['email', 'password'])]
-#[Validate(['email' => 'email', 'password' => 'length:8,'])]
-public function register() {
-    // 1. Only POST allowed
-    // 2. Both params must exist
-    // 3. Both params sanitized
-    // 4. Both params validated
-}
+```
+Validation failed: email must be a valid email; password must be at least 8 characters
 ```
 
-## Implementation
+The same line is logged at warn.
 
-Location: `core/attribute/Validate.php`
+## Open questions
 
-**Note:** This is a stub implementation. Full implementation pending based on actual usage patterns and requirements.
+Undecided in the class, and the reason it is still a stub:
+
+1. Custom validator callbacks.
+2. Conditional rules (validate X only if Y is present).
+3. Per-field error messages.
+4. A chained syntax (`'required|email|length:,255'`).
+5. More rules: `alpha`, `alphanumeric`, `date`, `datetime`, `json`, `matches:field`.

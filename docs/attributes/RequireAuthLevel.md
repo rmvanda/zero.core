@@ -1,90 +1,71 @@
 # RequireAuthLevel
 
-**Namespace:** `\Zero\Core\Attribute\RequireAuthLevel`
+**Class:** `Zero\Core\Attribute\RequireAuthLevel` (`core/attribute/RequireAuthLevel.php`)
 
-**Status: SHELVED (2026-08-16). Do not reach for this on new endpoints — use
-`#[RequirePermission]`.** It still works and the existing call sites are staying;
-what follows records why it is not the gate to pick, so the decision does not have
-to be re-derived.
+**Status: SHELVED (2026-08-16). Do not use it on new endpoints; use
+[`#[RequirePermission]`](RequirePermission.md).** It works and its existing
+call sites stay. This page records why it is not the gate to pick.
 
-**Purpose:** Require a minimum blanket authentication level to access an endpoint.
+Requires the user's `auth.level` setting to be at least a given number.
 
 ## Why it is shelved
 
-`RequireAuthLevel` was designed as the coarse-grained alternative to
-`RequirePermission`: one numeric tier per user instead of a set of named grants.
-That alternative has never earned its keep.
+**1. There is only one tier.** The attribute exists to express numeric tiers,
+and every declaration asks for level `1`. On this install one user holds an
+`auth.level` row. In practice it means "is this user special", which
+`allow.admin` answers more precisely.
 
-**1. There is only ever one tier.** Across the whole install, `user_settings`
-holds exactly one `auth.level` row — user 1, value `1`. Every `#[RequireAuthLevel]`
-in the codebase asks for level `1`. The tiering the attribute exists to express has
-no second rung, so in practice it degrades to "is this user special", which
-`allow.admin` already answers more precisely.
+**2. Beside `#[RequirePermission]` it vetoes grants.** `auth.level` is a
+setting in `user_settings`, separate from the `allow.*` capabilities, so a user
+can hold `allow.admin` and still be refused by `RequireAuthLevel(1)` for want
+of an `auth.level` row. Granting a permission is supposed to grant access.
+**Never pair the two attributes.** The gates that sat beside a
+`#[RequirePermission]`, and what they locked out, are listed in
+[../DEPRECATING_CHANGES.md](../DEPRECATING_CHANGES.md) under
+"`#[RequireAuthLevel]` — SHELVED".
 
-**2. Beside `#[RequirePermission]`, it does the wrong job.** It is not redundant
-with the permission check — it silently vetoes permission grants. `auth.level` is
-a setting in `user_settings`, separate from the `allow.*` grants, so a user can hold
-`allow.admin` and still be refused by `RequireAuthLevel(1)` for want of an
-`auth.level` row. That was live: user 9 held both `allow.admin` and
-`network.mapper` yet was locked out of Admin, System, Postgres, Bingo and
-`NetworkMap::save()`/`load()`, because only user 1 has ever had an `auth.level`.
+**3. It is the only auth gate that does not require a verified account.**
+`RequirePermission::handler()` opens with `(new RequireLogin())->handler()`.
+`RequireAuthLevel::handler()` does not: it reads `auth.level` and never
+`verified`. A session for an unverified account, which `#[AllowWithToken]` can
+establish, passes `RequireAuthLevel` and fails the other two. No endpoint
+declares both `#[AllowWithToken]` and `#[RequireAuthLevel]`, so nothing is
+exposed, but it is the reason not to add new bare uses.
 
-Granting a permission is supposed to grant access. A second, invisible tier that
-overrides it is a footgun. **Never pair the two attributes.**
+**4. It does not redirect.** An anonymous visitor gets a bare `401`, not the
+login page.
 
-**3. It is the only auth gate that does not enforce a verified email.**
-`RequirePermission::handler()` opens by delegating:
-
-```php
-// core/attribute/RequirePermission.php — handler() opens with this
-(new RequireLogin())->handler();
-```
-
-so login *and* verified-email are enforced for free, from a single source of
-truth. `RequireAuthLevel::handler()` does not delegate. It checks
-`session_status()`, then `Session::user()?->authLevel()` — and `authLevel()` reads
-`user_settings['auth.level']`, never `users.verified`. A session established for an
-unverified account (which `#[AllowWithToken]` can produce — see
-`core/attribute/AUTH_GATE_CONSISTENCY.md`) therefore passes `RequireAuthLevel`
-while failing `RequireLogin` and `RequirePermission`.
-
-That gap is **latent, not live**: none of the four remaining call sites carries
-`#[AllowWithToken]`, and no module anywhere pairs the two attributes. But it is
-the reason not to add new bare uses.
+Background: `core/attribute/AUTH_GATE_CONSISTENCY.md` § "The third gate".
 
 ### The condition for un-shelving
 
-A genuine need for **blanket** privilege tiers that are not expressible as named
-`allow.*` grants — i.e. more than one populated `auth.level`, and a meaningful
-ordering between them where "level 5 implies everything level 3 can do". Until
-then, granular permissions are both narrower and better enforced.
+A real need for **blanket** privilege tiers that named `allow.*` capabilities
+cannot express: more than one populated `auth.level`, and an ordering between
+them where level 5 implies everything level 3 can do.
 
-If it is un-shelved, fix the delegation first: make `handler()` open with
-`(new RequireLogin())->handler();` exactly as `RequirePermission` does, so all
-three auth gates share one definition of "logged in".
+If it is un-shelved, first make `handler()` open with
+`(new RequireLogin())->handler();` as `RequirePermission` does, so all three
+auth gates share one definition of "logged in".
 
-## Current usage
+## Where it is declared
 
-Four modules declare it, and in each one it is a **bare** gate with no
-`#[RequirePermission]` behind it — removing it would leave the endpoint open:
+In each of these it has no `#[RequirePermission]` behind it, so removing it
+would open the endpoint:
 
 | Module | Scope | Notes |
 |---|---|---|
-| `User` | `permissions()`, `permission()` | paired with `#[RequireLogin]`; the admin-only half of the permission editor |
-| `Test` | class-level + `auth()` | dev/diagnostic module |
-| `Sitemap` | class-level | the sole gate |
-| `HelloWorld` | `secureHello()` | demo endpoint, exists to show the attribute |
+| `User` (core) | `permissions()`, `permission()` | after `#[RequireLogin]` |
+| `Test` (core) | class level, and `auth()` | dev/diagnostic module |
+| `Sitemap` (core) | class level | the sole gate |
+| `HelloWorld` (core) | `secureHello()` | demo endpoint |
+| `Sandbox` (site) | class level | the site's scratch endpoints |
 
-`User` is the only one holding a real access decision. It wants a named `allow.*`
-grant instead — that is the migration this attribute is waiting on, not a rewrite.
+`User` holds the one real access decision. It wants a named `allow.*`
+capability instead.
 
-The gates that once sat *beside* a `#[RequirePermission]` are listed in
-`DEPRECATING_CHANGES.md`, along with why they had to go.
-
-**Dead imports** (`use` with no corresponding attribute): `Sqrlcam.php:5`,
-`ApiConfig/Admin/ApiConfigAdmin.php`, and
-`Plugins/Admin/PluginsAdmin.php` (whose `//#[RequireAuthLevel(9)]` at :16
-is commented out). All three classes already carry `#[RequirePermission]`.
+Three site classes import the attribute without declaring it, and carry
+`#[RequirePermission]`: `Sqrlcam`, `ApiConfig\Admin\ApiConfigAdmin` and
+`Plugins\Admin\PluginsAdmin`.
 
 ## Usage
 
@@ -92,62 +73,30 @@ is commented out). All three classes already carry `#[RequirePermission]`.
 use Zero\Core\Attribute\RequireAuthLevel;
 
 #[RequireAuthLevel(1)]
-public function dashboard() {
-    // auth.level >= 1 required
-}
-
-// Class-level — gates every endpoint
-#[RequireAuthLevel(1)]
-class AdminPanel extends Module { }
+public function dashboard() {}     // auth.level >= 1
 ```
 
 ## Parameters
 
-- `$level` (int, default `9`) - Minimum required auth level
+- `$level` (int, default `9`): the minimum `auth.level`. Higher is more
+  privileged.
 
-## Authentication Check
+## The check
 
-`RequireAuthLevel::handler()`, in order:
+1. No active session (`session_status() == PHP_SESSION_NONE`): deny, before
+   any lookup.
+2. `Session::user()?->authLevel() ?? 0`. `User::authLevel()` is the
+   `auth.level` key of `user_settings`, read from the database and memoized per
+   request. It is not a session value, so a changed level takes effect on the
+   user's next request.
+3. Deny when the level is `0` or below `$level`.
 
-1. `session_status() == PHP_SESSION_NONE` → deny. Checked **first**, before
-   touching `Session::user()`, because `authLevel()` is a database-backed call and
-   there is no sense paying for it just to be denied a line later.
-2. `$userLevel = \Zero\Core\Session::user()?->authLevel() ?? 0` — reads
-   `user_settings` where `setting_key = 'auth.level'`, memoized per instance.
-   **Not** a session value: a revoked or raised level takes effect on the very
-   next request rather than waiting for logout.
-3. Deny when `!$userLevel || $userLevel < $this->level`.
-
-It does **not** check `users.verified`. See "Why it is shelved" above.
-
-## Error Response
-
-Throws `HTTPError(401, "Authentication required")`, which bubbles to
-`Application::run()` and renders through the live module. It does not return an
-`Error` object, and it does not redirect — an anonymous visitor hitting a
-`RequireAuthLevel`-only endpoint gets a bare 401 rather than the login page.
-That asymmetry with `RequireLogin` is another reason to prefer the other gates.
-
-## Debug Output
+A denial throws `HTTPError(401, "Authentication required")` for every caller,
+and logs at warn:
 
 ```
-RequireAuthLevel attribute blocked request: required level 5, user level 3
+RequireAuthLevel attribute blocked request: required level 5, user level: 3
 RequireAuthLevel attribute blocked request: required level 5, user level: none
 ```
 
-## Notes
-
-- Higher numbers = higher privileges. Default is `9` when the level is omitted.
-- Levels live in `user_settings` under the key `auth.level`, **not** in `$_SESSION`.
-  `User::authLevel()` reads through to the database and memoizes per instance, so a
-  change takes effect on the user's next request.
-
-## Implementation
-
-Location: `core/attribute/RequireAuthLevel.php`
-
-## See also
-
-- [RequirePermission](RequirePermission.md) — the gate to use instead
-- [RequireLogin](RequireLogin.md) — the single definition of "logged in"
-- `core/attribute/AUTH_GATE_CONSISTENCY.md` — why the gates were unified
+Tests: `core/tests/Attribute/RequireAuthLevelTest.php`

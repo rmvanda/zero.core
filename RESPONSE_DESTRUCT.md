@@ -1,156 +1,129 @@
 # `Response::__destruct()` — why module-level tests are hard to write
 
-**Found:** 2026-08-16, while trying to give `modules/TheButton/TheButton.php`'s repaired
-user-lookup call sites a behavioural test during sub-project B.
-**Status:** Open. Documented, not fixed. Nothing in production is broken by this — it bites
-tests only.
-**Files:** `core/Response.php:15,24-28,51-67,206-232,233-247`
+**Status:** Open. Documented, not fixed. Nothing in production is broken by this; it affects
+tests only. Found 2026-08-16, checked against the code 2026-11-21.
+**Code:** `core/Response.php` — `__construct()`, `defineBasePaths()`, `__destruct()`,
+`build()`, `add()`, `framePiecePath()`, `export()`, and the static `$built`.
 
 ## Summary
 
-`Zero\Core\Response` cannot be instantiated outside a real web request. Its **constructor**
-fatals on constants that only the web entry point defines, and its **destructor** renders a
-complete HTML page as a side effect. Both make `Response` and `Module` subclasses effectively
-untestable without deliberate work.
-
-This is why the invite-email fix in `modules/TheButton/TheButton.php` (`:920`, `:932`) shipped
-with code review but no behavioural test.
+A `Zero\Core\Response` or `Module` subclass cannot be created and dropped in a test without
+preparation. The **constructor** needs a constant only the web entry point defines, and the
+**destructor** renders a complete HTML page.
 
 ## The two failures
 
-### 1. The constructor needs constants the test bootstrap never defines
+### 1. The constructor needs `ZERO_ROOT`
 
-`__construct()` calls `defineBasePaths()` (`Response.php:51`), which reads `MODULE_PATH` at
-`:54` and `ZERO_ROOT` at `:67`. Those constants — along with `ROOT_PATH` and `VIEW_PATH` — are
-defined in exactly one place:
-
-```php
-// app/frontend/www/index.php
-define("ZERO_ROOT",   dirname(__DIR__, 3) . "/");
-define("ROOT_PATH",   dirname(ZERO_ROOT) . "/");
-define("VIEW_PATH",   ZERO_ROOT . "app/frontend/frame/");
-define("MODULE_PATH", ZERO_ROOT . "modules/");
-```
-
-PHPUnit boots through `core/tests/bootstrap.php`, which never loads that file. So:
+`__construct()` calls `defineBasePaths()`, which falls back to
+`ZERO_ROOT."app/frontend/{frame,view,component,model}/"` for any folder the module does not
+have. `ZERO_ROOT`, `ROOT_PATH`, `VIEW_PATH` and `MODULE_PATH` are defined by the site's
+`app/frontend/www/index.php` (template: `core/skeleton/frontend/www/index.php`).
+`core/tests/bootstrap.php` defines none of them.
 
 ```
 $ php -r 'require "core/tests/bootstrap.php";
           class Probe extends \Zero\Core\Response {}
           new Probe();'
-
-Error: Undefined constant "Zero\Core\MODULE_PATH"
+Error: Undefined constant "Zero\Core\ZERO_ROOT"
 ```
 
-Note the namespaced name in the message: PHP resolves an unqualified constant against the
-current namespace before falling back to the global one, so the error says
-`Zero\Core\MODULE_PATH` even though the constant is written as `MODULE_PATH`. That misleads —
-it reads like a missing namespaced constant rather than a missing global one.
+The message names `Zero\Core\ZERO_ROOT` because PHP resolves an unqualified constant against
+the current namespace first. The missing constant is the global `ZERO_ROOT`.
 
-**Verified 2026-08-16.**
+Tests that need it define it themselves (`if (!defined('ZERO_ROOT')) define(…)` in
+`ModuleRoutingTest` and `SkeletonFallbackTest`; unconditionally in `RenderErrorTest`). A
+constant cannot be undefined again, so whichever test runs first sets it for the process.
 
 ### 2. The destructor renders a page
 
 ```php
-// Response.php:24-28
 public function __destruct(){
     if(!static::$built){
-        $this->build($this->body);
+        $this->build($this->body ?? "");
     }
 }
 ```
 
-`build()` (`:206`) adds `head`, `header`, `sideNav` and `footer`, each through `add()` (`:233`),
-which resolves a path from three candidates in order:
+`build()` adds `head`, `header`, `sideNav` and `footer` through `add()`, which asks
+`framePiecePath()` for each file. So an object that merely goes out of scope includes frame
+files and writes a full HTML document.
 
-```php
-// Response.php:239-241
-if(file_exists($path = $this->framePath.$piece.".php")
-|| file_exists($path = $this->viewPath .$piece.".php")
-|| file_exists($path = VIEW_PATH.$piece.".php")
-```
+In a test there are two outcomes, both bad:
 
-So an object that merely goes out of scope **includes view files and emits a full HTML
-document**. With the four constants defined, the probe above destructs without error but writes
-`<!DOCTYPE html>…` to stdout. In a test run that is stray output at best; if `VIEW_PATH` is
-undefined and the first two candidates miss, it is a fatal raised from inside `__destruct()` —
-which surfaces at object-destruction or shutdown time, so it gets attributed to whatever
-happens to be running, not to the test that created the object.
-
-**Verified 2026-08-16:** with the constants defined, destruction is clean and emits a page;
-without them, construction fails first and destruction is never reached.
+- `VIEW_PATH` undefined: `framePiecePath()` passes the bare constant, so destruction is a
+  fatal `Undefined constant "Zero\Core\VIEW_PATH"`. It is raised from inside `__destruct()`,
+  at object destruction or shutdown, so it is attributed to whatever is running then, not to
+  the test that created the object.
+- `VIEW_PATH` defined: the site's `head.php` is included, writes `<!DOCTYPE html>…` to
+  stdout, then fatals on the next constant it needs (`WEB_ROOT`, in `getStylesheets()`).
 
 ## The `static::$built` trap
 
-```php
-// Response.php:15
-protected static $built = false;
-```
+`protected static $built` is declared once on `Response` and never redeclared, so
+`static::$built` is one slot shared by every `Response` and `Module` subclass in the process.
+`build()` and `export()` set it to `true`; nothing sets it back.
 
-It is **static and never redeclared in any subclass**, so `static::$built` resolves to one slot
-shared by every `Response` and `Module` subclass in the process.
+## Workarounds in use
 
-The workaround currently used by `modules/TheButton/tests/TheButtonUserLookupTest.php` is to
-flip it to `true` by reflection in `setUp()`, so `__destruct()` early-returns. That works, but:
+| Workaround | Used by | Cost |
+|---|---|---|
+| Subclass that overrides `__destruct() {}` (and often `__construct() {}`) | `core/tests/ModuleRoutingTest.php`, `core/tests/AdoptFrameTest.php` | None beyond the subclass. Only possible when the test controls the class. **Prefer this.** |
+| `Request::$acceptsJSON = true` | `core/tests/RenderErrorTest.php`, the site's `modules/Plog/tests/PlogControllerTest.php` | `build()` returns before setting `$built`, so the shared flag is untouched. Global static on `Request`; must be reset. |
+| Set `Response::$built = true` by reflection | the site's `modules/TheButton/tests/TheButtonUserLookupTest.php`, `modules/Paste/tests/PasteRejectionTest.php`, `modules/Plog/tests/PlogControllerTest.php` | One-way and process-global: any later test that expects `build()` to run from `__destruct()` silently does not get it. Restoring it in `tearDown()` does not work — on a failing run the object is destroyed after the restore and the destructor fatals. |
 
-- It is **one-way**. Restoring it in `tearDown()` was tried and abandoned: on a failing run the
-  object is destroyed after the restore, and the destructor then fatals.
-- It is **process-global for the rest of the run**. Any later test that instantiates a
-  `Response`/`Module` subclass and expects `build()` to fire from `__destruct()` will silently
-  not get it.
+`Request::$madeWithAJAX = true` also stops output (`add()` returns for each piece), but
+`build()` still sets `$built`, so it has the same one-way cost as the reflection approach.
 
-That is safe *today* only because no other test in the suite instantiates one — verified by
-grepping `core/tests`, `modules/*/tests` and `aux/*/tests` on 2026-08-16. It is a landmine for
-the next person, not a pattern to copy.
+The reflection workaround is needed when the test instantiates a real module class. Three
+test files now depend on it, so the order tests run in already decides whether a real
+`build()` can happen. Do not add a fourth without fixing the cause.
 
-## Less destructive seams that already exist
+## Suggested fixes, in order of value
 
-Two early-returns are reachable without touching `$built`:
-
-- **`Request::$acceptsJSON`** — `build()` returns at `:208` *before* setting `$built = true`
-  (`:211`), so this leaves the shared flag untouched. This is the cleanest existing seam.
-- **`Request::$madeWithAJAX`** — `add()` returns at `:234` for each piece, so nothing is
-  included. `build()` still sets `$built = true`, so this one is also one-way.
-
-Both are still global static mutation, just on `Request` rather than `Response`.
-
-## Suggested fixes, roughly in order of value
-
-1. **Guard the constant.** `add()`'s third candidate should be
-   `defined('VIEW_PATH') && file_exists($path = VIEW_PATH.$piece.".php")`. A missing constant in
-   the last branch of a fallback chain should not be fatal. One line, no behaviour change when
-   the constant is present.
-2. **Don't render from a destructor.** `__destruct()` calling `build()` means page assembly is
-   triggered by garbage collection, which is why object lifetime and HTTP output are entangled
-   here at all. Making `build()` explicit at the end of the request — `Application::run()`
-   already owns that boundary — would remove the whole class of problem. Larger change; worth
-   scoping separately.
-3. **Define the four constants in `core/tests/bootstrap.php`.** Makes construction possible, but
-   does *not* address the page-rendering side effect, and hardcodes paths into the test
-   bootstrap. Treat as a stopgap, not a fix.
-4. **Give `Mail::` a test seam.** Unrelated to the destructor, but it is the other half of why
-   `sendInviteEmail()` is undrivable: it ends in a static `Mail::sendEmailTo()` with no
-   injection point, so exercising it sends real email. Closing 1 and 4 together would make the
-   two uncovered `TheButton` fixes testable.
+1. **Don't render from a destructor.** `__destruct()` calling `build()` ties page assembly to
+   garbage collection. `Application::run()` owns the end of the request and can call
+   `build()` explicitly. Larger change, but it removes the whole problem and every workaround
+   above. Watch out: `Application::run()` is not the only place a `Response` is created
+   (`Module::__call()` for submodules, `AdminResponse::routeToModuleAdmin()`,
+   `Response::__call()` for Index pages), and endpoints that set `$this->body` and return
+   rely on the destructor today.
+2. **Guard `VIEW_PATH` in `framePiecePath()`**: pass it only when `defined('VIEW_PATH')`. A
+   missing constant in a fallback list should not be fatal; `framePieceFile()` already falls
+   back to `core/skeleton/frontend/frame/`. One line, no change when the constant is defined.
+   On its own this turns the fatal into a rendered skeleton page on stdout, so it helps only
+   together with 1 or a workaround.
+3. **Define `ZERO_ROOT` in `core/tests/bootstrap.php`.** It already computes the same root
+   for the autoloader, and three tests define the constant by hand. Makes construction
+   possible everywhere; does nothing about the destructor. Watch out:
+   `core/tests/EntityLocationTest.php` has cases that need `ZERO_ROOT` undefined or set to
+   another value, so check how it isolates them before defining it globally.
+4. **Reset `$built` per request or make it an instance property.** Removes the trap for
+   tests; needs a check of every place that relies on one response per process.
 
 ## Reproduction
 
 ```bash
 cd /var/www/html/unisolu.com/zero
 
-# Constructor failure — the state a test actually runs in:
+# 1. Constructor failure — the state a test starts in:
 php -r 'require "core/tests/bootstrap.php";
         class Probe extends \Zero\Core\Response {}
         new Probe();'
-# → Error: Undefined constant "Zero\Core\MODULE_PATH"
+# → Error: Undefined constant "Zero\Core\ZERO_ROOT"
 
-# With constants defined — destructs cleanly, but emits a page:
+# 2. ZERO_ROOT defined — constructs, then fatals in the destructor:
 php -r 'define("ZERO_ROOT","/var/www/html/unisolu.com/zero/");
-        define("ROOT_PATH","/var/www/html/");
-        define("VIEW_PATH", ZERO_ROOT."app/frontend/frame/");
-        define("MODULE_PATH", ZERO_ROOT."modules/");
         require "core/tests/bootstrap.php";
         class Probe extends \Zero\Core\Response {}
         $p = new Probe(); unset($p);'
-# → <!DOCTYPE html> … a full page on stdout
+# → Fatal error: Undefined constant "Zero\Core\VIEW_PATH" (Response::framePiecePath)
+
+# 3. VIEW_PATH defined too — the destructor starts writing a page:
+php -r 'define("ZERO_ROOT","/var/www/html/unisolu.com/zero/");
+        define("VIEW_PATH", ZERO_ROOT."app/frontend/frame/");
+        require "core/tests/bootstrap.php";
+        class Probe extends \Zero\Core\Response {}
+        $p = new Probe(); unset($p);'
+# → <!DOCTYPE html> … on stdout, then Undefined constant "Zero\Core\WEB_ROOT"
 ```

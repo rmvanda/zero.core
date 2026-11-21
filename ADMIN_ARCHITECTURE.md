@@ -1,21 +1,23 @@
 # Admin Architecture
 
-Pluggable admin system for the Zero Framework.
+The Admin module (`core/modules/Admin/`) is the `/admin` hub: users, groups, modules, firewall.
+Every other admin screen belongs to the module it administers, which offers it from its own
+`Admin/` folder. Admin lists the offerings it finds and routes `/admin/{module}/...` to them.
 
-- **Auto-Discovery**: Modules with an `{Module}Admin` class in `Admin/` appear on the admin dashboard when the module is switched on in `app/modules.ini` (or on by default) and the user holds the card's `permissions`
-- **Secure by Default**: `allow.admin` permission enforced at base class + framework layers
-- **Inline Assets**: Admin CSS/JS served inline; never exposed as public URLs (see `ADMIN_ASSETS.md`)
-- **Flexible Routing**: Clean URLs with automatic controller routing
+- A module never depends on the Admin module. A site without Admin loses the screens and nothing
+  else.
+- Every admin controller extends `AdminResponse`, which requires `allow.admin`.
+- Admin CSS and JS are inlined, never served by URL. See `core/ADMIN_ASSETS.md`.
+- Sessions, users, groups and capabilities (`allow.*`) are core's. See `core/PERMISSIONS.md`.
 
 ---
 
-## Module Admin Controller vs Admin Submodule
+## Where an admin screen lives
 
-> **A feature's admin screen lives in its own module's `Admin/` directory as a Module Admin Controller, whether or not the module has a public controller.**
+> **A feature's admin screen lives in its own module's `Admin/` directory as a module admin
+> controller, whether or not the module has a public controller.**
 >
 > **Admin's `submodule/` directory is for Admin's own screens (Firewall).**
-
-This keeps domain logic co-located with its module and prevents the Admin module from becoming a dumping ground for unrelated controllers.
 
 | Feature | Location |
 |---------|----------|
@@ -25,26 +27,14 @@ This keeps domain logic co-located with its module and prevents the Admin module
 | AWS billing | `modules/Billing/Admin/BillingAdmin.php` |
 | Plugin manager | `modules/Plugins/Admin/PluginsAdmin.php` |
 | API key config | `modules/ApiConfig/Admin/ApiConfigAdmin.php` |
-| Entity types, records, event log | `core/modules/Entity/Admin/EntityAdmin.php` |
 | WebSocket monitor | `modules/Ws/Admin/WsAdmin.php` |
+| Entity types, records, event log | `core/modules/Entity/Admin/EntityAdmin.php` |
 | Push notifications | `core/modules/Push/Admin/PushAdmin.php` |
 | Firewall rules | `core/modules/Admin/submodule/Firewall/` (Admin's own screen) |
 
-### What makes an offering
-
-A module is an admin offering when the class `Zero\Module\{Module}\Admin\{Module}Admin` exists. This is the class `Admin::__call` routes to, and it is what `getAdminModules()` checks: an `Admin/` folder without the class (for example one holding only `view/`) is not listed on the dashboard.
-
-### Cards respect permissions
-
-`getAdminModules()` lists a card only when `Modules::enabled()` is true for the module and the logged-in user holds every key in the `permissions` array of the offering's `admin-config.php` (default `['allow.admin']`), checked with `Session::can()`. `permissions` lists the same keys that gate the offering class.
-
-### Routable methods
-
-`routeToModuleAdmin()` routes only to a public, non-static method that is not a constructor or magic method and is declared outside the `Zero\Core\` namespace. Protected helpers and methods inherited from the framework (`loadConfig`, `loadInlineAsset`, ...) answer `HTTPError(404, 'Admin method not found: ...')` before the controller is constructed.
-
 **Namespaces:**
-- Admin submodules: `Zero\Module\Admin` (routed via `Module::__call` fallthrough)
-- Module Admin controllers: `Zero\Module\{Module}\Admin` (routed via `Admin::__call` class-existence check)
+- Module admin controllers: `Zero\Module\{Module}\Admin\{Module}Admin`, reached through `Admin::__call`
+- Admin submodules: `Zero\Module\Admin\{Name}`, reached when `Admin::__call` falls through to `Module::__call`
 
 ---
 
@@ -52,53 +42,51 @@ A module is an admin offering when the class `Zero\Module\{Module}\Admin\{Module
 
 ### `AdminResponse` (`core/AdminResponse.php`)
 
-Base class for all admin controllers. Extends `Module`.
+Abstract base class of every admin controller. Extends `Module`.
 
 | Method | Purpose |
 |--------|---------|
-| `__construct()` | Enforces `allow.admin`; removes any auto-created public symlink so admin assets are never web-accessible |
-| `getStylesheets()` / `getScripts()` | Override — inline admin assets using the framework's filename-matching convention |
-| `getAdminModules()` | Discover the offerings (modules with an `{Module}Admin` class) the user may see |
-| `loadInlineAsset($module, $type, $filename)` | Include a single asset file inline |
-| `loadAdminStyles($module)` / `loadAdminScripts($module)` | Include all CSS/JS for a module inline (manual usage in views) |
-| `setBreadcrumbs(array $crumbs)` | Prepend "Admin" and set navigation |
-| `routeToModuleAdmin($module, $method, $params)` | Route to a module's admin controller |
+| `__construct()` | Requires `allow.admin`; removes the public asset link `Module::__construct()` made |
+| `getStylesheets()` / `getScripts()` | Inline the page's admin assets (see `core/ADMIN_ASSETS.md`) |
+| `loadInlineAsset()`, `loadAdminStyles()`, `loadAdminScripts()` | Inline assets from a view (see `core/ADMIN_ASSETS.md`) |
+| `getAdminModules()` | The offerings the user may see |
+| `setBreadcrumbs(array $crumbs)` | Sets `$this->breadcrumbs` to an "Admin" crumb (`/admin`) followed by `$crumbs`, each `['label' => ..., 'url' => ...]` |
+| `routeToModuleAdmin($module, $method, $params)` | Call an offering's endpoint |
 
-### `Admin` Module (`core/modules/Admin/Admin.php`)
+### `Admin` (`core/modules/Admin/Admin.php`)
 
-Main admin hub. Extends `AdminResponse`. Handles user and group management, and routes `/admin/{module}/*` to module admin controllers via `__call`.
+`Zero\Module\Admin`, `#[RequirePermission('allow.admin')]` on the class. Holds the user, group
+and module screens, and routes `/admin/{module}/*` to offerings through `__call`.
 
 ```
 /admin                    → Admin::index()
-/admin/manage/users       → Admin::manage(['users'])
+/admin/manage/users       → Admin::manage('users')
+/admin/manage/user/5      → Admin::manage('user', '5')
+/admin/manage/groups      → Admin::manage('groups')
+/admin/manage/modules     → Admin::manage('modules')
+/admin/firewall           → Admin::__call('firewall', ...) → Firewall::index()   (submodule)
 /admin/links              → Admin::__call('links', ...) → LinksAdmin::index()
-/admin/links/edit/5       → Admin::__call('links', ...) → LinksAdmin::edit(5)
+/admin/links/edit/5       → Admin::__call('links', ...) → LinksAdmin::edit('5')
 ```
 
-The `/admin` dashboard has two sections. "Users and access" holds the Users, Groups, Modules and Firewall cards, the only links written into the view. "Modules" holds one card per offering that `getAdminModules()` discovers (a module that is switched off has no card). A module's feature screens appear there with no change to Admin.
+The `/admin` dashboard has two sections. "Users and access" holds the Users, Groups, Modules and
+Firewall cards, the only links written into the view. "Modules" holds one card per offering that
+`getAdminModules()` returns, so a module's screens appear there with no change to Admin.
 
 ---
 
-## The modules screen
-
-`/admin/manage/modules` (`manage('modules')`, assets `manage-modules.css` and `manage-modules.js`) lists `Modules::all()` ordered by tier (required, optional, example, site) then name: the real folder name, tier, where it lives (`core` under `core/modules/`, otherwise `site`), on or off, whether that is the default or a departure, and the order. A required module shows no switch, and a module whose name is an INI keyword (`On`, `Off`, `Yes`, `No`, `True`, `False`, `None`, `Null`) shows no controls and a note, because its name cannot be a key in `app/modules.ini`. Each row's form carries the hash of `app/modules.ini` as the screen was drawn. `POST /admin/set-module` (`#[AuditLog('module_setting_change')]`, POST only, `module` and `hash` required) answers 409 with the reload text when the file no longer has that hash, so a screen left open never overwrites another admin's change; otherwise it validates the POST (400, or 404 for a module that does not exist) and hands it to `Zero\Core\ModulesIni`, the only writer of `app/modules.ini`. `ModulesIni` refuses (500, with the path in the error text) when it cannot write, and it checks that `Modules` reads its text back as the intended entries before it replaces the file. The write is a temp file in the file's folder renamed over the file, so the FOLDER must be writable by the web server user; an existing file keeps its permission bits, a new one is 0664, and a file with no write bit at all is treated as deliberately read-only and refused. A save changes `app/modules.ini`, which a site tracks in git; the site commits the change. The lock file `modules.ini.lock` and the `.modules.ini.*.tmp` temp files are git-ignored. After a form post without JavaScript the screen shows a "Saved" line (`?saved=1`). The wording of the screen's sentences is in `core/modules/Admin/strings/admin.ini` (`ADMIN_MODULES_*`).
-
-## Module Admin Structure
+## Offering an admin screen
 
 ```
 modules/YourModule/
-├── YourModule.php              # Public controller
+├── YourModule.php              # Public controller (optional)
 ├── view/                       # Public views
-└── Admin/                      # ← Admin subsystem
-    ├── admin-config.php        # Optional: discovery metadata
+└── Admin/
     ├── YourModuleAdmin.php     # Admin controller (extends AdminResponse)
+    ├── admin-config.php        # Optional: the dashboard card
     ├── view/                   # Admin views
-    └── assets/                 # Admin-only assets (never web-accessible)
-        ├── admin.css
-        └── admin.js
+    └── assets/                 # Admin-only assets, inlined (see core/ADMIN_ASSETS.md)
 ```
-
-Minimal admin controller:
 
 ```php
 <?php
@@ -121,79 +109,132 @@ class YourModuleAdmin extends AdminResponse {
 }
 ```
 
-Standard CRUD/pagination/filtering patterns are just regular Zero controller patterns — see the `/zeromodule` skill.
+Everything else (CRUD, pagination, filtering) is an ordinary Zero controller; see the
+`/zeromodule` skill. `core/modules/Module/Admin/` is a working example, and
+`./mkmod Name --admin` scaffolds one.
 
----
-
-## Discovery Mechanism
-
-`AdminResponse::getAdminModules()` walks `Modules::all()` (every module folder in every root), keeps the modules that are switched on (`Modules::enabled()`) and have an `Admin/` folder, keeps a module whose class `Zero\Module\{X}\Admin\{X}Admin` exists (a class that throws while loading is logged with `Console::warn()` and left out), reads optional `admin-config.php` for metadata, applies defaults, keeps the modules whose every `permissions` key the user holds, and sorts by `Modules::order()` (the `[order]` section of `app/modules.ini`; modules without an order come last, then by name). `Admin::__call` checks `Application::isModuleName()` and `Modules::routable()` before any `class_exists()`, so `/admin/{module}` for a module that is switched off never loads its admin file and falls through exactly as a module with no offering; `routeToModuleAdmin()` repeats the check and answers 404.
-
-**admin-config.php format:**
+**`admin-config.php`** returns the card. Every key is optional:
 
 ```php
 <?php
 return [
-    'label' => 'Manage Links',              // Display name
-    'icon' => 'link',                       // Material Symbol name
-    'description' => 'Manage shared links',
-    'permissions' => ['allow.admin']
+    'label' => 'Manage Links',              // default "{Module} Management"
+    'icon' => 'link',                       // Material Symbol name, default "settings"
+    'description' => 'Manage shared links', // default ""
+    'permissions' => ['allow.admin']        // default ['allow.admin']
 ];
 ```
 
-**Defaults (if missing):** `label="{Module} Management"`, `icon="settings"`, `permissions=['allow.admin']`. Whether the module is on, and the order of its card, are set in `app/modules.ini`, never in `admin-config.php`.
+`permissions` lists the same keys that gate the offering's class. Whether the module is on, and
+where its card sits, are set in `app/modules.ini`, never in `admin-config.php`.
 
 ---
 
-## Routing Flow
+## Discovery
 
-Example: `/admin/links/edit/5`
+`AdminResponse::getAdminModules()` walks `Modules::all()` (every module folder in every root) and
+lists a module when all of these hold:
 
-1. Framework routes to `Admin` module
-2. `Admin::__call('links', [['edit', '5']])` — checks if `Links\Admin\LinksAdmin` exists
-3. Calls `routeToModuleAdmin('links', 'edit', [5])`
-4. `AdminResponse::routeToModuleAdmin()` instantiates `LinksAdmin` and calls `edit(5)`
-5. `LinksAdmin::edit(5)` fetches data, sets breadcrumbs, renders `view/edit.php` with inline assets
+1. It is not Admin itself, it has an `Admin/` folder and `Modules::enabled()` is true for it.
+2. The class `Zero\Module\{X}\Admin\{X}Admin` exists. An `Admin/` folder without it (one holding
+   only `view/`, say) is not an offering. A class that throws while loading is logged with
+   `Console::warn()` and left out; the other cards still show.
+3. The logged-in user holds every key in the card's `permissions`, checked with `Session::can()`.
 
-**Kebab-case ↔ PascalCase conversion:**
-- URL → Class: `tech-stack` → `TechStack` (word-by-word capitalization, not `ucfirst(strtolower())`)
-- Class → URL slug: `TechStack` → `tech-stack` (insert hyphen before each uppercase, then lowercase)
-
-Both conversions live in `Admin::__call` and `AdminResponse::getAdminModules()`.
-
----
-
-## Permission Security
-
-Multi-layer protection:
-
-1. **AdminResponse constructor** — redirects to login if user lacks `allow.admin`. Every admin controller inherits this check.
-2. **Class attribute** on `Admin`: `#[RequirePermission('allow.admin')]` — enforced by the attribute processor, redundant protection if the base class check were bypassed.
-3. **Method-level** (optional) — `#[RequirePermission('blog.edit')]` for fine-grained per-action control.
-
-**Asset protection:** the constructor deletes any public symlink that `Module::__construct()` auto-created, and `getStylesheets()`/`getScripts()` are overridden to emit assets inline. Admin assets are never reachable as `/assets/{module}/...` URLs.
+Cards are sorted by `Modules::order()` (the `[order]` section of `app/modules.ini`), modules
+without an order last, then by name. Each card carries `name`, `slug`, `label`, `icon`,
+`description`, `order`, `permissions` and `url` (`/admin/{slug}`).
 
 ---
 
-## Asset Management
+## Routing
 
-See `core/ADMIN_ASSETS.md` for how inline loading works and the filename-matching convention used by `inlineAdminAssets()`.
+`/admin/links/edit/5`:
+
+1. `Application::run()` resolves `Admin`, checks its `#[RequirePermission('allow.admin')]` and
+   calls `links('edit', '5')`, which `Admin` does not have.
+2. `Admin::__call('links', ['edit', '5'])` turns `links` into `Links`. It looks for
+   `Zero\Module\Links\Admin\LinksAdmin` only when `Application::isModuleName()` and
+   `Modules::routable()` both pass, so the admin file of a module that is switched off is never
+   loaded. Without the class, the call falls through to `Module::__call` (Admin's submodules,
+   then `Response::__call`), exactly as for a module with no offering.
+3. `routeToModuleAdmin('Links', 'edit', ['5'])`:
+   - repeats the `Modules::routable()` check and the class check (404
+     `Admin interface not found for module: ...`),
+   - converts a kebab-case method to camelCase (`create-workflow` → `createWorkflow`),
+   - answers 404 `Admin method not found: ...` unless the method is routable (below),
+   - runs `Application::checkAttributes()` on the offering's class and method, so the offering's
+     own attributes (`#[RequirePermission]`, `#[AllowedMethods]`, ...) apply,
+   - constructs `LinksAdmin` and calls `edit('5')`.
+
+**Routable methods.** Only a public, non-static method that is not a constructor or magic method
+and is declared outside the `Zero\Core\` namespace is an endpoint. Protected helpers and methods
+inherited from the framework (`loadConfig`, `loadInlineAsset`, ...) answer 404 before the
+controller is constructed.
+
+**Names.** URL → class: `tech-stack` → `TechStack` (each word capitalised), in `Admin::__call`.
+Class → URL slug: `TechStack` → `tech-stack` (a hyphen between a lowercase and an uppercase
+letter, then lowercase), in `getAdminModules()`.
+
+---
+
+## Access
+
+Capabilities themselves are described in `core/PERMISSIONS.md`. The admin layers are:
+
+1. **`AdminResponse::__construct()`**: a user without `allow.admin` is redirected to
+   `/user/login?r=y`, with the requested URL kept in `$_SESSION['return_url']` when it is
+   site-relative. Every admin controller inherits this, so an offering always needs
+   `allow.admin` whatever else it asks for.
+2. **`#[RequirePermission('allow.admin')]` on `Admin`**: checked by `Application::run()` for
+   every `/admin/*` request.
+3. **Attributes on an offering or submodule**, class or method level
+   (`#[RequirePermission('allow.aws.bill.read')]` on `BillingAdmin`): checked before the controller is constructed, by
+   `routeToModuleAdmin()` for an offering and by `Module::__call` for a submodule.
+4. **The card's `permissions`**: decide whether the card shows. They do not gate the URL; the
+   attributes do.
+
+---
+
+## The modules screen
+
+`/admin/manage/modules` (assets `manage-modules.css`, `manage-modules.js`; wording in
+`core/modules/Admin/strings/admin.ini`, `ADMIN_MODULES_*`) lists `Modules::all()` ordered by tier
+(required, optional, example, site) then name. Each row shows the real folder name, the tier,
+where it lives (`core` under `core/modules/`, otherwise `site`), on or off, whether that is the
+default or a departure, and the order.
+
+- A required module shows no switch.
+- A module whose name is an INI keyword (`On`, `Off`, `Yes`, `No`, `True`, `False`, `None`,
+  `Null`) shows no controls and a note: its name cannot be a key in `app/modules.ini`.
+- Each row's form carries the hash of `app/modules.ini` as the screen was drawn.
+
+`POST /admin/set-module` (`#[AuditLog('module_setting_change')]`, POST only, `module` and `hash`
+required; `enabled` is `on`, `off` or `default`; `order` is a whole number from 0 to 9999, empty
+to remove it; a field that is missing changes nothing):
+
+- **409** with the reload text when the file no longer has that hash, so a screen left open
+  never overwrites another admin's change.
+- **400** for a value that is not valid, **404** for a module that does not exist.
+- Otherwise the change goes to `Zero\Core\ModulesIni`, the only writer of `app/modules.ini`.
+  It checks that `Modules` reads its text back as the intended entries before it replaces the
+  file, and refuses with **500** (the path is in the error text) when it cannot write.
+- A JSON client gets the result as JSON. A form post is redirected to the screen, which shows a
+  "Saved" line (`?saved=1`), or gets the screen again with the error above the table.
+
+The write is a temp file in the file's folder renamed over the file, so the **folder** must be
+writable by the web server user. An existing file keeps its permission bits, a new one is 0664,
+and a file with no write bit at all is treated as deliberately read-only and refused. A save
+changes `app/modules.ini`, which a site tracks in git; the site commits the change. The lock file
+`modules.ini.lock` and the `.modules.ini.*.tmp` temp files are git-ignored.
 
 ---
 
 ## Debugging
 
-- `var_dump($this->getAdminModules())` in `Admin::index()` to inspect discovery
-- `var_dump(Session::can('allow.admin'))` / `User::getAuthLevel()` to check permission state
-- Test URLs: `/admin` (dashboard), `/admin/{module}` (module admin), `/admin/invalid` (404)
-
----
-
-## Summary
-
-- **Security**: multi-layer permission checks, assets never web-accessible
-- **Simplicity**: drop in an `Admin/{Module}Admin.php` class, auto-discovered
-- **Scalability**: each module owns its admin interface
-- **Consistency**: shared UI patterns via `core/modules/Admin/assets/`
-
-Core philosophy: convention over configuration, secure by default, pluggable by design.
+- `var_dump($this->getAdminModules())` in `Admin::index()` shows what discovery returns.
+- `var_dump(Session::can('allow.admin'))` shows whether the logged-in user is an admin.
+- `/admin` is the dashboard, `/admin/{module}` an offering, `/admin/invalid` a 404.
+- An offering that is missing from the dashboard: check that the module is on
+  (`/admin/manage/modules`), that the class name and namespace are exact, and the log for
+  `Admin offering {Module} failed to load`.

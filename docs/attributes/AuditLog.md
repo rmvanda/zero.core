@@ -1,176 +1,81 @@
 # AuditLog
 
-**Purpose:** Automatically log endpoint access to the event table for security auditing and compliance.
+**Class:** `Zero\Core\Attribute\AuditLog` (`core/attribute/AuditLog.php`)
 
-## Basic Usage
+Records a request to the endpoint as an `Event` entity. It never refuses a
+request: `handler()` always passes, and a failure to write the event is caught
+and logged (`AuditLog failed: …`, at error).
+
+## Usage
 
 ```php
-use \Zero\Core\Attribute\AuditLog;
+use Zero\Core\Attribute\{RequirePermission, AuditLog, AllowedMethods};
 
-#[AuditLog('admin_action')]
-public function updatePermission() {
-    // Endpoint access automatically logged to event table
-}
+#[RequirePermission('allow.admin')]
+#[AuditLog('admin_permission_change', includeParams: true)]
+#[AllowedMethods('POST')]
+public function updatePermission() {}
 ```
+
+Declare it after the auth attributes, so the event carries the user and is
+written only for callers who got in, and before `AllowedMethods` and the
+parameter attributes. See [../ATTRIBUTES.md](../ATTRIBUTES.md#order).
 
 ## Parameters
 
-- **`eventType`** (string, required): Event category/type for grouping logs
-- **`includeParams`** (bool, optional, default: false): Include sanitized request parameters
-- **`requireAuth`** (bool, optional, default: false): Only log if user is authenticated
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `$eventType` | `string` | required | The event's type, for grouping (`admin_action`, `data_export`, `permission_grant`). |
+| `$includeParams` | `bool` | `false` | Add the request parameters to the event. |
 
-## Usage Examples
+## What is recorded
 
-### Basic Audit Logging
+One `Zero\Entity\Event`:
 
-```php
-#[RequirePermission('allow.admin')]
-#[AuditLog('admin_action')]
-public function deleteUser() {
-    // Logs: event type, endpoint, user ID, IP, timestamp
-}
-```
+| Field | Value |
+|---|---|
+| `event` | `$eventType` |
+| `datetime` | Now. Set by `Event`. |
+| `ip` | `$_SERVER['REMOTE_ADDR']`. Set by `Event`. This is the peer address, which behind Cloudflare is the edge and not `Request::clientIp()`. |
+| `detail` | One string, parts joined by ` \| `, in the order below. |
 
-### Include Request Parameters
+`detail` parts:
 
-```php
-#[AuditLog('data_export', includeParams: true)]
-public function exportData() {
-    // Logs with sanitized request parameters
-    // Sensitive keys (password, token, etc.) are redacted
-}
-```
+- `Endpoint: {module}/{endpoint}` (`Request::$module`, `Request::$endpoint`)
+- `User ID: {id}`, when `Session::userId()` is not null
+- `Username: {name}`, when `$_SESSION['username']` is set
+- `Method: {HTTP method}`
+- `Params: {json}`, when `includeParams` is true and there are any
+- `UA: {user agent}`, cut to 100 characters
 
-### Only Log Authenticated Access
+An anonymous request is recorded too, without the user parts.
 
-```php
-#[AuditLog('sensitive_view', requireAuth: true)]
-public function viewProfile() {
-    // Only logs if user is logged in
-    // Silent skip if anonymous access
-}
-```
+### Parameters in the event
 
-## What Gets Logged
+`$_GET` and `$_POST` merged (POST wins on a shared key), then:
 
-The attribute creates an Event entity with:
+- These top-level keys are replaced with `[REDACTED]`: `password`, `passwd`,
+  `pwd`, `pass`, `secret`, `token`, `api_key`, `apikey`, `auth`,
+  `authorization`, `csrf`, `csrf_token`. The match is on the exact key; a
+  nested key or one of another name (`new_password`) is recorded as sent.
+- A string value over 200 characters is cut to 200 with `... [truncated]`.
 
-**Automatic (from Event class):**
-- `datetime` - Current timestamp
-- `ip` - Client IP address (from $_SERVER['REMOTE_ADDR'])
+## Cost
 
-**From AuditLog:**
-- `event` - Event type (from parameter)
-- `detail` - Formatted string containing:
-  - Endpoint (module/method)
-  - User ID (if available)
-  - Username (if available)
-  - HTTP method (GET/POST)
-  - Request parameters (if includeParams=true, sanitized)
-  - User agent (truncated to 100 chars)
+The event is written synchronously, on every request that reaches the
+attribute. Leave `includeParams` off on high-traffic endpoints.
 
-## Parameter Sanitization
+## Reading the log
 
-When `includeParams: true`, sensitive fields are automatically redacted:
-
-**Redacted fields:**
-- password, passwd, pwd, pass
-- secret, token, api_key, apikey
-- auth, authorization
-- csrf, csrf_token
-
-Long values (>200 chars) are truncated with "[truncated]" suffix.
-
-## Error Handling
-
-- Logging errors are caught and logged to Console
-- Attribute always returns `true` - **logging never blocks execution**
-- If `requireAuth: true` and user not authenticated, silently skips logging
-
-## Common Event Types
-
-Recommended event type naming:
-
-- `admin_action` - Administrative operations
-- `user_data_access` - Access to user data
-- `permission_change` - Permission modifications
-- `data_export` - Data export operations
-- `config_change` - Configuration changes
-- `auth_attempt` - Authentication attempts (use Auth module instead)
-
-## Performance Considerations
-
-- Event creation is synchronous - adds minimal overhead
-- Use `includeParams: false` for high-traffic endpoints
-- Consider archiving old events periodically
-- Event table uses EAV schema - query carefully for large datasets
-
-## Best Practices
-
-1. **Combine with permission attributes:**
-   ```php
-   #[RequirePermission('allow.admin')]
-   #[AuditLog('admin_action')]
-   ```
-
-2. **Use descriptive event types:**
-   - Good: `user_data_export`, `permission_grant`
-   - Bad: `action`, `log`
-
-3. **Enable params for critical operations:**
-   ```php
-   #[AuditLog('permission_grant', includeParams: true)]
-   ```
-
-4. **Use requireAuth for optional endpoints:**
-   ```php
-   // Public endpoint that tracks authenticated access only
-   #[AuditLog('public_api', requireAuth: true)]
-   ```
-
-## Example: Admin Panel Audit Trail
-
-```php
-namespace Zero\Module;
-
-use \Zero\Core\Attribute\{RequirePermission, AuditLog, AllowedMethods};
-
-class Admin extends \Zero\Core\Module {
-
-    #[RequirePermission('allow.admin')]
-    #[AuditLog('admin_permission_change', includeParams: true)]
-    #[AllowedMethods('POST')]
-    public function updatePermission() {
-        // Logs user ID, which permission was changed, and new value
-    }
-
-    #[RequirePermission('allow.admin')]
-    #[AuditLog('admin_user_view')]
-    public function viewUser() {
-        // Logs which admin viewed which user
-    }
-}
-```
-
-## Querying Audit Logs
-
-Events are stored in the `event` table using EAV schema. View the `event_view` for easier querying:
+Events are entities; query the pivoted `event_view`:
 
 ```sql
--- Recent admin actions
 SELECT * FROM event_view
 WHERE event = 'admin_action'
 ORDER BY datetime DESC
 LIMIT 100;
 
--- Actions by specific user
+-- By user: the id is inside the detail string
 SELECT * FROM event_view
-WHERE event = 'admin_action'
-AND detail LIKE '%User ID: 5%'
-ORDER BY datetime DESC;
-
--- Actions within date range
-SELECT * FROM event_view
-WHERE event LIKE 'admin%'
-AND datetime BETWEEN '2025-01-01' AND '2025-12-31';
+WHERE event = 'admin_action' AND detail LIKE '%User ID: 5 |%';
 ```

@@ -1,106 +1,120 @@
 # Admin Asset Loading
 
-Admin CSS/JS is **always served inline** — never exposed as a public URL. This is enforced at the framework layer; there is no admin asset URL scheme.
+Admin CSS and JS are always written into the page inline. There is no admin asset URL: nothing
+under a module's `Admin/assets/` (or the Admin module's own `assets/`) is reachable from the web
+root. The price is no browser caching between admin pages.
 
-> For a proposed future dynamic-URL-served approach (deferred), see `core/archive/ADMIN_ASSETS_PROPOSAL.md`.
+> A URL-served design that would allow caching is kept, not implemented, in
+> `core/archive/ADMIN_ASSETS_PROPOSAL.md`.
 
-## Why inline?
+## How it is enforced
 
-- Assets never reachable at `/assets/{module}/...` → no information disclosure from `Admin/assets/` directories
-- No symlink management, no path-traversal surface, no routing
-- Guaranteed to load with the page
+Every admin controller extends `AdminResponse` (`core/AdminResponse.php`), which does two things:
 
-Trade-off: no cross-page browser caching. Acceptable until admin interfaces grow large enough to matter.
+1. **Constructor.** `Module::__construct()` links a module's `assets/` folder into
+   `WEB_ROOT/assets/`. After calling it, `AdminResponse::__construct()` deletes the link made for
+   the admin class and removes the parent folders it left empty.
+2. **`getStylesheets()` / `getScripts()`.** The frame calls these to emit a page's assets.
+   `AdminResponse` overrides both to print `<style>` and `<script>` blocks through
+   `inlineAdminAssets()` instead of `<link>` and `<script src>` tags.
 
-## Security enforcement (AdminResponse)
+## Auto mode: files named by convention
 
-`core/AdminResponse.php` guarantees admin assets stay inline:
+Auto mode runs whenever an admin page is built through the frame. Nothing is called from the view.
 
-1. **Constructor (lines 47–60)** — after `parent::__construct()` (which auto-creates `/assets/{module}` symlinks for regular modules), it **deletes** any symlink matching the admin controller's path and cleans up empty parent directories. Admin asset directories cannot be reached from the web root.
-2. **`getStylesheets()` / `getScripts()` overrides** — replace the default `<link>`/`<script src>` emission with inline `<style>`/`<script>` blocks via `readfile`.
+**Folders searched**, in order:
 
-## How loading works
+1. `core/modules/Admin/assets/{css|js}/`: the shared base
+2. `{folder of the controller's class}/assets/{css|js}/`: for an offering that is
+   `modules/Links/Admin/assets/{css|js}/`, for an Admin submodule
+   `core/modules/Admin/submodule/Firewall/assets/{css|js}/`
 
-There are two mechanisms. Both inline. Choose based on whether you want the framework's filename convention.
+**Filenames loaded** (anything else in those folders is ignored; a name found in both folders is
+loaded once, from the first):
 
-### Auto mode (preferred): framework filename convention
+| File | Is |
+|------|----|
+| `admin.{css\|js}` | The shared base, on every admin page |
+| `{class}.{css\|js}` | The controller's class name in lowercase: `linksadmin.css` for `LinksAdmin`, `firewall.css` for `Firewall`, `admin.css` for `Admin` |
+| `{endpoint}.{css\|js}` | The endpoint of the request, in both its camelCase form and as written in the URL (`groupForm.css` or `group-form.css` for `/admin/group-form`) |
 
-When an admin view is rendered through the normal frame, `AdminResponse::getStylesheets()` and `getScripts()` fire automatically. They delegate to `inlineAdminAssets($type)`, which looks for these filenames (matching the regular framework convention):
+What "the endpoint" is depends on the controller:
 
-- `admin.{css|js}` — shared admin base (always loaded)
-- `{moduleName}.{css|js}` — module-wide
-- `{endpointName}.{css|js}` — endpoint-specific
-- `{endpointNameOrig}.{css|js}` — original (pre-kebab) endpoint name
+- **Admin itself**: the URL's second segment. `/admin/group-form` loads `group-form.css`.
+  `Admin::manage()` sets it to `manage-{type}`, so `/admin/manage/users` loads
+  `manage-users.css` and `/admin/manage/group/5` loads `manage-group.css`.
+- **An offering** (`/admin/links/edit/5`): the URL's second segment is the module, so the endpoint
+  is `links` on every page of the offering. `linksadmin.css` and `links.css` both load on all of
+  them; `edit.css` does not load. An offering that wants a file for one page loads it from the
+  view (manual mode) or sets `$this->activeEndpoint` before `build()`.
+- **An Admin submodule** (`/admin/firewall/list`): the submodule's own endpoint, `list`.
 
-And searches these directories, in order:
-
-1. `core/modules/Admin/assets/{css|js}/` — shared base styles/scripts
-2. `{current module}/Admin/assets/{css|js}/` — module-specific (via `$this->moduleAssetDir`)
-
-Each matching file is emitted inside a single `<style>` or `<script>` block (with a filename comment for debuggability):
+Each file is printed in its own block, with the filename in a comment:
 
 ```html
 <style>/* admin.css */
 ... file contents ...
 </style>
-<style>/* links.css */
+<style>/* linksadmin.css */
 ... file contents ...
 </style>
 ```
 
-**Example:** request to `/admin/links/edit/5`, controller `LinksAdmin`:
-- `core/modules/Admin/assets/css/admin.css` → loaded (shared base)
-- `modules/Links/Admin/assets/css/links.css` → loaded (module match)
-- `modules/Links/Admin/assets/css/edit.css` → loaded (endpoint match)
-
-Files that don't match the convention are ignored.
-
-### Manual mode: explicit view calls
-
-For views that need to load everything in a module's admin assets dir (bypassing the filename convention):
+## Manual mode: calls from a view
 
 ```php
-<?php $this->loadAdminStyles('links'); ?>   // globs & inlines ALL *.css in modules/Links/Admin/assets/
-<?php $this->loadAdminScripts('links'); ?>  // globs & inlines ALL *.js
-<?php $this->loadInlineAsset('links', 'css', 'admin.css'); ?>  // single file
+<?php $this->loadInlineAsset('Links', 'css', 'edit.css'); ?>   // one file
+<?php $this->loadAdminStyles('Links'); ?>                      // every *.css
+<?php $this->loadAdminScripts('Links'); ?>                     // every *.js
 ```
 
-| Method | Behavior |
-|--------|----------|
-| `loadInlineAsset($module, $type, $filename)` | Inline one specific file |
-| `loadAdminStyles($module)` | Inline every `*.css` in `modules/{Module}/Admin/assets/` |
-| `loadAdminScripts($module)` | Inline every `*.js` in `modules/{Module}/Admin/assets/` |
+| Method | Inlines |
+|--------|---------|
+| `loadInlineAsset($module, $type, $filename)` | `{module}/Admin/assets/{filename}`, wrapped in `<style>` for type `css` or `<script>` for `js` |
+| `loadAdminStyles($module)` | Every `*.css` directly in `{module}/Admin/assets/` |
+| `loadAdminScripts($module)` | Every `*.js` directly in `{module}/Admin/assets/` |
 
-`loadInlineAsset()`, `loadAdminStyles()` and `loadAdminScripts()` find the module's folder by name regardless of case or hyphens (`ApiConfig`, `apiconfig` and `api-config` all reach `modules/ApiConfig/`). A missing file logs a warning, and prints an HTML comment in `DEVMODE`.
+- Manual mode reads `Admin/assets/` itself, not the `css/` and `js/` folders auto mode reads. A
+  module uses one layout or the other for a given file.
+- The module is found through `Modules::path()`, whatever the case or hyphens of the name
+  (`ApiConfig`, `apiconfig` and `api-config` all reach `modules/ApiConfig/`).
+- The loaders only look in a module's `Admin/` folder, so they cannot load the Admin module's
+  shared files. Auto mode has already loaded `admin.css` and `admin.js`.
+- The file is `include`d, so PHP tags in it run.
+- `loadInlineAsset()` on a missing file logs `Console::warn()` and, in `DEVMODE`, prints an HTML
+  comment. `loadAdminStyles()` and `loadAdminScripts()` on a module with no `Admin/assets/` do
+  nothing.
 
-**When to use which:** prefer auto mode and rely on naming conventions. Reach for manual mode only when an admin view needs assets that don't follow the `{module}/{endpoint}` naming pattern.
+Prefer auto mode. Use manual mode for a file that belongs to one page of an offering, or one
+whose name does not fit the convention.
 
 ## File layout
 
 ```
-core/modules/Admin/
-└── assets/
-    ├── css/
-    │   ├── admin.css              # shared base — auto-loaded on every admin page
-    │   └── admin-tables.css       # will NOT auto-load unless named for a module/endpoint
-    └── js/
-        └── admin.js
+core/modules/Admin/assets/
+├── css/
+│   ├── admin.css              # shared base: every admin page
+│   └── manage-users.css       # Admin's own /admin/manage/users
+├── js/
+│   └── admin.js
+└── component/
+    └── admin-expandable-table.html
 
-modules/Links/Admin/
-└── assets/
-    ├── css/
-    │   ├── links.css              # auto-loaded for all /admin/links/* endpoints
-    │   └── edit.css               # auto-loaded only on /admin/links/edit/*
-    └── js/
-        └── links.js
+modules/Comfy/Admin/assets/    # auto mode
+├── css/comfyadmin.css         # every /admin/comfy/* page
+└── js/comfyadmin.js
+
+modules/ApiConfig/Admin/assets/    # manual mode: each view calls loadInlineAsset()
+├── api-config.css
+├── mappings.css
+└── mappings.js
 ```
 
 ## Component assets
 
-ShadowComponents used inside admin views follow the same inline-only rule. Since ShadowComponent HTML files are self-contained (styles + script inside the `<template>`), they can be `require`d directly:
+A ShadowComponent used in an admin view is inline too. Its HTML file holds its styles and script
+inside the `<template>`, so the view `require`s it and nothing is served by URL:
 
 ```php
-<?php require_once MODULE_PATH . 'Links/Admin/assets/components/link-manager.html'; ?>
+<?php require_once __DIR__ . '/../assets/aws-billing-dashboard.html'; ?>
 ```
-
-The `<template>` + `<script>` block registers the custom element without exposing anything as a URL.

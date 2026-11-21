@@ -1,8 +1,8 @@
 # RequiredParams
 
-**Namespace:** `\Zero\Core\Attribute\RequiredParams`
+**Class:** `Zero\Core\Attribute\RequiredParams` (`core/attribute/RequiredParams.php`)
 
-**Purpose:** Validate required parameters exist in GET or POST before execution.
+Requires parameters to be present in GET or POST before the endpoint runs.
 
 ## Usage
 
@@ -12,62 +12,29 @@ use Zero\Core\Attribute\RequiredParams;
 #[RequiredParams('username')]
 public function lookup() {
     $username = $_POST['username'] ?? $_GET['username'];
-    // Guaranteed to exist
 }
 
-#[RequiredParams(['email', 'password'])]
-public function register() {
-    // Both guaranteed present
-}
-
-// Combined with other attributes
 #[AllowedMethods('POST')]
 #[RequiredParams(['requested_url', 'reason'])]
-public function submit() {
-    // POST only + both params required
-}
+public function submit() {}
 ```
 
 ## Parameters
 
-- `$params` (string|array) - Single param or array of required param names
+- `$params` (string|array): one parameter name or a list of them.
 
-## Validation Logic
+## Behaviour
 
-- Checks both `$_POST` and `$_GET`
-- Parameter missing if:
-  - Not in POST or GET
-  - Present but `empty()` (empty string, null, 0, '0', false)
-- Reports ALL missing parameters in error
+A parameter is missing when it is `empty()` in both `$_POST` and `$_GET`. That
+includes an absent key, an empty string, `0`, `'0'`, `false` and an empty
+array, so this attribute does not suit a parameter whose valid values include
+zero.
 
-## When to Use
-
-- Form submission handlers
-- API endpoints with required fields
-- Reducing boilerplate validation
-- Preventing undefined index errors
-
-## Error Response
-
-- HTTP 400 Bad Request
-- Message: "Missing required parameter(s): email, password"
-
-## Debug Output
+If any are missing it throws `HTTPError(400)` naming all of them:
+`Missing required parameter(s): email, password`, and logs at warn:
 
 ```
-RequiredParams checking for: email, password
-  - Found: email = user@example.com
-  - Missing: password
-RequiredParams attribute blocked request - Missing: password
-POST params available: email, action
+RequiredParams attribute blocked request - Missing: email, password
 ```
 
-## Notes
-
-- Only validates presence, NOT format
-- For complex validation, handle in method
-- Empty string/0/'0'/false considered missing
-
-## Implementation
-
-Location: `core/attribute/RequiredParams.php:21-47`
+It checks presence only. For format, see [Validate](Validate.md).

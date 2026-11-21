@@ -24,14 +24,16 @@ use Zero\Core\Session;
 Session::userId();              // ?int, without building an object
 Session::user();                // ?User
 Session::isLoggedIn();          // logged in and verified
-Session::can('allow.polly');    // does the logged-in user have the capability?
+Session::can('allow.polly');    // does the logged-in user have the capability? false for nobody
 
 Session::establish($user);      // the single writer of the login session
 Session::end();                 // the single place it is torn down
 ```
 
 `User` knows nothing about the session: every `User` method answers for the account the object
-was loaded from. See `core/modules/Auth/CLAUDE.md` for what `establish()` puts in `$_SESSION`.
+was loaded from. `Session::user()` is built from `$_SESSION` without a query; it can be changed
+and `save()`d, but never `delete()` it: the row goes and the session stays. See
+`core/modules/Auth/CLAUDE.md` for what `establish()` puts in `$_SESSION`.
 
 ## Two kinds of permission
 
@@ -89,7 +91,8 @@ Keys in use:
 ## Holders
 
 A `Holder` is what a permission is granted to. `User` and `Group` are the two holders. Both have
-the same capability methods, and `Permission` takes either wherever it grants or revokes.
+the same capability methods (the `HoldsCapabilities` trait), and `Permission` takes either
+wherever it grants or revokes.
 
 ```php
 $user  = User::find($userId);
@@ -118,15 +121,18 @@ $group->revoke('allow.polly');
 $group->can('allow.polly');              // was it granted to the group itself?
 ```
 
-- A key is `allow.` and then lowercase words joined by dots: `allow.polly`,
-  `allow.receipt.view`. No module's sharing key can start with `allow.`, and `grant()` refuses
-  a key that does not.
+- A key is `allow.` and then lowercase words joined by dots, at most 100 characters:
+  `allow.polly`, `allow.receipt.view`. No module's sharing key can start with `allow.`, and
+  `grant()` refuses a key that does not.
+- A holder's `grant()` and `revoke()` return `false` when the write fails or is refused (a bad
+  key, a group the granter may not share with); they log the reason and do not throw.
 - `can()` reads the database once per object, so a grant or revocation takes effect on the
   user's next request. A failed lookup denies.
 - `revoke()` removes the holder's own row. A capability a user has through a group stays until
   the group loses it.
 - The Admin module's user screen lists every key named in a `#[RequirePermission]` attribute
-  in the modules' source, plus every key somebody has, and grants or revokes with a tick box.
+  in the source of the modules that are switched on, plus every key somebody has, and grants or
+  revokes with a tick box.
 - A user asking for a capability they lack goes through the AccessRequest module, which calls
   `grant()` when an admin approves.
 
@@ -201,7 +207,6 @@ Things to know:
 - `sqlCan()` uses positional `?` placeholders, so the query it goes into must too. Splice its
   parameters in at the fragment's position.
 - Granting again replaces the flags. Granting with all three flags false removes the row.
-- A module that deletes an item must call `forget()`.
 - `can()` and the listing methods return `false` / `[]` on a database error and log it; the
   writing methods throw.
 - A module's own `.sql` does not create a permission table. `permission` comes from core.
@@ -213,11 +218,12 @@ Things to know:
 ```php
 use Zero\Core\Access\Group;
 
-Group::forUser($userId);          // the user's active groups; each has ->role, ->member_count
+Group::forUser($userId);          // the user's active groups; each has ->role, ->added_at, ->member_count
 $user->groups();                  // the same
 $user->groups(false);             // inactive ones too, for a screen that manages groups
 Group::idsForUser($userId);
 Group::all();                     // every group; each has ->member_count, ->created_by_username
+Group::all(true);                 // active groups only
 
 $group = Group::create(['group_name' => 'Campaign 12']);   // created_by: the logged-in user
 $group = Group::find($groupId);                             // ?Group
@@ -230,6 +236,8 @@ $group->has($userId);             // a member, and the group is active
 $group->usableBy($userId);        // may share with it: has(), or an admin
 $group->role($userId);            // ?string
 $group->members();                // membership rows with username and email
+$group->nonMembers();             // every user not in the group: user_id, username, email
+$group->memberCount();
 $group->remove($userId);
 
 $group->deactivate();             // stops granting; rows stay
@@ -251,16 +259,19 @@ No foreign key removes anything. The objects do:
   settings and their profile. What modules keep about a user is the module's to remove.
 - `$group->delete()` removes its memberships and every permission granted to it.
 - A module deleting an item calls `$perm->forget($id)`.
+- The Admin module's delete-user action (`Zero\Module\Admin\Model\UserAdmin::delete()`) clears
+  `auth_token`, `api_tokens`, `oauth_token`, `ws_tokens` and `push_subscriptions` for the user,
+  then calls `$user->delete()`.
 
 The caller owns the transaction.
 
 ## Testing a module's sharing
 
 Test the shared path with a real group, a real member and a real grant, and never let that test
-skip because the environment has no group: a sharing test that skipped once let a regression
-ship that locked every non-owner out of Notebook. `core/tests/PermissionTest.php` shows the
-fixture: create a group and member through `Group`, grant through `Permission`, assert, and
-delete everything the test created in both `setUp()` and `tearDown()`.
+skip because the environment has no group: a skipped sharing test hides a regression that locks
+every non-owner out. `core/tests/PermissionTest.php` shows the fixture: create a group and member
+through `Group`, grant through `Permission`, assert, and delete everything the test created in
+both `setUp()` and `tearDown()`.
 
 ## Outside the framework
 

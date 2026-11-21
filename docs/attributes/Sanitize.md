@@ -1,129 +1,92 @@
 # Sanitize
 
-**Namespace:** `\Zero\Core\Attribute\Sanitize`
+**Class:** `Zero\Core\Attribute\Sanitize` (`core/attribute/Sanitize.php`)
 
-**Purpose:** Sanitize POST/GET parameters before method execution to prevent injection attacks and ensure clean data.
+Cleans GET/POST parameters in place before the endpoint runs. It never refuses
+a request.
+
+It is not an escape. The default method keeps `<`, `>`, quotes and slashes, so
+a sanitized value still needs a prepared statement on its way into SQL and
+`htmlspecialchars()` on its way into a page.
 
 ## Usage
 
 ```php
 use Zero\Core\Attribute\Sanitize;
 
-// Default sanitization - strips special symbols
-#[Sanitize(['title', 'content'])]
-public function create() {
-    // $_POST['title'] and $_POST['content'] are sanitized
-}
+#[Sanitize(['title', 'content'])]                     // default method
+#[Sanitize(['user_id', 'post_id'])]                   // names ending in "id": integer
+#[Sanitize(['title' => 'filename'])]                  // preset
+#[Sanitize(['email' => FILTER_SANITIZE_EMAIL])]       // filter_var filter
+#[Sanitize(['code' => '/[^a-zA-Z0-9]/'])]             // regex: what matches is removed
 
-// Specific filter_var filter
-#[Sanitize(['email' => FILTER_SANITIZE_EMAIL])]
-public function subscribe() {
-    // $_POST['email'] sanitized as email address
-}
-
-// Built-in presets
-#[Sanitize(['title' => 'filename'])]
-public function create() {
-    // $_POST['title'] sanitized for safe filenames
-}
-
-// Custom regex pattern - removes non-matching characters
-#[Sanitize(['code' => '/[^a-zA-Z0-9]/'])]
-public function lookup() {
-    // $_POST['code'] keeps only alphanumeric chars
-}
-
-// Auto-detect numeric IDs (keys ending in 'id')
-#[Sanitize(['user_id', 'post_id'])]
-public function update() {
-    // Both sanitized as integers automatically
-}
-
-// Combined with other attributes
 #[AllowedMethods('POST')]
 #[RequiredParams(['title', 'content'])]
 #[Sanitize(['title', 'content', 'category_id'])]
-public function create() {
-    // POST only, params required, then sanitized
-}
+public function create() {}
 ```
 
 ## Parameters
 
-- `$params` (array) - Parameters to sanitize with optional sanitization method
-  - Numeric key: `['title']` - default sanitization
-  - String key with filter: `['email' => FILTER_SANITIZE_EMAIL]`
-  - String key with regex: `['slug' => '/^[a-z0-9-]+$/']`
+- `$params` (array): a list of parameter names, or `name => method` pairs, or a
+  mix of both.
 
-## Sanitization Methods
+## Behaviour
 
-### Default (no method specified)
-- Removes special characters while preserving readable text
-- Keeps: letters, numbers, spaces, basic punctuation (`-_.!?@#$%&*()`)
-- Normalizes whitespace
+For each named parameter, the value in `$_POST` and the value in `$_GET` are
+each replaced with the sanitized one, if set. A parameter that is not set is
+left alone. An array value is sanitized element by element, recursively.
 
-### Auto-detected ID Fields
-- Any parameter ending in `id` (case-insensitive) is sanitized as integer
-- Examples: `user_id`, `postId`, `CATEGORY_ID`
+Declare it after `RequiredParams` and before `Validate`; see
+[../ATTRIBUTES.md](../ATTRIBUTES.md#order).
 
-### Built-in Presets
-Use preset names as the value for common sanitization patterns:
+## Methods
 
-| Preset | Keeps | Use Case |
-|--------|-------|----------|
-| `filename` | Letters, numbers, spaces, `-_.` | File names, titles |
-| `slug` | Lowercase letters, numbers, `-` | URL slugs |
-| `alphanumeric` | Letters and numbers only | Codes, identifiers |
-| `alpha` | Letters only | Names |
-| `numeric` | Numbers only | Numeric strings |
+The method for a parameter is chosen in this order.
 
-Example: `#[Sanitize(['title' => 'filename'])]`
+**1. No method, name ends in `id`** (case-insensitive: `user_id`, `postId`,
+and also `paid` or `valid`): the value becomes an integer, by
+`FILTER_SANITIZE_NUMBER_INT` and an `(int)` cast. An empty or non-numeric value
+becomes `0`. Giving the parameter any method turns this off.
 
-### filter_var Filters
-Supported filter constants:
-- `FILTER_SANITIZE_EMAIL` - Remove illegal email characters
-- `FILTER_SANITIZE_URL` - Remove illegal URL characters
-- `FILTER_SANITIZE_NUMBER_INT` - Remove non-numeric characters
-- `FILTER_SANITIZE_NUMBER_FLOAT` - Remove non-numeric (except . and ,)
-- `FILTER_SANITIZE_FULL_SPECIAL_CHARS` - HTML-encode special chars
-
-### Custom Regex Patterns
-- Pattern must start/end with delimiter (`/`, `#`, `~`, etc.)
-- Characters matching the pattern are REMOVED
-- Use negated character class to keep specific chars: `/[^a-z0-9]/` keeps only a-z and 0-9
-- Whitespace is normalized after pattern application
-
-## Validation Logic
-
-- Sanitizes both `$_POST` and `$_GET` values
-- Handles arrays recursively
-- Logs changes to Console for debugging
-- Non-destructive: original values in superglobals are replaced
-
-## When to Use
-
-- Before processing user input
-- File upload names
-- Search queries
-- Any user-provided data used in output or queries
-- Pair with `RequiredParams` for complete validation
-
-## Debug Output
+**2. No method, any other name**: the default. Removes every character that is
+not a letter, a digit, whitespace or one of
 
 ```
-Sanitize processing 3 parameter(s)
-  Auto-detected 'user_id' as numeric ID
-  Sanitized POST['title']: 'Hello<script>alert(1)</script>' -> 'Helloalert1'
-  Sanitized POST['user_id']: '42abc' -> '42'
+- _ . , ! ? @ # $ % & * ( ) + = [ ] { } | \ : ; " ' < > / ~ `
 ```
 
-## Notes
+which leaves control characters, `^` and symbols such as emoji to be removed.
+Runs of whitespace then collapse to one space and the value is trimmed.
 
-- Runs BEFORE method execution (like all attributes)
-- Order matters: use after `RequiredParams` if both present
-- For validation without modification, use `Validate` attribute
-- Empty values remain empty (not sanitized to placeholder)
+**3. A preset name:**
 
-## Implementation
+| Preset | Keeps |
+|--------|-------|
+| `filename` | Letters, digits, whitespace, `-` `_` `.` |
+| `slug` | `a-z`, `0-9`, `-`. Uppercase letters and spaces are removed, not converted: `My Slug` becomes `ylug`. |
+| `alphanumeric` | Letters and digits |
+| `alpha` | Letters |
+| `numeric` | `0-9` |
 
-Location: `core/attribute/Sanitize.php`
+Whitespace is collapsed and trimmed afterwards, as in the default.
+
+**4. A `filter_var` sanitize filter** (an integer from 500 to 600, which is
+where the `FILTER_SANITIZE_*` constants are): the value is passed through
+`filter_var($value, $filter)`. No flags can be given, so
+`FILTER_SANITIZE_NUMBER_FLOAT` removes the decimal point as well.
+
+**5. A regex**, delimited by one of `/ # ~ @ ! %`, with optional flags.
+Everything the pattern matches is **removed**, so write what to strip, usually
+a negated class: `/[^a-z0-9]/` keeps only `a-z` and `0-9`. A pattern written to
+describe a valid value (`/^[a-z0-9-]+$/`) deletes every valid value. Whitespace
+is collapsed and trimmed afterwards.
+
+**Anything else** (an unknown preset name, a `FILTER_VALIDATE_*` constant):
+the default method is used, and a warn is logged:
+
+```
+Sanitize: Unknown method for 'title', using default
+```
+
+That is the only thing the attribute logs. Changed values are not logged.

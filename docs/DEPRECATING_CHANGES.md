@@ -10,9 +10,16 @@ that text belongs in this file.
 
 Newest first.
 
+## 2026-11 — `Entity::where()` prints nothing
+
+### An unknown search key printed into the page — REPLACED by a `Console` warning
+
+`Entity::where()` with a key the type does not have printed `Unknown search key: ...` into
+the response. It writes a `Console` warning naming the entity class and returns `null`.
+
 ## 2026-11 — Auth adapters have a namespace; Keycloak is gone
 
-### Global adapter classes (`\\GitHubAdapter`) — REPLACED by `Zero\Module\Auth\Adapters\`
+### Global adapter classes (`\GitHubAdapter`) — REPLACED by `Zero\Module\Auth\Adapters\`
 
 `GoogleAdapter`, `GitHubAdapter`, `DiscordAdapter`, `GitLabAdapter` and `OAuth2Adapter` are
 classes of `Zero\Module\Auth\Adapters` in `core/modules/Auth/adapters/`. The autoloader
@@ -58,6 +65,44 @@ require __DIR__ . '/../../core/autoload.php';
 A test names the class in a `use` line and nothing else. A `require_once` stays only for
 a file whose class does not follow the naming convention.
 
+## 2026-11 — Logging goes through `Console`
+
+### `error_log()` in core and the bundled modules — REPLACED by `Console`
+
+Core, `core/lib/` and the bundled modules call `Console::error()`, `Console::warn()` or
+`Console::critical()` where they called `error_log()`, so the line reaches `zero.log` and
+the DevToolbar.
+
+```php
+// gone
+error_log("User::settings() failed: " . $e->getMessage());
+
+// use
+\Zero\Core\Console::error("User::settings() failed: " . $e->getMessage());
+```
+
+### Refused requests logged as errors — REPLACED by `warn`
+
+`Response::renderError()` logs at `error` only for a 5xx and at `warn` for anything else.
+`#[RequiredParams]` and `#[Validate]` log a refused request at `warn`. "Could not find a
+module" and "Built view with text instead of file path" are `debug` lines.
+
+### `Console` reading the forwarding headers itself — REPLACED by `Request::clientIp()`
+
+A log line carried `X-Forwarded-For`, then `CF-Connecting-IP`, then `REMOTE_ADDR`, so a
+client could choose the address in its log lines. `Console` logs the address
+`Request::clientIp()` resolves, which believes a forwarding header only from a Cloudflare
+edge, and `cli` when there is none.
+
+## 2026-11 — The site's `docs/superpowers/` is deleted
+
+### `docs/superpowers/plans/`, `specs/` and `.sdd/` — DELETED
+
+The plans, design specs and task packages written while features were built are gone from
+the site repository, and no code comment, doc or `.sql` file in core points at one. There
+is no replacement: the docs describe what was built, this file records what it replaced,
+and the files themselves are in the site repository's history.
+
 ## 2026-11 — Users, groups and permissions are in `core/access/`
 
 The five classes moved, and their namespace follows the folder. There are no aliases: code
@@ -71,8 +116,9 @@ that names an old class does not load.
 | `Zero\Core\Holder` | `Zero\Core\Access\Holder` | `core/access/Holder.php` |
 | `Zero\Core\HoldsCapabilities` | `Zero\Core\Access\HoldsCapabilities` | `core/access/HoldsCapabilities.php` |
 
-`Zero\Core\Session` stays where it is. A site's `composer.json` maps
-`Zero\Core\Access\` to `core/access/`.
+`Zero\Core\Session` stays where it is. `Application::classFile()` finds the five through
+its `Zero\Core\` rule (`Access` is the folder `access/`); a site's `composer.json` has no
+entry for them.
 
 ## 2026-11 — The ban check has a name and an allow-list
 
@@ -166,7 +212,7 @@ The bundled User and Auth views load these three partials through the frame look
 
 ### Module frame heads — scripts and fonts come from the `_head-scripts` frame piece
 
-`core/modules/Module/frame/head.php` (and the head `mkmod --frame` copies) no longer name a component script or a Google Fonts link. They include the frame piece `_head-scripts` through `framePiecePath()`: the site's `app/frontend/frame/_head-scripts.php` when it has one, otherwise core's empty `core/skeleton/frontend/frame/_head-scripts.php`. This site's file holds the `shadow-component.js` script tag and the Material Symbols link the head used to carry (the font link now follows `main.css` instead of preceding it).
+`core/modules/Module/frame/head.php` (and the head `mkmod --frame` copies) named a component script and a Google Fonts link. They include the frame piece `_head-scripts` through `framePiecePath()` instead: the site's `app/frontend/frame/_head-scripts.php` when it has one, otherwise core's empty `core/skeleton/frontend/frame/_head-scripts.php`. A site that wants the `shadow-component.js` script tag and the Material Symbols link puts them in its own file (the font link then follows `main.css` instead of preceding it).
 
 ### `core/composer.json`
 
@@ -176,11 +222,11 @@ Lists the Composer packages core uses (`minishlink/web-push`; suggested `google/
 
 ### `zero-init.sh` cloning `shadowjs` and `zero.core` — REMOVED
 
-`core/skeleton/zero-init.sh` clones nothing. It no longer fetches `shadowjs` into `www/shadow-component/` and no longer clones `zero.core`: it lives in `{site}/core/skeleton/`, so core is already there, and it builds the site folder in the folder that contains `core/` (or the folder given as the first argument). It no longer requires an empty target and no longer creates a `zero/` subfolder, a `www` symlink, a git repository for `app/` or changes permissions: the web root is `app/frontend/www/` and the vhost samples in `etc/` point at it. A file that already exists is skipped, so the script can run again.
+`core/skeleton/zero-init.sh` clones nothing: not `shadowjs` into `www/shadow-component/`, and not `zero.core`, since the script lives in `{site}/core/skeleton/` and core is already there. It builds the site in the folder that contains `core/` (or the folder given as the first argument). Also gone: the empty-target requirement, the `zero/` subfolder, the `www` symlink, the git repository for `app/` and the permission changes. The web root is `app/frontend/www/` and the vhost samples in `etc/` point at it. A file that already exists is skipped, so the script can run again.
 
 ### The skeleton's frames — REWRITTEN
 
-`core/skeleton/frontend/frame/*` are plain HTML and one stylesheet (`assets/css/main.css`). They no longer use `shadow-component`, Material Symbols or a Google font, and `assets/js/main.js` is gone. A site that relied on the old skeleton frames for web components copies the frames it wants into its own `app/frontend/frame/`.
+`core/skeleton/frontend/frame/*` are plain HTML and one stylesheet (`assets/css/main.css`). `shadow-component`, Material Symbols, the Google font and `assets/js/main.js` are gone from them. A site that relied on the old skeleton frames for web components keeps the frames it wants in its own `app/frontend/frame/`.
 
 ## 2026-11 — The bundled modules ship with core
 
@@ -226,7 +272,7 @@ same `#[RequireAuthLevel(1)]` gate). The tracked symlink `Test/submodule/Route/a
 
 `Entity`, `GenericEntity` and `Event`, their scripts (`Test.php`, `Testcase.php`, `sanity.php`,
 `test_generic_entity.php`, `encrypt.php`, `test`), `reset_entity.sql`, `README.md`, `CLAUDE.md`
-and `.gitignore` moved from `entity/` to `core/entity/` (the `zero.entity` repository, a git
+and `.gitignore` moved from `entity/` to `core/entity/` (the `rmvanda/entity` repository, a git
 submodule of core). The site's `entity/` folder holds only the site's own classes, which are
 committed in the site repository.
 
@@ -243,18 +289,20 @@ committed in the site repository.
 that are plain identifiers (`^[a-z_][a-z0-9_]*\z`, so a trailing newline is refused too), a
 `server:KEY` default with `KEY` in upper-case letters, digits and underscores, and scalar or null
 defaults. A type whose studly-cased class name matches a framework class (`generic_entity`,
-`event`, `test_case`, ...) or an existing `Zero\Entity` class is refused before anything is
-written, as is one whose class name is a PHP reserved word (`class`, `list`, `self`, `int`, ...). Entity and attribute names are capped at 64 characters. A class file differing only in case, or one `force` would overwrite that was generated for another entity name, is a collision. Values in a generated class are emitted with `var_export()`.
-
----
+`event`, `test_case`, ...) or an existing `Zero\Entity` class the generator did not write is
+refused before anything is written, as is one whose class name is a PHP reserved word
+(`class`, `list`, `self`, `int`, ...). Entity and attribute names are capped at 64
+characters. A class file differing only in case, or one `force` would overwrite that was
+generated for another entity name, is a collision. Values in a generated class are emitted
+with `var_export()`. See `core/entity/README.md`, "What define() refuses".
 
 ## 2026-11 — A schema for an empty database
 
 ### One-off `.sql` files — MOVED to `core/sql/migrations/`; `core/sql/core.sql` creates the tables
 
-Core's tables used to exist only on the live database and in scattered one-off files. Now
+Core's tables existed only on the live database and in scattered one-off files.
 `core/sql/core.sql` creates every table and view core and its bundled modules use on an empty
-database (see `core/sql/README.md`), and the one-off files are gathered in `core/sql/migrations/`,
+database (see `core/sql/README.md`), and the one-off files are in `core/sql/migrations/`,
 to be run by hand on a site that still needs them.
 
 | Was | Is |
@@ -262,15 +310,13 @@ to be run by hand on a site that still needs them.
 | `core/{capability_migration,group_rename,group,permission_migration,permission,user_profile,users_migration,users,user_view_eav_rollback,user_view}.sql` | `core/sql/migrations/` (same names) |
 | `modules/Auth/auth_manual.sql`, `user_schema.sql`, `oauth_token.sql`, `oauth_provider.sql` | `core/sql/migrations/auth_auth_manual.sql`, `auth_user_schema.sql`, `auth_oauth_token.sql`, `auth_oauth_provider.sql` |
 
-`entity/reset_entity.sql` stays beside the entity framework.
-
----
+`core/entity/reset_entity.sql` stays beside the entity framework.
 
 ## 2026-11 — Libraries live in core or in the module that owns them
 
 ### The site-root `lib/` folder — REMOVED
 
-`lib/` no longer exists. `Zero\Lib\` maps to `core/lib/`, which holds `CloudFlare`, `Http`,
+The site-root `lib/` is gone. `Zero\Lib\` maps to `core/lib/`, which holds `CloudFlare`, `Http`,
 `Mail` and `Push` under the same class names. Three libraries moved into the one module that
 uses them and took that module's namespace (no alias is left at the old name):
 
@@ -283,8 +329,6 @@ uses them and took that module's namespace (no alias is left at the old name):
 
 The example `example_module_integration.php`, which shows `ServiceClient` inside a module,
 moved from the skeleton module to `modules/ApiConfig/`; `modules/ApiDemo` is the live example.
-
----
 
 ## 2026-11 — Fix wave after the core rules work
 
@@ -306,6 +350,7 @@ A config key (any `app/config/*.ini`, a module's `config.ini` or `config/*.ini`,
 
 A key that is already defined, from any source (a strings file, an earlier config file, `index.php`), keeps its
 first value and writes a Console WARN naming the key and file. It used to raise PHP's "already defined" warning.
+A config file that repeats a key a strings file defined is the common case: the strings value stays.
 
 ### `/assets/hexmap/` — REPLACED by `/assets/ttrpg/hexmap/`
 
@@ -324,19 +369,15 @@ The default `From` and `Reply-To` is `Mail::sender()`: `MAIL_FROM` when the site
 They take a list of module directories (each with a trailing slash), or none to read every module that
 is switched on in every root, instead of one `modules/` folder.
 
----
-
 ## 2026-11 — Wording comes from `strings/`
 
 ### `SITE_NAME` in `app/config/config.ini` — MOVED
 
 `SITE_NAME` is defined in `app/strings/site.ini`, with `SITE_SHORT_NAME`; module defaults sit in
-`{Module}/strings/*.ini` (see `docs/ZERO.md`, "Wording: `strings/`"). A config file that repeats a key
-a strings file already defined no longer raises "already defined": the repeat is logged and the strings
-value stays. Remove `SITE_NAME` from `app/config/config.ini`; the skeleton's `config-templates/config.ini`
-no longer carries it and `core/skeleton/strings/site.ini` does.
-
----
+`{Module}/strings/*.ini` (see `core/docs/ZERO.md`, "Wording: `strings/`"). Remove `SITE_NAME` from
+`app/config/config.ini`: a repeat there is logged and the strings value stays (see "A repeated
+config key" above). `core/skeleton/config-templates/config.ini` does not carry it and
+`core/skeleton/strings/site.ini` does.
 
 ## 2026-11 — A module is found through `Modules` and can be turned off
 
@@ -350,21 +391,19 @@ modules without an order last, then by name. The `$root` parameter of `getAdminM
 `AdminResponse::resolveModuleDir()` are gone: `Modules::configure()` points tests at a throwaway tree
 and `Modules::name()` gives a module's real directory name. A module that is off answers 404 exactly as
 a module that does not exist: no controller, no view-file fallback, no `config.ini`, no `/admin/{module}`,
-and `Application::run()` removes its public asset links (when the set of disabled modules has changed, see below). A name held by two roots makes `run()` fail
+and `Application::run()` removes its public asset links (when the set of disabled modules has changed, see "Asset-link cleanup per request" above). A name held by two roots makes `run()` fail
 with a 500 (`Modules::assertNoClash()`). `assertNoClash()` compares names the way `path()` does (case and
 hyphens ignored); `dropDisabledAssetLinks()` removes every symlink under `assets/` (and one level below a real folder there) that points anywhere into a disabled module's folder, submodule links included.
 A URL that differs from a module's folder name only by case or hyphens now reaches the module (`/speedtest` reaches `SpeedTest`); it used to fall through to `Index` and 404. The skeleton `Module` is an example module and is off by default; unisolu's `app/modules.ini` turns it,
 `HelloWorld` and `Test` on.
-
----
 
 ## 2026-11 — The autoloader maps namespaces to folders
 
 ### Path guessing by string replacement, and the site folder named `zero` — REPLACED
 
 `Application::autoloader()` loads through `Application::classFile()`, an explicit map:
-`Zero\Core\Attribute\` is `core/attribute/`, `Zero\Core\` is `core/`, `Zero\Lib\` is `lib/`,
-`Zero\Entity\` is `entity/`, `Zero\Aux\` is `aux/`, `Zero\App\Lib\` is `app/lib/`, and `Zero\Module\{X}` is the
+`Zero\Core\Attribute\` is `core/attribute/`, `Zero\Core\` is `core/`, `Zero\Lib\` is `core/lib/`,
+`Zero\Entity\` is `core/entity/` then the site's `entity/`, `Zero\Aux\` is `aux/`, `Zero\App\Lib\` is `app/lib/`, and `Zero\Module\{X}` is the
 folder `Modules::path(X)` names, with each following segment a folder (as written, then as a
 submodule, then lowercased). The class name is no longer rewritten, so a class named `ModelCache`
 or `LibraryService` loads. `isModule()` loads a module's controller through the same map, and only for a URL name that is a
@@ -375,8 +414,6 @@ name as `Modules` knows it.
 folder no longer has to be called `zero`, and `ROOT_PATH` is the parent of `ZERO_ROOT`.
 `registerAutoloaders()` hands `Modules` its roots (`MODULE_PATH` and `core/modules/`) and
 `app/modules.ini`.
-
----
 
 ## 2026-11 — Admin offerings are classes, filtered by permission, with a fixed set of routable methods
 
@@ -398,8 +435,6 @@ cache (calling AWS only when no cache exists) and ignores `?refresh=1`.
 
 `/admin/manage` with no type throws `HTTPError(400, 'Management type required')`.
 
----
-
 ## 2026-11 — The WebSocket monitor and the push screen belong to Ws and Push
 
 ### `modules/Admin/submodule/WebSocket/`, `Admin::pushNotifications()`, `Admin::deletePushNotifications()` — MOVED into the Ws and Push modules' admin offerings
@@ -418,11 +453,9 @@ both screens are listed with the other module offerings.
 | `/admin/push-notifications` | `/admin/push` |
 | `/admin/delete-push-notifications` | `/admin/push/delete` (still POST only, still audit logged as `push_notification_delete`) |
 
-Views and assets sit in `modules/Ws/Admin/` and `modules/Push/Admin/` and are inlined by the
+Views and assets sit in `modules/Ws/Admin/` and `core/modules/Push/Admin/` and are inlined by the
 views (`websocket.css`, `websocket.js`, `push.js`). The WebSocket monitor's notes moved to
-`modules/Ws/CLAUDE.md`. `modules/Admin/submodule/` holds only `Firewall`.
-
----
+`modules/Ws/CLAUDE.md`. `core/modules/Admin/submodule/` holds only `Firewall`.
 
 ## 2026-11 — Billing and Plugins are their own modules
 
@@ -445,8 +478,6 @@ configured") when the file is missing. Its dashboard component is
 `modules/Billing/Admin/assets/aws-billing-dashboard.html`, required by the view. Views and
 assets sit in `modules/{Billing,Plugins}/Admin/`; the plugin CSS and JS are inlined by the
 view.
-
----
 
 ## 2026-11 — ApiConfig is its own module
 
@@ -471,8 +502,6 @@ before). Views and assets sit in `modules/ApiConfig/Admin/`; the `manage-api-tra
 and `view-api-response` assets are now `transactions` and `view-response`. `api_schema.sql`
 and `CLAUDE.md` moved to `modules/ApiConfig/`.
 
----
-
 ## 2026-11 — Entity screens belong to the Entity module
 
 ### `/admin/manage/{entity}`, `/admin/manage/event`, `/admin/create-entity`, `/admin/update-entity`, `/admin/delete-entity` — MOVED into the Entity module's admin offering
@@ -493,36 +522,34 @@ The entity-management screens and the event log left `modules/Admin`. They are
 `Admin::updateEntity()` and `Admin::deleteEntity()` are gone. `Admin::manage()` answers 404
 for a type it has no screen for (`users` and `groups` remain).
 `Zero\Module\Admin\Model\Entity` is now `Zero\Module\Entity\Model\EntityStore`. The views
-and the `create` and `manage` assets moved with it (`modules/Entity/Admin/`); the
+and the `create` and `manage` assets moved with it (`core/modules/Entity/Admin/`); the
 `create-entity` and `manage-entity` asset names are now `create` and `manage`.
 
 **Event log.** `/admin/manage/event` rendered the generic entity table for the `event`
 type; `view/manage-events.php`, the filterable log over `event_view`, was never selected.
-`/admin/entity/events` renders that filterable log.
-
----
+`/admin/entity/events` renders that filterable log (`Admin/view/events.php`).
 
 ## 2026-11 — OAuth storage belongs to the Auth module
 
 ### `Zero\Entity\OAuthToken`, `Zero\Entity\OAuthProvider`, `Zero\Core\TokenBroker` — MOVED into Auth
 
 The OAuth token store, provider registry and token broker are Auth's own, so they live in
-`modules/Auth/OAuth/`. Methods, signatures and the stored rows are unchanged.
+`core/modules/Auth/OAuth/`. Methods, signatures and the stored rows are unchanged.
 
 | Was | Now |
 |---|---|
 | `Zero\Entity\OAuthToken` | `Zero\Module\Auth\OAuth\Token` |
 | `Zero\Entity\OAuthProvider` | `Zero\Module\Auth\OAuth\Provider` |
 | `Zero\Core\TokenBroker` | `Zero\Module\Auth\OAuth\Broker` |
-| `entity/oauth_token.sql`, `entity/oauth_provider.sql` | `modules/Auth/oauth_token.sql`, `modules/Auth/oauth_provider.sql` |
-| `core/tests/TokenBrokerTest.php` | `modules/Auth/tests/OAuthBrokerTest.php` |
-
----
+| `entity/oauth_token.sql`, `entity/oauth_provider.sql` | `core/sql/migrations/auth_oauth_token.sql`, `auth_oauth_provider.sql` |
+| `core/tests/TokenBrokerTest.php` | `core/modules/Auth/tests/OAuthBrokerTest.php` |
 
 ## 2026-11 — Session, User, Group and Permission reshaped
 
 One design for the four classes: `Session` is the request, `User` and `Group` are row objects
 that can both hold permissions, `Permission` grants to either. See `core/PERMISSIONS.md`.
+`User`, `Group`, `Permission` and `Holder` are in `Zero\Core\Access` (see "Users, groups and
+permissions are in `core/access/`" above); older entries name them `Zero\Core\...`.
 
 ### Session statics on `Zero\Core\User` — MOVED to `Zero\Core\Session`
 
@@ -555,7 +582,7 @@ that can both hold permissions, `Permission` grants to either. See `core/PERMISS
 
 `grant($id, $groupId)` and `grantUser($id, $userId)`, `revoke()` and `revokeUser()`,
 `forgetGroup()` and `forgetUser()` were one operation written twice. `User` and `Group`
-implement `Zero\Core\Holder`, and `grant($id, $holder)`, `revoke($id, $holder)` and
+implement `Zero\Core\Access\Holder`, and `grant($id, $holder)`, `revoke($id, $holder)` and
 `Permission::forgetHolder($holder)` take either. `Permission` no longer takes a PDO first:
 `new Permission('lists', 'list')`, with an optional PDO last for code outside the framework.
 
@@ -583,7 +610,7 @@ posted group to a campaign, which listed that group's members and their emails t
 
 A capability was a `user_settings` row with the value `'1'`; `User::can()` read the whole
 settings map and granted on a strict `'1'`, `1` or `true`. A capability is a row in `permission`
-on `entity_id` 0, so a group can hold one too. `core/capability_migration.sql` moved every
+on `entity_id` 0, so a group can hold one too. `core/sql/migrations/capability_migration.sql` moved every
 `allow.*` row and the three older keys `network.mapper`, `hello.world` and `posts.edit`.
 `network.mapper` and `hello.world` are now `allow.network.mapper` and `allow.hello.world`, so
 every capability key starts with `allow.`; `grant()` refuses one that does not.
@@ -615,14 +642,15 @@ setting.
 
 ### `group`, `group_member` — RENAMED to `user_group`, `user_group_member`
 
-`group` is a reserved word and had to be quoted in every query. `core/group_rename.sql` renames
-both tables; the class is still `Zero\Core\Group`, and only `core/Group.php` and
-`core/Permission.php` name the tables.
+`group` is a reserved word and had to be quoted in every query.
+`core/sql/migrations/group_rename.sql` renames both tables; the class kept its name (it is
+`Zero\Core\Access\Group`), and only `core/access/Group.php` and `core/access/Permission.php`
+name the tables.
 
 ## 2026-11 — Permissions: one core table
 
-Sharing an item with a group is core's job. `Zero\Core\Permission` owns one `permission` table
-for every module; see `core/PERMISSIONS.md`.
+Sharing an item with a group is core's job. `Zero\Core\Permission` (`Zero\Core\Access\Permission`
+since) owns one `permission` table for every module; see `core/PERMISSIONS.md`.
 
 ### Per-module permission tables — REPLACED by `permission`
 
@@ -638,7 +666,7 @@ tables it did not own.
 | `kanban_permissions` | `kanban.board` |
 | `comfy_share` (`shared_by` → `granted_by`, always read-only) | `comfy.generation` |
 
-`core/permission_migration.sql` copies the old rows across for a site that still has the old
+`core/sql/migrations/permission_migration.sql` copies the old rows across for a site that still has the old
 tables. It does not drop them.
 
 ### `Zero\Core\GroupPermission` — REPLACED by `Zero\Core\Permission`
@@ -649,7 +677,7 @@ about the module's tables.
 
 | Was | Use |
 |---|---|
-| `new GroupPermission($db, 'notes', 'note_id', 'note_permissions', 'note')` | `new Permission($db, 'notes', 'note')` |
+| `new GroupPermission($db, 'notes', 'note_id', 'note_permissions', 'note')` | `new Permission('notes', 'note')` |
 | `hasPermission($id, $userId, $action)` (checked the owner too) | the module checks the owner, then `can($id, $userId, $action)` |
 | `getByEntity($id)` | `groups($id)`; rows carry `entity_id`, `granted_by`, `granted_on`, not `permission_id`, the module's id column or `created_at` |
 | `getAvailableGroups($id, $userId)` | `availableGroups($id, $userId)` |
@@ -706,30 +734,32 @@ groups, so none of them could be installed without Admin. One core class now cov
 | Was | Use |
 |---|---|
 | `Group::getUserGroups($userId)` | `Group::forUser($userId)` |
-| `Group::getMembers($groupId)` | `Group::members($groupId)` |
-| `Group::delete($groupId)` (set `is_active = 0`) | `Group::deactivate($groupId)` |
-| `Group::hardDelete($groupId)` | `Group::delete($groupId)` |
-| `GroupMember::add()`, `remove()` | `Group::add()`, `remove()` |
-| `GroupMember::updateRole()` | `Group::setRole()` |
-| `GroupMember::getRole()` | `Group::role()` |
-| `GroupMember::isMember()` | `Group::isMember()`, which is false for an inactive group |
-| `GroupMember::getNonMembers($groupId)` | `Group::nonMembers($groupId)` |
+| `Group::getMembers($groupId)` | `$group->members()` |
+| `Group::delete($groupId)` (set `is_active = 0`) | `$group->deactivate()` |
+| `Group::hardDelete($groupId)` | `$group->delete()` |
+| `GroupMember::add()`, `remove()` | `$group->add()`, `remove()` |
+| `GroupMember::updateRole()` | `$group->setRole()` |
+| `GroupMember::getRole()` | `$group->role()` |
+| `GroupMember::isMember()` | `$group->has()`, which is false for an inactive group |
+| `GroupMember::getNonMembers($groupId)` | `$group->nonMembers()` |
 
-`find()`, `all()`, `create()` and `update()` keep their names. `Group::findByName()`, `getStats()`
+`$group` is `Group::find($groupId)`: the class became a row object in the reshaping above,
+and the right-hand column gives today's calls. `find()`, `all()` and `create()` keep their
+names; `update()` is setting properties and `save()`. `Group::findByName()`, `getStats()`
 and `GroupMember::find()`, `count()`, `bulkAdd()`, `bulkRemove()` had no callers and are gone.
 
 Ttrpg and the Admin user list wrote their own SQL against the two tables; they use `Group` too.
-`UserAdmin::delete()` clears a deleted user's memberships with `Group::removeUser()` and their
-direct grants with `Permission::forgetUser()`.
+A deleted user's memberships and direct grants are cleared by `$user->delete()`
+(`Group::removeFromAll()`, `Permission::forgetHolder()`).
 
 ### `GroupMember::updateRole()` to the role a member already has threw — FIXED
 
 It read "no row changed" as "not a member". `Group::setRole()` throws only when the user is not in
 the group.
 
-### `modules/Admin/group_schema.sql` — MOVED to `core/group.sql`
+### `modules/Admin/group_schema.sql` — MOVED to `core/group.sql` (now `core/sql/migrations/group.sql`)
 
-The tables belong to core. The file no longer drops the tables before creating them.
+The tables belong to core. The file does not drop the tables before creating them.
 
 ## 2026-11 — Notebook: a checklist is a reference to a List
 
@@ -753,7 +783,7 @@ title or items still makes the List at once.
 `resolveChecklist()` and `resolveChecklistItem()`, edited a checklist's List through Lists'
 models and re-implemented Lists' rules (they took blank items, didn't count suggestions, and let
 a drag cross the checked items). Use `/lists/add-item`, `toggle-item`, `update-item`,
-`delete-item`, `reorder-items`, `edit/{id}` and `delete/{id}` (see `docs/LISTS_API.md`).
+`delete-item`, `reorder-items`, `edit/{id}` and `delete/{id}` (see the site's `docs/LISTS_API.md`).
 
 ### Lazy migration of checklists without a List — REMOVED
 
@@ -801,8 +831,6 @@ title), which calls `/lists/edit/{id}`.
 Only Notebook's `checklist-toggle-item` used it. `ListService::toggleItem()` sets the state and moves
 the item to the end of the group it joins.
 
----
-
 ## 2026-11 — Lists: the rules move to `lib/ListService`
 
 ### A List that doesn't exist answered 403 — REPLACED by 404
@@ -824,8 +852,6 @@ catch it; the lib throws `HTTPError(400)`, and the forms catch `\Exception` and 
 A model's failure inside an item endpoint was answered with `error()` (400, `{success: false,
 error}`); it is an `HTTPError(500)` now. `update-item` with nothing to change answered 400 "No
 fields to update" through `error()`; it is `HTTPError(400, 'Nothing to update')`.
-
----
 
 ## 2026-11 — HTTPError: the detail reaches JSON clients
 
@@ -857,8 +883,6 @@ The generic error page printed the detail as raw HTML. It is now escaped, with n
 into line breaks, so a detail is plain text: write `"\n"`, not `"<br>"`. Jackpack's two 503
 details were the only ones with markup, and use a newline.
 
----
-
 ## 2026-11 — Lists: suggestions count every add; unused model methods removed
 
 ### Suggestions recorded on clear and removed on delete — REPLACED
@@ -884,8 +908,9 @@ planned.
 ### `ListModel::getSharedUsers()`, `ListPermission::update()`, `ListPermission::find()` — REMOVED
 
 Nothing called them. For `update()` use `grant()`, which inserts or updates the group's row; for
-`find()` use `getByList()`. `getSharedUsers()` returned the email address of everyone a list was
-shared with, and has no replacement.
+`find()` use `getByList()` (`groups()` on `Permission` since `ListPermission` went, see
+"Permissions: one core table" above). `getSharedUsers()` returned the email address of everyone
+a list was shared with, and has no replacement.
 
 ### `list_permissions.updated_at` — DROPPED; Lists timestamps `timestamp` → `datetime`
 
@@ -909,8 +934,6 @@ serves the same lookups and the foreign key.
 The create/edit form's group checkboxes script. The framework loads only `{module}.js` and
 `{endpoint}.js`, and the form is served by `create` and `edit`, so `form.js` never loaded and
 a newly shared group's Update and Delete boxes stayed hidden.
-
----
 
 ## 2026-10 — Comfy: generations are assembled from a model and LoRAs
 
@@ -1065,9 +1088,24 @@ remembered one for a model gets that model's default instead.
 for the image model, and any of them can be tried on any image model. A set added to the
 folder is a choice for all of them.
 
----
-
 ## 2026-08 — Auth and permission overhaul
+
+The "use" lines in this section give today's calls: the session statics these entries
+introduced on `User` are on `Zero\Core\Session`, and `User` is `Zero\Core\Access\User`.
+
+### `#[AuditLog]`'s `requireAuth` parameter — REMOVED
+
+```php
+// gone: skipped the event when nobody was logged in
+#[AuditLog('profile_update', false, true)]
+
+// use: gate the endpoint, then log
+#[RequireLogin]
+#[AuditLog('profile_update')]
+```
+
+The constructor is `(string $eventType, bool $includeParams = false)`. An event for an
+anonymous request is recorded with no user.
 
 ### `$_SESSION['user_settings']` — REMOVED
 
@@ -1079,18 +1117,18 @@ and read directly by permission checks.
 !empty($_SESSION['user_settings']['allow.admin'])
 
 // use
-\Zero\Core\User::hasPermission('allow.admin')   // current user
+\Zero\Core\Session::can('allow.admin')          // current user
 $user->can('allow.admin')                       // a specific user
-$user->settings()                               // the whole map
+$user->settings()                               // the whole settings map
 ```
 
 **Why.** A session cache made a *revoked* permission keep working until the user logged
-out. `User::can()` / `User::settings()` read through to `user_settings` and memoize per
+out. `$user->can()` and `$user->settings()` read through to the database and memoize per
 `User` instance for the life of one request, so a revocation denies on the very next
 request.
 
 **Watch for:** a doc or comment telling a tester to log out and back in for a grant to
-take effect. That has not been true since this change — the next request is enough.
+take effect. The next request is enough.
 
 ### `$_SESSION['auth_level']` — REMOVED
 
@@ -1099,28 +1137,29 @@ take effect. That has not been true since this change — the next request is en
 $_SESSION['auth_level'] ?? 0
 
 // use
-\Zero\Core\User::current()?->authLevel() ?? 0
+\Zero\Core\Session::user()?->authLevel() ?? 0
 ```
 
 Same reasoning as `user_settings`, of which it was one key (`auth.level`).
 
 ### `User::currentId()` fallback to `$_SESSION['user']['id']` — REMOVED
 
-`currentId()` reads `$_SESSION['user_id']` and nothing else.
+`currentId()` (`Session::userId()` now) reads `$_SESSION['user_id']` and nothing else.
 
-**Why.** The fallback returned the **provider's** user id — a GitHub or GitLab integer, a
-Discord snowflake, a Keycloak UUID — not a local `users.id`. `User::establish()` now
-overwrites `$_SESSION['user']['id']` with the local id so the key means one thing on both
-of its branches, but nothing should read identity from there. Ask `currentId()`.
+**Why.** The fallback returned the **provider's** user id (a GitHub or GitLab integer, a
+Discord snowflake, a Keycloak UUID), not a local `users.id`. `establish()` overwrites
+`$_SESSION['user']['id']` with the local id so the key means one thing on both of its
+branches, but nothing should read identity from there. Ask `Session::userId()`.
 
 ### `User::getPermission()`, `getAllPermissions()`, `setPermission()` — REMOVED
 
-Had zero callers. `User::hasPermission()` is the one permission static that survives;
-`$user->can()` / `$user->setSetting()` are the instance equivalents.
+Had zero callers. `User::hasPermission()` (`Session::can()` now) was the one permission
+static that survived; `$user->can()`, `$user->grant()` and `$user->revoke()` are the
+instance calls.
 
-(`modules/User/User.php` has its own unrelated `getAllPermissions()`. Different class.)
+(`core/modules/User/User.php` has its own unrelated `getAllPermissions()`. Different class.)
 
-### `UserProfile` class — REPLACED by the `Zero\Core\User` instance API
+### `UserProfile` class — REPLACED by the `Zero\Core\Access\User` instance API
 
 ```php
 // gone
@@ -1148,10 +1187,9 @@ Facebook, Twitter, Instagram, Foursquare, Yelp, PayPal, LinkedIn, Pinterest and 
 git show 5dbb57b^:Auth/adapters/TwitterAdapter.php
 ```
 
-Their `$smids` indices are deliberately still reserved in `modules/Auth/Auth.php` so the via codes
-stay stable and a revival keeps its old URLs. `loadAdapter()` 404s on all of them.
-`KeycloakAdapter` is a different case — deprecated and unmaintained, but still present and still
-reachable at `/auth/keycloak-test`.
+Their `$smids` indices are deliberately still reserved in `core/modules/Auth/Auth.php` so the via
+codes stay stable and a revival keeps its old URLs. `loadAdapter()` 404s on all of them.
+`KeycloakAdapter` outlived them and went in 2026-11 (see "Keycloak is gone" above).
 
 ### `#[RequireAuthLevel]` — SHELVED, do not add new ones
 
@@ -1166,7 +1204,7 @@ was refused anyway. Every such pairing was deleted on 2026-08-16: `Admin`, `Syst
 `Postgres`, `Bingo`, `HelloWorld::permittedHello()`, `NetworkMap::save()`/`load()`.
 
 Full reasoning and the condition for un-shelving: `core/attribute/AUTH_GATE_CONSISTENCY.md`
-§ "The third gate", and `docs/attributes/RequireAuthLevel.md`.
+§ "The third gate", and `core/docs/attributes/RequireAuthLevel.md`.
 
 ### `#[RequirePermission]` method level: REPLACE → ADDITIVE
 
@@ -1181,11 +1219,11 @@ old semantics `modules/Receipts` declaring `allow.receipt.view` on the class and
 keeps replace semantics, because they name a destination or a constraint and two of those
 contradict each other.
 
-### Hand-rolled session teardown — REPLACED by `User::logout()`
+### Hand-rolled session teardown — REPLACED by `User::logout()` (now `Session::end()`)
 
 `Auth::logout()` and `Jackpack::signout()` each cleared the session their own way and had
 drifted: one left the cookie, the other left `$_SESSION` populated for the rest of the
-request. `User::logout()` is the single teardown — memo, `$_SESSION`, cookie, destroy.
+request. `Session::end()` is the single teardown: memo, `$_SESSION`, cookie, destroy.
 Callers keep only their redirect.
 
 ### `modules/Push` "session/cookie/localStorage" user resolution — REMOVED (security)
@@ -1197,7 +1235,7 @@ $userId = User::currentId()
     ?? $input['user_id'];            // client-supplied request body
 
 // use
-$userId = User::currentId();         // behind #[RequireLogin]
+$userId = Session::userId();         // behind #[RequireLogin]
 ```
 
 `subscribe`, `unsubscribe`, `status` and `click` carried **no gate at all** and resolved the
@@ -1219,18 +1257,19 @@ the gate is per-method rather than class-level.
 
 ### `unisolu_user_id` cookie — UNUSED, safe to delete
 
-`User::establish()` still sets it; **nothing reads it.** Its only reader was `modules/Push`,
-which resolved the acting user from it — a client-settable plaintext id trusted as proof of
+`establish()` still sets it; **nothing reads it.** Its only reader was `modules/Push`,
+which resolved the acting user from it: a client-settable plaintext id trusted as proof of
 identity. That was removed on 2026-08-16.
 
-It was never authentication. Do not add a reader. Removing the `setcookie()` call in
-`core/User.php` is an open cleanup.
+It was never authentication. Do not add a reader. The cookie is named by
+`Session::hintCookieName()` (see "Core names no site" above), and removing the `setcookie()`
+call in `Session::establish()` (`core/Session.php`) is an open cleanup.
 
 ### `$_SESSION['framePath']` — REMOVED, replaced by `Response::adoptFrameFrom()`
 
 `Module::defineBasePaths()` closed by writing the resolved frame into the session, so that
 a shared module could render in the styling of whatever sent the visitor to it.
-`modules/User/User.php` was the only reader.
+`modules/User/User.php` (`core/modules/User/User.php` now) was the only reader.
 
 ```php
 // gone
@@ -1246,7 +1285,7 @@ $this->adoptFrameFrom($_SERVER['HTTP_REFERER'] ?? null);
 
 - It ran on **every** request, so every visitor — bots included — was handed a session
   file. That is one of the two writes behind the accumulated session store described in
-  `SESSION_LIFECYCLE_HANDOFF.md`.
+  the site's `SESSION_LIFECYCLE_HANDOFF.md`.
 - The stored value was the frame of the last module *that browser* touched. Another tab or
   an hour ago counted, so a shared module frequently rendered in a frame nothing on the
   current path had asked for.
@@ -1274,14 +1313,14 @@ copy.
 
 ### `user_view` — NO LIVE READERS, retained as a compatibility view
 
-`user` moved out of the EAV entity system to `Zero\Core\User` over a real `users` table.
-No PHP file joins `user_view` any more. It is kept only so an old query doesn't hard-fail.
+`user` moved out of the EAV entity system to `Zero\Core\User` (`Zero\Core\Access\User` now)
+over a real `users` table. No PHP file joins `user_view` any more. It is kept only so an old
+query doesn't hard-fail.
 
 **Footgun:** creating an entity type named `user` via `/admin/entity/create` replaces the
 view with an empty EAV pivot, and login keeps working either way, so a smoke test won't
-catch it. Recovery is a manual re-run of `core/sql/migrations/user_view.sql`. See `entity/CLAUDE.md`.
-
----
+catch it. Recovery is a manual re-run of `core/sql/migrations/user_view.sql`. See
+`core/entity/CLAUDE.md`.
 
 ## Older
 
@@ -1292,13 +1331,13 @@ of them.
 
 | Gone | Where its job went |
 |---|---|
-| `Client.php` — session info, `getGeoLocation()`, `getGravatarURL()` | `Zero\Core\User` (session facade) |
-| `Restricted.php`, `Whitelist.php` — the old ACL | `core/attribute/` gates + `user_settings` keys |
+| `Client.php` — session info, `getGeoLocation()`, `getGravatarURL()` | `Zero\Core\Session` |
+| `Restricted.php`, `Whitelist.php` — the old ACL | `core/attribute/` gates + capabilities in `permission` |
 | `Application.min.php` — a single-file build of the core | abandoned |
-| `tools/` — unhooked debugging helpers | `plugin/DevToolbar`, `Zero\Core\Console` |
+| `tools/` — unhooked debugging helpers | the site's `plugin/DevToolbar`, `Zero\Core\Console` |
 
-`core/SQLAdapter.php` is a related loose end: it survives but extends an `Adapter` class that
-does not exist in this repo, and nothing references it. It would fatal if autoloaded.
+`SQLAdapter.php` is a related loose end: it survives in `core/deprecated/`, extends an
+`Adapter` class that does not exist in this repo, and nothing references it.
 
 ### `Application` constructor options — REMOVED
 
@@ -1343,19 +1382,17 @@ still the original URL args array.
 new Error(404, 'Item not found');
 
 // use
-throw new \Zero\Core\HTTPError(404, 'Item not found');
+throw new \Zero\Core\Exception\HTTPError(404, 'Item not found');
 ```
 
 `HTTPError` bubbles to `Application::run()` and calls `renderError()` on the live module,
 so the error keeps the module's frame. `$detail` shows on the error page and reaches JSON
 clients as `detail`.
-`new Error()` exits immediately instead, taking the frame with it.
+`new Error()` exited immediately instead, taking the frame with it.
 
-`core/Error.php` still exists and still works. **Not yet migrated:** `modules/Admin/Admin.php`
-(six call sites) and `modules/Index/view/zero-framework.php`, which warns against
-`new Error()` in one section and still teaches it as the way to return an HTTP error in two
-others (lines 158 and 476). `modules/Jackpack` was migrated on 2026-08-22, and
-`modules/Lists` in 2026-11.
+`modules/Jackpack` was migrated on 2026-08-22 and the rest in 2026-11 (`Lists`, `Admin`, and
+the modules listed under "Modules throw `HTTPError`" above). Nothing calls `new Error()`, and
+the class is `core/deprecated/Error.php`, which the autoloader does not find.
 
 ### `Request::convertJSONtoPOST()` — now gated on Content-Type
 

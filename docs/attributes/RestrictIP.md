@@ -1,89 +1,84 @@
 # RestrictIP
 
-**Namespace:** `\Zero\Core\Attribute\RestrictIP`
+**Class:** `Zero\Core\Attribute\RestrictIP` (`core/attribute/RestrictIP.php`)
 
-**Purpose:** Restrict an endpoint (or an entire module) to a whitelist of client IP addresses or CIDR ranges. Requests from any other IP receive a `403` and execution halts.
+Restricts an endpoint, or a whole class, to an allow-list of client IP
+addresses and CIDR ranges. Any other client gets a `403`.
 
 ## Usage
 
 ```php
 use Zero\Core\Attribute\RestrictIP;
 
-// Single IP
 #[RestrictIP('203.0.113.5')]
-public function adminOnly() {
-    // Only reachable from 203.0.113.5
-}
+public function adminOnly() {}
 
-// CIDR range
 #[RestrictIP('10.0.0.0/8')]
-public function internal() {
-    // Only reachable from the internal 10.x network
-}
+public function internal() {}
 
-// Multiple entries — plain IPs and CIDR ranges, IPv4 and IPv6
+// Plain IPs and CIDR ranges, IPv4 and IPv6
 #[RestrictIP(['203.0.113.5', '198.51.100.0/24', '2001:db8::/32'])]
-public function restricted() {
-    // Reachable from any listed address / range
-}
+public function restricted() {}
 
-// Class-level: applies to every endpoint in the module
+// Class level: every endpoint
 #[RestrictIP('10.0.0.0/8')]
-class Ops extends Module {
-    // ...
-}
+class Ops extends Module {}
 ```
 
 ## Parameters
 
-- `$allowed` (string|array) — A single IP/CIDR string or an array of them.
-  - Plain addresses: `'203.0.113.5'`, `'2001:db8::1'`
-  - CIDR ranges: `'203.0.113.0/24'`, `'2001:db8::/32'`
-  - Empty / non-string entries are ignored.
+- `$allowed` (string|array): one entry or a list. An entry is a plain address
+  (`'203.0.113.5'`, `'2001:db8::1'`) or a CIDR range (`'203.0.113.0/24'`,
+  `'2001:db8::/32'`). Entries are trimmed; empty and non-string entries are
+  dropped. An empty list, or an entry that is not a valid address or range,
+  matches nobody.
 
-## When to Use
+## Client IP
 
-- Admin or ops endpoints that should only be reachable from the office / VPN network
-- Webhook receivers locked to a provider's published IP ranges
-- Internal-only APIs
+The client IP is `Request::clientIp()`:
 
-## Error Response
+- The peer (`REMOTE_ADDR`) is a Cloudflare edge (`Zero\Lib\Net\TrustedProxy`):
+  `CF-Connecting-IP`, else the first hop of `X-Forwarded-For`, else the peer.
+- Any other peer: the peer itself. Forwarding headers from a client that
+  connects straight to the origin are not believed.
 
-- HTTP 403 Forbidden
-- Detail (on the error page, and as `detail` in JSON): `Access denied for IP <client-ip>`
+Before matching, the attribute requires `Request::clientIpIsVerified()` and
+refuses when it is false: there is no peer address, or the peer is a Cloudflare
+edge that sent no `CF-Connecting-IP`. An address taken from `X-Forwarded-For`
+alone is client-supplied, so it is never used to let someone in.
 
-## Client IP Resolution
+## Matching
 
-The attribute resolves the client IP using the same precedence as `Application::banNefariousRequest()`:
+`Zero\Lib\Net\Cidr::matches()`, on the binary form of the address (`inet_pton`):
 
-1. `HTTP_CF_CONNECTING_IP` — the Cloudflare-verified client IP (authoritative behind Cloudflare)
-2. First hop of `HTTP_X_FORWARDED_FOR` — fallback
-3. `REMOTE_ADDR` — direct (non-proxied) requests
+- Equivalent spellings of an address compare equal.
+- IPv4 never matches IPv6, and the reverse.
+- CIDR matching is bit-exact, including prefixes that end mid-byte (`/20`).
+- `/0` matches every address of the same family.
 
-> **Security note:** Because the site sits behind Cloudflare, `REMOTE_ADDR` is Cloudflare's edge IP, so `CF-Connecting-IP` is trusted as the real client. This is safe **only** while the origin is not reachable directly — a client able to bypass Cloudflare could spoof `CF-Connecting-IP`. Ensure the origin firewall only accepts traffic from Cloudflare.
+## Refusal
 
-## Notes
+| Case | `HTTPError` | Logged at warn |
+|---|---|---|
+| Client IP not verified | `403` `Access denied` | `RestrictIP denied: client IP could not be verified` |
+| Client IP not on the list | `403` `Access denied for IP <ip>` | `RestrictIP blocked request from '<ip>' (allowed: <list>)` |
 
-- IPv4 and IPv6 are both supported. Matches never cross address families (an IPv4 client never matches an IPv6 range and vice-versa).
-- Exact IPs are compared after binary normalization (`inet_pton`), so equivalent textual forms compare equal.
-- CIDR matching is bit-exact, including partial-byte prefixes (e.g. `/20`).
-- A `/0` range matches every address of the same family.
+## Class level and method level
 
-## Override
-
-A method-level `#[RestrictIP]` replaces a class-level `#[RestrictIP]` for that endpoint (standard attribute override semantics). Use a class-level default to lock down a whole module, then relax or tighten specific methods:
+A method-level `#[RestrictIP]` replaces the class-level one for that endpoint;
+the two lists are not merged. To widen one endpoint, repeat the class's entries:
 
 ```php
-#[RestrictIP('10.0.0.0/8')]      // Class default: internal network only
+#[RestrictIP('10.0.0.0/8')]
 class Ops extends Module {
 
-    public function status() {
-        // Inherits the 10.0.0.0/8 restriction
-    }
+    public function status() {}                    // 10.0.0.0/8
 
-    #[RestrictIP(['10.0.0.0/8', '203.0.113.5'])]  // Also allow one external admin IP
-    public function report() {
-        // Class-level restriction does NOT apply here — this list replaces it
-    }
+    #[RestrictIP(['10.0.0.0/8', '203.0.113.5'])]   // this list only
+    public function report() {}
 }
 ```
+
+See [../ATTRIBUTES.md](../ATTRIBUTES.md#class-level-and-method-level).
+
+Matcher tests: `core/tests/CidrTest.php`

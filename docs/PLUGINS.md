@@ -1,76 +1,89 @@
 # Zero Framework Plugin System
 
-## Overview
+A plugin runs code at fixed points of every request without a change to `Application.php`. It is
+a class in the site's `plugin/` folder; there is no registry and no configuration.
 
-The plugin system provides a way to extend Zero's core functionality without modifying `Application.php`. Plugins hook into specific lifecycle points and are automatically discovered from the `plugin/` directory.
-
-**Key Principles:**
-- **Zero Configuration** - Drop a plugin file and it works
-- **Zero Core Changes** - Add/remove plugins without touching Application.php
-- **Zero Bloat** - Plugins are optional; removing one never breaks the framework
-- **Convention-based** - Follows Zero's "convention over configuration" philosophy
-
-**Architecture:**
-- Plugins live in `zero/plugin/{Name}/{Name}.php`
-- Each extends `\Zero\Plugin` abstract base class
-- `PluginLoader` discovers and instantiates them automatically
-- Hooks fire at 5 lifecycle points during request processing
+- A plugin is `plugin/{Name}/{Name}.php`, declaring `\Zero\Plugin\{Name}`, which extends the
+  abstract base class `\Zero\Plugin`.
+- The base class is `plugin/Plugin.php`. It ships with the plugin folder, not with core. A site
+  with no `plugin/` folder loads no plugins.
+- `Zero\Core\PluginLoader` (`core/PluginLoader.php`) finds the plugins and calls their hooks.
 
 ## Lifecycle Hooks
 
-Plugins can hook into these points in the request lifecycle:
+There are five hooks. `Application` fires each with `PluginLoader::hook()`.
 
-| Hook | When It Fires | Available State | Common Uses |
-|------|--------------|-----------------|-------------|
-| `afterAutoloaders()` | After SPL + Composer autoloaders registered | Autoloaders only | Early initialization, timing |
-| `afterParseRequest()` | After URL parsed into Request object | `Request::$Module`, `$endpoint`, `$args` | Request logging, routing |
-| `afterConstants()` | After all .ini constants defined | All constants, `DEVMODE`, `MODULE_PATH` | Config-dependent setup, discovery |
-| `beforeRun($module, $endpoint, $args)` | After module resolved, before instantiation | Module name (string), endpoint, args | Pre-execution hooks, caching |
-| `afterRun($module, $endpoint, $args)` | After endpoint executed, before output flush | Everything + response generated | Output modification, logging |
+| Hook | Fires | Available |
+|------|-------|-----------|
+| `afterAutoloaders()` | End of `registerAutoloaders()`, right after the plugins are loaded | Autoloaders (core's and Composer's), `ZERO_ROOT`, `MODULE_PATH`, the session |
+| `afterParseRequest()` | End of `parseRequest()` | `Request::$module`, `$Module`, `$endpoint`, `$args`, `$method`, ... |
+| `afterConstants()` | End of `defineConstants()` | Every `.ini` constant, `DEVMODE` |
+| `beforeRun($module, $endpoint, $args)` | In `run()`, after the module class is resolved, before it is constructed | The three arguments `run()` was given: the module and endpoint as the URL named them, and the remaining URL segments |
+| `afterRun($module, $endpoint, $args)` | End of `run()`, after the endpoint returned or its `HTTPError` was rendered | The response in the output buffer, not yet sent |
 
-**Execution Order:**
+Order within a request, as the site's `index.php` calls it:
+
 ```
-Application::__construct()
-  ↓
-Application::registerAutoloaders()
-  ├→ SPL autoloaders registered
-  ├→ Composer vendor/autoload.php loaded
-  ├→ PluginLoader::load() - discovers all plugins
-  └→ afterAutoloaders() hook fires
-  ↓
-Application::parseRequest()
-  ├→ Request object populated with module/endpoint/args
-  └→ afterParseRequest() hook fires
-  ↓
-Application::defineConstants()
-  ├→ All .ini files processed
-  ├→ DEVMODE set based on IP
-  └→ afterConstants() hook fires
-  ↓
-Application::run($module, $endpoint, $args)
-  ├→ Module class resolved
-  ├→ beforeRun() hook fires
-  ├→ Attributes checked (RequireLogin, etc.)
-  ├→ Module instantiated
-  ├→ Endpoint method called
-  └→ afterRun() hook fires
-  ↓
-Application::__destruct()
-  └→ Output buffer flushed to browser
+new Application()                 output buffering on, session started
+registerAutoloaders()
+  ├ autoloaders registered, Composer's vendor/autoload.php loaded
+  ├ PluginLoader::load()
+  └ afterAutoloaders
+parseRequest()
+  ├ new Request()
+  └ afterParseRequest
+defineConstants()
+  ├ .ini files read, DEVMODE set
+  └ afterConstants
+run($module, $endpoint, $args)
+  ├ ban check, module check
+  ├ module class resolved
+  ├ beforeRun
+  ├ module constructed
+  ├ attributes checked (RequireLogin, ...)
+  ├ endpoint called
+  └ afterRun
+Application::__destruct()         output buffer flushed
 ```
 
-## Available Plugins
+`afterRun` does not fire when the endpoint ends the request itself (`exit` after a redirect, for
+example), or when `run()` stops at its module check.
 
-| Plugin | Purpose | Hooks Used | Documentation |
-|--------|---------|-----------|---------------|
-| `SideNav` | Auto-discovers modules/views/submodules for navigation | `afterConstants()` | [plugin/SideNav/README.md](../../plugin/SideNav/README.md) |
-| `DevToolbar` | Debug toolbar showing performance/request/session data | `afterAutoloaders()`, `beforeRun()`, `afterRun()` | [plugin/DevToolbar/README.md](../../plugin/DevToolbar/README.md) |
+## Loading
+
+`PluginLoader::load()` runs once per request:
+
+1. Returns no plugins when `ZERO_ROOT/plugin/` is not a directory.
+2. Requires `plugin/Plugin.php`.
+3. For each subfolder `{Name}` that holds `{Name}.php`: requires the file and constructs
+   `\Zero\Plugin\{Name}`. A subfolder without that file is skipped silently.
+4. Sets the plugin's `$cacheDir` to `storage/cache/plugin/{Name}/`.
+5. Sorts by priority, lower first, then by class name.
+
+Two mistakes are logged with `Console::warn()` and the plugin is left out:
+
+- `Plugin file {file} exists but class {class} not found`
+- `Plugin {class} does not extend \Zero\Plugin base class`
+
+## Errors
+
+`PluginLoader::hook()` catches anything a hook throws, logs
+`Plugin {class}::{hook}() threw: {message}` with `Console::error()` and goes on to the next
+plugin. A hook that throws never breaks the request.
+
+Loading has no such guard: a syntax error in a plugin's file, or a constructor that throws, breaks
+every request.
+
+## Plugins in the plugin folder
+
+| Plugin | Purpose | Priority | Hooks | Documentation |
+|--------|---------|----------|-------|---------------|
+| `DevToolbar` | Debug toolbar (performance, request, session), `DEVMODE` only | 10 | `afterAutoloaders`, `afterConstants`, `beforeRun`, `afterRun` | [plugin/DevToolbar/README.md](../../plugin/DevToolbar/README.md) |
+| `SideNav` | Discovers modules, views and submodules for navigation | 70 | `afterConstants` | [plugin/SideNav/README.md](../../plugin/SideNav/README.md) |
 
 ## Creating a Plugin
 
-### Basic Plugin
-
-Create `zero/plugin/MyPlugin/MyPlugin.php`:
+`plugin/MyPlugin/MyPlugin.php`:
 
 ```php
 <?php
@@ -82,53 +95,35 @@ use \Zero\Core\Console;
 
 class MyPlugin extends BasePlugin {
 
-    /**
-     * Priority: lower runs first (0-100, default 50)
-     */
     protected int $priority = 50;
 
-    /**
-     * Hook example: runs after constants are loaded
-     */
     public function afterConstants(): void {
-        Console::debug("MyPlugin: Constants loaded, DEVMODE = " . (DEVMODE ? 'true' : 'false'));
-
-        // Your plugin logic here
+        Console::debug("MyPlugin: DEVMODE = " . (DEVMODE ? 'true' : 'false'));
     }
 }
 ```
 
-That's it! The plugin will be automatically discovered and loaded.
+It is loaded on the next request.
 
-### With Caching
-
-Plugins have built-in cache helpers:
+### With caching
 
 ```php
 public function afterConstants(): void {
-    // Try cache first (1 hour TTL)
-    $data = $this->cacheGet('mydata', 3600);
+    $data = $this->cacheGet('mydata', 3600);      // null when missing or older than an hour
 
     if ($data === null) {
-        // Cache miss - do expensive operation
-        $data = $this->expensiveOperation();
-
-        // Cache the result
+        $data = $this->expensiveOperation();      // scan the filesystem, query the database
         $this->cacheSet('mydata', $data);
     }
-
-    // Use $data
-}
-
-private function expensiveOperation(): array {
-    // Scan filesystem, query DB, etc.
-    return ['result' => 'data'];
 }
 ```
 
-Cache files are stored at `storage/cache/plugin/{PluginName}/{key}.json` with automatic TTL expiration.
+A cache entry is the file `storage/cache/plugin/{PluginName}/{key}.json`. Its age is the file's
+modification time; `cacheGet()` deletes an entry that is older than `$ttl` or is not valid JSON
+and returns `null`. `cacheSet()` creates the folder when it is missing, so `storage/cache/` must
+be writable by the web server user.
 
-### Full Example: Request Logger
+### Example: request logger
 
 ```php
 <?php
@@ -154,326 +149,153 @@ class RequestLogger extends BasePlugin {
             date('Y-m-d H:i:s'),
             $module,
             $endpoint,
-            $_SERVER['REMOTE_ADDR']
+            \Zero\Core\Request::clientIp()
         );
         file_put_contents($this->logFile, $entry, FILE_APPEND);
     }
 
     public function afterRun(string $module, string $endpoint, mixed $args): void {
-        $elapsed = round((microtime(true) - $this->startTime) * 1000, 2);
-        $memory = round(memory_get_peak_usage() / 1024 / 1024, 2);
-
         $entry = sprintf(
             "[%s] END   %s::%s() [%sms, %sMB]\n",
             date('Y-m-d H:i:s'),
             $module,
             $endpoint,
-            $elapsed,
-            $memory
+            round((microtime(true) - $this->startTime) * 1000, 2),
+            round(memory_get_peak_usage() / 1024 / 1024, 2)
         );
         file_put_contents($this->logFile, $entry, FILE_APPEND);
     }
 }
 ```
 
-Drop this at `zero/plugin/RequestLogger/RequestLogger.php` and it immediately starts logging all requests.
-
-## Plugin API Reference
-
-### Base Class Properties
+## Base Class Reference
 
 ```php
-protected int $priority = 50;        // Execution priority (0-100, lower = first)
-public string $cacheDir = '';        // Auto-set by PluginLoader
-```
+protected int $priority = 50;        // 0-100, lower runs first
+public string $cacheDir = '';        // set by PluginLoader
 
-### Lifecycle Hook Methods
-
-All default to no-op (override only what you need):
-
-```php
+// Hooks. All are no-ops; override the ones you need, with exactly these signatures.
 public function afterAutoloaders(): void {}
 public function afterParseRequest(): void {}
 public function afterConstants(): void {}
 public function beforeRun(string $module, string $endpoint, mixed $args): void {}
 public function afterRun(string $module, string $endpoint, mixed $args): void {}
-```
 
-### Cache Helper Methods
-
-```php
-// Read cache (returns null if missing or expired)
-protected function cacheGet(string $key, int $ttl = 3600): mixed
-
-// Write cache
-protected function cacheSet(string $key, mixed $data): void
-
-// Delete cache
+protected function cacheGet(string $key, int $ttl = 3600): mixed   // null if missing or expired
+protected function cacheSet(string $key, mixed $data): void        // $data must be JSON-serializable
 protected function cacheClear(string $key): void
-
-// Get plugin priority
 public function getPriority(): int
 ```
 
-## Priority and Ordering
+## Priority
 
-Plugins run in priority order (lower = first). Ties are broken alphabetically by class name.
+Every hook runs the plugins in priority order, lower first; ties go by class name. A guide:
 
-**Default priorities:**
-- `0-20` - Early initialization (timers, logging setup)
-- `20-40` - Request processing (routing, validation)
-- `40-60` - Normal operations (default is 50)
-- `60-80` - Late processing (navigation, UI)
-- `80-100` - Output modification (injecting HTML, compression)
+- `0-20`: early setup (timers, logging). DevToolbar is 10, to capture the start time.
+- `20-40`: request processing
+- `40-60`: ordinary work. The default is 50.
+- `60-80`: late work (navigation, UI). SideNav is 70.
+- `80-100`: output modification
 
-**Example:**
-```php
-// DevToolbar: priority 10 (runs early to capture start time)
-// MyPlugin: priority 50 (default)
-// SideNav: priority 70 (runs late, navigation not needed early)
-```
-
-## Accessing Framework State
-
-Plugins can access framework state through existing mechanisms:
-
-**Request Data:**
-```php
-use \Zero\Core\Request;
-
-Request::$Module;    // "Test"
-Request::$endpoint;  // "myMethod"
-Request::$args;      // ["arg1", "arg2"]
-Request::$method;    // "GET" or "POST"
-```
-
-**Constants:**
-```php
-ZERO_ROOT;          // Framework root path
-MODULE_PATH;        // Path to modules directory
-DEVMODE;            // true if on dev subnet
-// ... all constants from .ini files
-```
-
-**Session:**
-```php
-$_SESSION['user_id'];   // users.id, or absent
-// ... standard PHP session
-```
-
-Permissions and `auth.level` are not in the session. Ask the user object, which reads
-through to the database:
+## Framework State in a Hook
 
 ```php
-\Zero\Core\Session::can('allow.admin');       // bool, current user
-\Zero\Core\Session::user()?->authLevel() ?? 0;       // int
-```
+use \Zero\Core\{Request, Session, Database, Console};
 
-The full session contract is in `core/modules/Auth/CLAUDE.md`.
+Request::$Module;  Request::$endpoint;  Request::$args;  Request::$method;   // from afterParseRequest on
 
-**Database:**
-```php
-use \Zero\Core\Database;
+ZERO_ROOT;  MODULE_PATH;          // always
+DEVMODE;                          // from afterConstants on, with every .ini constant
+
+Session::userId();                // ?int
+Session::can('allow.admin');      // bool, reads the database
+Session::user()?->authLevel() ?? 0;
 
 $db = Database::getConnection();
-$stmt = $db->prepare("SELECT ...");
+
+Console::debug("...");  Console::info("...");  Console::warn("...");  Console::error("...");
 ```
 
-**Logging:**
-```php
-use \Zero\Core\Console;
+Capabilities and `auth.level` are not in `$_SESSION`; ask `Session`. See `core/PERMISSIONS.md`,
+and `core/modules/Auth/CLAUDE.md` for what the session holds.
 
-Console::debug("Debug message");
-Console::info("Info message");
-Console::warn("Warning message");
-Console::error("Error message");
-```
-
-## Error Handling
-
-Plugins are wrapped in try/catch to prevent breaking the framework:
+## Patterns
 
 ```php
-// In PluginLoader::hook()
-try {
-    $plugin->$hook(...$args);
-} catch (\Throwable $e) {
-    Console::error("Plugin {$name}::{$hook}() threw: " . $e->getMessage());
-    // Framework continues running
-}
-```
-
-**Result:** A broken plugin logs an error but never crashes the site.
-
-## Best Practices
-
-### DO:
-- Keep plugins focused on a single concern
-- Use caching for expensive operations
-- Check for DEVMODE when appropriate
-- Log errors with Console::error()
-- Make plugins optional (no hard dependencies)
-- Follow the Priority guidelines
-
-### DON'T:
-- Modify global state unexpectedly
-- Perform slow operations on every request
-- Assume other plugins are loaded
-- Block requests (use attributes for that)
-- Require manual configuration
-
-### Plugin Pattern Examples
-
-**Configuration-based:**
-```php
+// Only when a feature is switched on by a constant
 public function afterConstants(): void {
-    // Check if feature is enabled via constant/config
     if (!defined('ENABLE_MY_FEATURE') || !ENABLE_MY_FEATURE) {
         return;
     }
-
-    // Feature logic here
+    // ...
 }
-```
 
-**DEVMODE-only:**
-```php
-public function afterRun(...): void {
+// Only in DEVMODE
+public function afterRun(string $module, string $endpoint, mixed $args): void {
     if (!defined('DEVMODE') || !DEVMODE) {
         return;
     }
-
-    // Dev-only logic here
+    // ...
 }
-```
 
-**Conditional injection:**
-```php
-public function afterRun(...): void {
-    // Only inject into HTML responses
-    $isHtml = false;
+// Add to HTML responses only
+public function afterRun(string $module, string $endpoint, mixed $args): void {
     foreach (headers_list() as $header) {
         if (stripos($header, 'Content-Type: text/html') !== false) {
-            $isHtml = true;
-            break;
+            echo "<div>Injected content</div>";
+            return;
         }
     }
-
-    if (!$isHtml) return;
-
-    echo "<div>Injected content</div>";
 }
 ```
 
-## Disabling Plugins
+Guidelines:
 
-### Temporary Disable
+- One concern per plugin, and no dependence on another plugin being loaded.
+- A hook runs on every request: cache anything expensive.
+- A plugin does not block a request. That is an attribute's job (below).
 
-**Option 1:** Rename the plugin file
+## Disabling and Removing
+
+The loader only sees `{Name}/{Name}.php`, so any of these takes a plugin out:
+
 ```bash
-mv plugin/MyPlugin/MyPlugin.php plugin/MyPlugin/MyPlugin.php.disabled
+mv plugin/MyPlugin/MyPlugin.php plugin/MyPlugin/MyPlugin.php.disabled   # disable
+mv plugin/MyPlugin/MyPlugin.php.disabled plugin/MyPlugin/MyPlugin.php   # enable
+rm -rf plugin/MyPlugin                                                  # remove
 ```
 
-**Option 2:** Rename the plugin directory
-```bash
-mv plugin/MyPlugin plugin/_MyPlugin
-```
-
-**Option 3:** Delete the plugin directory
-```bash
-rm -rf plugin/MyPlugin
-```
-
-**Option 4:** Add a disable check in the plugin
-```php
-public function afterAutoloaders(): void {
-    if (file_exists(ZERO_ROOT . 'storage/myplugin.disabled')) {
-        return;
-    }
-    // ... plugin logic
-}
-```
-
-Then: `touch storage/myplugin.disabled` to disable.
-
-### Permanent Removal
-
-Simply delete the plugin directory:
-```bash
-rm -rf zero/plugin/MyPlugin
-```
-
-No other changes needed. The plugin system will skip it automatically.
+The `.php.disabled` rename is what the Plugins module's admin screen (`/admin/plugins`, a site
+module) does; it also clears the plugin's cache folder.
 
 ## Troubleshooting
 
-### Plugin Not Loading
+Log lines go through `Console` (by default `/var/log/php-fpm/zero.log`):
 
-**Check the log:**
 ```bash
-tail -f /var/log/php-fpm/zero.log | grep "PluginLoader"
+tail -f /var/log/php-fpm/zero.log | grep "Plugin"
 ```
 
-**Common issues:**
-- File not named correctly (must be `{Name}/{Name}.php`)
-- Class name doesn't match namespace (must be `\Zero\Plugin\{Name}`)
-- PHP syntax error in plugin file
-- Plugin directory not in `zero/plugin/`
+**Not loading:**
+- The file is not `plugin/{Name}/{Name}.php`. Nothing is logged for a folder without it.
+- The class is not `\Zero\Plugin\{Name}`, or does not extend `\Zero\Plugin` (both are logged).
 
-### Plugin Loaded But Hook Not Firing
+**Loaded, but a hook does nothing:**
+- The method name or signature differs from the base class.
+- The hook returns early on its own condition.
+- The hook threw: look for `threw:` in the log.
 
-**Check:**
-- Hook method signature matches base class exactly
-- No type errors in parameters
-- Plugin isn't returning early due to conditional logic
-- Look for exceptions in the log
+**Cache not working:**
+- `storage/cache/plugin/{Name}/` cannot be created or written.
+- The TTL passed to `cacheGet()` has expired.
+- The plugin skips its cache on purpose. SideNav does in `DEVMODE`.
 
-### Cache Not Working
+## Plugins or Attributes
 
-**Verify:**
-- `storage/cache/plugin/` directory exists and is writable
-- Plugin's `$cacheDir` property is set (automatic)
-- TTL hasn't expired
-- In DEVMODE, some plugins may bypass cache intentionally
+| Use a plugin for | Use an attribute for |
+|------------------|----------------------|
+| Something on every request: timing, logging, discovery | One endpoint or one module: auth, validation, sanitizing |
+| Adding to the output | Refusing or ending a request |
 
-## Comparison: Plugins vs Attributes
-
-**Use Plugins for:**
-- Lifecycle-level concerns (timing, logging, discovery)
-- Expensive operations that run once per request
-- Output modification (injecting HTML, headers)
-- Framework-wide features
-- Background tasks
-
-**Use Attributes for:**
-- Per-endpoint concerns (auth, validation)
-- Request filtering and early termination
-- Method-level decorators
-- Security enforcement
-- Parameter sanitization
-
-**Example:**
-- ✅ Plugin: "Log all requests to a file"
-- ✅ Attribute: "Require login for this endpoint"
-- ✅ Plugin: "Auto-discover modules for navigation"
-- ✅ Attribute: "Validate POST parameters before execution"
-
-## Future Plugin Ideas
-
-- **Metrics** - Track request times, memory usage, query counts
-- **CookieBanner** - Inject GDPR cookie consent banner
-- **Maintenance** - Check maintenance flag, show maintenance page
-- **CORS** - Set CORS headers for API endpoints
-- **Compression** - Gzip compress output
-- **RateLimiter** - Limit requests by IP/user
-- **Localization** - Load language files based on user preference
-- **AssetOptimizer** - Minify/combine CSS/JS on the fly
-
-Each can be added without touching the core framework.
-
-## See Also
-
-- [ATTRIBUTES.md](ATTRIBUTES.md) - PHP 8 Attributes system
-- [plugin/SideNav/README.md](../../plugin/SideNav/README.md) - SideNav plugin documentation
-- [plugin/DevToolbar/README.md](../../plugin/DevToolbar/README.md) - DevToolbar plugin documentation
-- [MODULE_PHILOSOPHY.md](MODULE_PHILOSOPHY.md) - Module design principles
+"Log every request" is a plugin. "Require login for this endpoint" is an attribute. See
+[ATTRIBUTES.md](ATTRIBUTES.md).

@@ -1,46 +1,77 @@
 # Session Improvements: Silent Rehydration via Remember-Me Token
 
-**Status: PROPOSAL — not implemented.** Nothing below exists yet: there is no
-`core/RememberToken.php`, no `core/SessionState.php`, and no remember-token table. Today
-`RequireLogin` still redirects to `/user/login?r=y` when the session is gone. Read this as a
-design, not as behaviour.
+**Status: PROPOSAL — not implemented.** There is no `RememberToken` class and no
+`remember_tokens` table. `RequireLogin` redirects to `/user/login?r=y` when the session is
+gone. Read this as a design, not as behaviour. Checked against the code 2026-11-21.
+
+**Related:** `core/docs/TOKEN_ISSUE.md` changes how sessions start for API-token requests and
+touches the same code (`Application::__construct()`, `Session::establish()`); plan the two
+together. `SESSION_LIFECYCLE_HANDOFF.md`, an untracked file in the root of the unisolu.com
+site checkout (outside this repository), covers session start and lifetime more broadly.
 
 ## Goal
 
-When a returning user navigates to a protected URL (e.g. `/notebook`) and their PHP session has expired, the request should rehydrate the session **server-side** before any HTML is rendered — no redirect, no Google JS round-trip, no visible bounce. The user simply sees the page they asked for.
-
-This replaces the current behavior, where `RequireLogin` redirects to `/user/login` whenever `$_SESSION['user_id']` is missing.
+A returning user whose PHP session has expired opens a protected URL (e.g. `/notebook`). The
+server rebuilds the session before any HTML is rendered: no redirect, no provider round-trip.
 
 ## Non-goals
 
-- Removing Google as the identity provider. Google remains the only login UI; this just lets us *resume* a Google-authenticated session without re-running Google's flow on every browser restart.
-- Changing the session itself (lifetime, regeneration, cookie name). All of that stays.
-- Replacing the current session cookie with the remember-me cookie. They serve different purposes and coexist.
+- Changing how people sign in. OAuth (Google, GitHub, GitLab, Discord) and the emailed
+  sign-in link stay as they are; this only resumes a session that one of them created.
+- Replacing the session cookie. The two cookies coexist.
+- Replacing PHP sessions with JWTs, provider revocation hooks, a user-facing "active
+  sessions" page (easy to add later given the schema).
 
-## Design summary
+## What exists already
 
-Standard "selector + validator" remember-me pattern:
+- **`Session::establish(User $user)`** is the single writer of the login session and
+  `Session::end()` the single teardown. Rehydration must go through `establish()`, not build
+  `$_SESSION` itself. The session contract is in `core/modules/Auth/CLAUDE.md`;
+  `core/tests/SessionEstablishTest.php` pins it.
+- **`Zero\Module\Auth\Model\AuthToken`** (`core/modules/Auth/model/AuthToken.php`, table
+  `auth_token`) already implements selector + validator tokens for one-time sign-in links:
+  `random_bytes`, base64url, validator stored hashed, `expires_at` computed by the database.
+  Copy its approach. It is one-time by design, so a remember token needs its own table and
+  rotation.
+- **The hint cookie.** `establish()` sets a non-expiring cookie named by
+  `Session::hintCookieName()` (`SESSION_HINT_COOKIE` in `app/config/constants.ini`, default
+  `zero_user_id`) holding the plaintext user id. Nothing in core or the site's modules reads
+  it; `core/modules/Push`, the last reader, now takes the id from the session only. It is not
+  authentication and must not become it.
+- **Persistent login by configuration.** `SESSION_LIFECYCLE_HANDOFF.md` records
+  `session.cookie_lifetime = 604800` and `session.gc_maxlifetime = 604800` on the live host
+  (measured 2026-08-16): the session cookie already survives browser restarts for seven days.
+  This proposal extends that; it does not introduce it.
 
-- On successful Google login, server issues a long-lived cookie containing `selector:validator`, both random.
-- Server stores `(selector, user_id, hash(validator), expires_at, ...)` in a new `remember_tokens` table.
-- On a request with no session but with a valid remember-me cookie, `RequireLogin` looks up by `selector`, constant-time compares `hash(submitted_validator)` against the stored hash, rebuilds `$_SESSION` inline, **rotates the validator**, and lets the request proceed.
-- On logout, the cookie is cleared and that token row is deleted.
-- If a `selector` is presented with a wrong validator, that's a theft signal: invalidate all of that user's tokens.
+## Design
 
-## Cookie
+Standard selector + validator remember-me:
 
-- Name: `unisolu_remember`
-- Value: `{selector}:{validator}`, where `selector` is 16 random bytes and `validator` is 32 random bytes, both base64url-encoded
-- Attributes: `Path=/; HttpOnly; Secure; SameSite=Lax; Expires=<configurable, default 90 days>`
-- Why selector+validator instead of one opaque token: the selector is the DB lookup key (indexable, no need to hash), and the validator is the secret (only its hash is stored, so a DB leak doesn't grant impersonation). Splitting them lets us do constant-time hash comparison after a single indexed lookup.
-- Why not just sign a `user_id` with HMAC: signed cookies can't be revoked individually, can't be rotated on use, and can't detect theft. A DB-backed token can do all three.
+- On interactive sign-in the server sets a long-lived cookie `selector:validator`, both
+  random, and stores `(selector, user_id, hash(validator), expires_at, …)`.
+- On a request with no login session but a remember cookie: look up by `selector`,
+  constant-time compare `hash(validator)`, call `Session::establish()`, **rotate the
+  validator**, continue the request.
+- On logout: clear the cookie, delete that row.
+- A known selector with a wrong validator is a theft signal: delete all of that user's
+  tokens.
 
-## Database schema
+### Cookie
 
-New table:
+- Value `{selector}:{validator}`: 16 and 32 random bytes, base64url.
+- `Path=/; HttpOnly; Secure; SameSite=Lax; Expires=<configurable, default 90 days>`. Lax, not
+  Strict, so the cookie is sent on a top-level navigation from another site.
+- Name: the original draft used `unisolu_remember`. Core serves more than one site, so the
+  name should come from configuration, as `SESSION_HINT_COOKIE` does.
+- Selector + validator rather than one opaque token: the selector is the indexed lookup key,
+  the validator is the secret and only its hash is stored.
+- Not an HMAC-signed user id: that cannot be revoked per device, rotated on use, or detect
+  theft.
+
+### Table
 
 ```sql
-CREATE TABLE remember_tokens (
+CREATE TABLE IF NOT EXISTS remember_tokens (
     selector        CHAR(22)        NOT NULL PRIMARY KEY,   -- base64url of 16 bytes
     user_id         INT UNSIGNED    NOT NULL,
     validator_hash  CHAR(64)        NOT NULL,               -- sha256 hex of validator
@@ -54,156 +85,147 @@ CREATE TABLE remember_tokens (
 );
 ```
 
-Notes:
-- One row per device. A user can have many active tokens (laptop, phone, tablet), each with its own selector. Logout deletes only the current device's row.
-- `validator_hash` uses sha256 — fast is fine here because the validator is 32 random bytes (256 bits of entropy). Bcrypt-style slow hashing is for low-entropy passwords; it's the wrong tool for high-entropy random tokens.
-- Periodic cleanup: a cron or on-write sweep that deletes rows where `expires_at < NOW()`. Cheap and not load-bearing for security (expired rows fail the expiry check anyway).
+- Goes in `core/sql/core.sql` (see `core/sql/README.md` for its rules) with a file in
+  `core/sql/migrations/`.
+- One row per device. Logout deletes only the current device's row.
+- sha256 is right for a 256-bit random validator; slow hashes are for passwords.
+- Compute and compare `expires_at` in the database (`NOW()`), not in PHP. PHP runs UTC and
+  MySQL local time on the live host; `AuthToken::issue()` documents the bug this caused.
+- Expired rows fail the expiry check anyway; a periodic delete is housekeeping only.
 
 ## Code changes
 
-### 1. New helper class: `core/RememberToken.php`
-
-A small static class encapsulating the token lifecycle. Public surface:
+### 1. `RememberToken`
 
 ```php
-namespace Zero\Core;
-
 class RememberToken {
-    // Issue a fresh token for a user; sets the cookie. Called from Auth::complete().
-    public static function issue(int $userId): void;
-
-    // Read the cookie, validate it, rebuild $_SESSION on success, rotate the validator.
-    // Returns true if session was rehydrated. Called from RequireLogin::handler() and
-    // anywhere else (e.g., Push) that needs "resolve current user from cookie".
-    public static function tryRehydrate(): bool;
-
-    // Delete the current device's token row and clear the cookie. Called from Auth::logout().
-    public static function revokeCurrent(): void;
-
-    // Nuke all tokens for a user (theft response, "log out everywhere" feature).
+    public static function issue(int $userId): void;          // new row, set cookie
+    public static function tryRehydrate(): bool;              // validate, establish(), rotate
+    public static function revokeCurrent(): void;             // this device: delete row, clear cookie
     public static function revokeAllForUser(int $userId): void;
 }
 ```
 
-Internal logic for `tryRehydrate()`:
+`tryRehydrate()`:
 
-1. Read cookie. If absent or malformed → return false.
-2. Split into `selector`, `validator`. Validate format strictly.
-3. SELECT row by selector. If no row → return false.
-4. If `expires_at < NOW()` → delete row, clear cookie, return false.
-5. `hash_equals(stored_validator_hash, sha256(validator))` — constant-time.
-   - If mismatch → **theft signal**: call `revokeAllForUser($row->user_id)`, clear cookie, return false. Optionally log/alert.
-6. Load the user record (`User::getInstance()->withId(...)`). If user doesn't exist → delete row, clear cookie, return false.
-7. Rebuild `$_SESSION` exactly the way `Auth::complete()` does: `user_id`, `name`, `email`, `verified`, `pic`, `user_settings`, `auth_level`, `created_at`. Extract this into a shared helper (see §3) to avoid divergence.
-8. Rotate: generate new validator, update `validator_hash` and `last_used_at` in DB, set new cookie with extended expiry.
+1. Read the cookie. Absent or malformed → false.
+2. Split and validate the format strictly.
+3. Select the row by selector. None → false.
+4. Expired → delete row, clear cookie, false.
+5. `hash_equals(stored_hash, sha256(validator))`. Mismatch → `revokeAllForUser()`, clear
+   cookie, log, false.
+6. `Zero\Core\Access\User::find($row['user_id'])`. No user → delete row, clear cookie, false.
+7. `Session::establish($user)`. Then require `Session::isLoggedIn()`: `establish()` copies
+   `verified` from the row, and an unverified account is not logged in.
+8. Rotate: new validator, update `validator_hash` and `last_used_at`, set the cookie again.
 9. Return true.
 
-### 2. `core/attribute/RequireLogin.php`
+### 2. Where rehydration runs
 
-Modify `handler()`:
+`RequireLogin::handler()`, before it gives up:
 
 ```php
-public function handler() {
-    if (session_status() == PHP_SESSION_NONE || !isset($_SESSION['user_id'])) {
-        // Try silent rehydration via remember-me cookie before redirecting.
-        if (\Zero\Core\RememberToken::tryRehydrate()) {
-            return $this->approved = true;
-        }
-        Console::warn("RequireLogin attribute blocked request: user not logged in");
-        $this->redirectToLogin();
+if (session_status() == PHP_SESSION_NONE || !Session::isLoggedIn()) {
+    if (RememberToken::tryRehydrate()) {
+        return $this->approved = true;
     }
-    return $this->approved = true;
+    Console::warn("RequireLogin attribute blocked request: user not logged in");
+    $this->redirectToLogin();
 }
 ```
 
-`RequireAuthLevel` and `RequirePermission` should get the same treatment (or, cleaner: have them all delegate the "is there a logged-in user" check to one place).
+`RequirePermission::handler()` delegates to `RequireLogin`, so it is covered.
+`RequireAuthLevel` does not delegate and is shelved (`core/docs/attributes/RequireAuthLevel.md`);
+leave it. `core/modules/Push` gates its acting endpoints with `#[RequireLogin]`, so it needs
+no change of its own.
 
-### 3. `core/modules/Auth/Auth.php`
+### 3. Where tokens are issued and revoked
 
-Two changes:
+- **Issue** after `Session::establish()` in the two interactive sign-ins: `Auth::complete()`
+  (OAuth) and `Auth::token()` (emailed link). **Not** inside `establish()`:
+  `AllowWithToken` is its third caller and an API-token request must not be handed a
+  remember cookie.
+- **Revoke** in `Auth::logout()`, before `Session::end()`.
 
-**a. Extract the "load user into session" block (currently lines ~96–123) into a helper** so both `complete()` and `RememberToken::tryRehydrate()` use the same code path. Candidate location: a new private method on `Auth`, or a new method on the `User` entity (`User::populateSession($user)`), or a small `core/SessionState.php` helper. Whichever fits the codebase best.
+### 4. The hint cookie
 
-**b. In `complete()`, replace the existing `setcookie('unisolu_user_id', ...)` block (lines 125–135) with `RememberToken::issue($user->id);`.** This is the single most important change — it removes the forgable plaintext-user-id cookie.
-
-**c. In `logout()`, call `RememberToken::revokeCurrent()` before destroying the session.**
-
-### 4. `core/modules/Push/Push.php`
-
-Currently uses `$_COOKIE['unisolu_user_id']` as a fallback identifier in four places. Two options, in order of preference:
-
-- **Preferred:** replace the `?? $_COOKIE['unisolu_user_id']` fallback with a call to `RememberToken::tryRehydrate()` if `$_SESSION['user_id']` is absent. This makes Push consistent with the rest of the system: identity always comes from a verified source, never from a forgable cookie.
-- **Fallback:** if there's a real reason Push needs to work in a context where `tryRehydrate()` can't run (e.g., service-worker-initiated request with no cookies), accept `user_id` only via a signed payload, never raw.
-
-The plain `unisolu_user_id` cookie should be deleted entirely once Push is converted.
+Remove the `setcookie(self::hintCookieName(), …)` call from `Session::establish()` and
+`hintCookieName()` with it, once it is confirmed that no client outside the PHP code (a
+mobile app, an integration) reads the cookie. It is `HttpOnly`, so page script cannot.
+`core/tests/SessionHintCookieTest.php` covers the current behaviour and goes with it. Expire
+leftover cookies for a couple of weeks after.
 
 ### 5. Config
 
-Add to `app/config/constants.ini`:
+`app/config/constants.ini` (and the templates in `core/skeleton/`):
 
 ```ini
 ; Remember-me cookie lifetime in seconds (default: 90 days)
 REMEMBER_TOKEN_LIFETIME=7776000
 ```
 
-Read in `RememberToken::issue()` and rotation. Configurable so we can tune without code changes.
+## Rollout
 
-## Migration / rollout
+1. Ship the table. `CREATE TABLE IF NOT EXISTS`.
+2. Ship the code. A user without a remember cookie behaves as today and gets one at their
+   next sign-in.
+3. Remove the hint cookie (§4).
 
-1. Ship the schema migration (new `remember_tokens` table). Idempotent CREATE.
-2. Ship the code. Existing users won't have a remember-me cookie yet; they continue to behave as today (session works while alive, redirect to Google when it dies). The first time each user logs in after the deploy, they get a remember-me cookie and the new behavior kicks in.
-3. Once Push is converted (§4), delete leftover `unisolu_user_id` cookies on next visit (`setcookie('unisolu_user_id', '', time() - 3600, '/')` somewhere in the bootstrap, for one or two weeks, then remove).
+No data migration.
 
-No data migration needed. No flag day. The system is strictly additive until step 3's cleanup.
+## Security
 
-## Security considerations
+- `HttpOnly` + `Secure` + `SameSite=Lax` are mandatory. The cookie cannot be created by
+  JavaScript; do not "fix" that.
+- `hash_equals` for the validator. `random_bytes()` for both halves.
+- Rotate on every successful use. That is what makes theft detectable.
+- On a mismatch, revoke all of the user's tokens and log it. Consider emailing the user.
+- Never log the validator, including in dev-mode output. The hash is fine.
+- Fail quietly on garbage cookies (bad format, unknown selector). They happen.
+- Rehydration changes state on a GET. `establish()` already rotates the session id, which is
+  what is wanted here.
 
-- **Cookie attributes are mandatory:** `HttpOnly` + `Secure` + `SameSite=Lax`. Lax (not Strict) so the cookie is sent on top-level navigations from external links — required for the silent-rehydration UX to work when a user clicks a link to your site from elsewhere.
-- **Constant-time compare on the validator** (`hash_equals`). Don't use `===` or `strcmp`.
-- **Random source must be `random_bytes()`** — never `mt_rand`/`uniqid`.
-- **Rotate on every successful use.** This is what makes theft detectable: the legitimate user and the thief can't both hold a valid validator at the same time.
-- **Theft response should be loud.** When mismatch is detected, revoke all tokens for that user and consider sending them an email ("a session on your account was invalidated for security; if this wasn't you, change your Google password"). Log it.
-- **Don't log the validator anywhere** — not in error logs, not in DEVMODE dumps. The hash is fine; the raw value is a credential.
-- **Rate limit lookup attempts** by IP (or globally) to make brute-forcing the selector space impractical. A 16-byte selector has 128 bits of entropy, so brute force isn't realistic, but a misconfigured lookup that doesn't error on garbage selectors could be used to probe DB performance. Worth a `try/catch` and quiet failure.
-- **The remember-me cookie cannot be created by JavaScript** (HttpOnly). Document this so no one tries to "fix" it later.
+## Edge cases
 
-## Edge cases & decisions
-
-| Case | Behavior |
+| Case | Behaviour |
 |------|----------|
-| User changes their Google email | Out of scope — current login already handles this by matching on `email`. Existing tokens remain valid for the user_id they were issued for. |
-| User deleted from DB | `tryRehydrate()` deletes the orphan token and falls through to the normal redirect. |
-| Cookie tampered (bad format) | Return false silently, do not log noisily. Garbage cookies happen. |
-| Cookie tampered (valid format, unknown selector) | Return false silently. Same reason. |
-| Cookie tampered (known selector, wrong validator) | Theft signal. Revoke all tokens for that user_id. Log. |
-| User revokes app access in Google | The remember-me cookie still works until it expires or is rotated. **This is a deliberate tradeoff** — by design, our session outlives the Google session. If you want Google revocation to invalidate our session immediately, that requires Google's revocation webhooks (out of scope). |
-| Multi-device | Each device gets its own selector/row. Logout on one device doesn't log out the others. |
-| "Log out everywhere" feature | `RememberToken::revokeAllForUser($userId)`. Easy to expose in user settings later. |
+| User deleted | `tryRehydrate()` deletes the orphan row and falls through to the redirect. Account deletion should also call `revokeAllForUser()`. |
+| Bad format, or unknown selector | Return false silently. |
+| Known selector, wrong validator | Theft signal. Revoke all tokens for that user. Log. |
+| Access revoked at the provider | The remember cookie still works until it expires. Deliberate: the session outlives the provider's. |
+| Two tabs rehydrate at once | The second presents the validator the first just rotated away and trips the theft response. Needs a decision: a short grace window for the previous validator, or accept the logout. |
+| Multi-device | One row per device. Logout on one leaves the others. |
+| "Log out everywhere" | `RememberToken::revokeAllForUser($userId)`. |
+| JSON caller | `redirectToLogin()` throws 401 for JSON callers. Rehydration runs before that, so an XHR with a valid remember cookie succeeds. |
 
-## Open questions for review
+## Open questions
 
-1. **Cookie lifetime.** Default 90 days. Some sites go a year. What's the right number for unisolu? Tradeoff is convenience vs. blast radius if a device is lost.
-2. **Where does `populateSession()` live?** `Auth.php` private method, `User` entity method, or a new `core/SessionState.php`? The third is probably cleanest because it's not really an Auth concern *or* a domain-entity concern — it's session shape.
-3. **Should `RequireAuthLevel` and `RequirePermission` also call `tryRehydrate()`?** Probably yes (otherwise rehydration only works on `RequireLogin`-protected endpoints). Might be cleanest to have all three attributes share a base class or trait that does the check.
-4. **Should we add a "remember me" checkbox** on the Google sign-in page, or always remember? Always-remember is simpler and matches the user's stated goal ("a cookie that never expires"). A checkbox is more polite to shared-device users. Recommend always-remember for now and add a checkbox later if it becomes an issue.
-5. **Handling of the existing `unisolu_user_id` cookie.** Confirm: are there *any* clients (mobile app, integrations) that read it? If yes, we need a deprecation plan instead of a delete.
+1. **Cookie lifetime.** Default 90 days. Convenience against blast radius if a device is
+   lost.
+2. **Where does `RememberToken` live?** `Zero\Core` next to `Session`, or the Auth module
+   next to `AuthToken`. `RequireLogin` is in core and must not depend on a module that could
+   be absent; Auth is a required module, but core calling into it is still the wrong
+   direction.
+3. **Public pages.** Rehydrating only in `RequireLogin` means a returning user on a public
+   page (the home page, anything that branches on `Session::isLoggedIn()`) looks signed out
+   until they open a gated one. Rehydrating in `Application::__construct()` after
+   `session_start()` fixes that at the cost of a cookie check on every anonymous request.
+4. **A "remember me" checkbox, or always remember?** Always is simpler. A checkbox is kinder
+   on shared devices.
+5. **Interaction with `core/docs/TOKEN_ISSUE.md`.** A request carrying a Bearer token must
+   never rehydrate from a remember cookie.
 
 ## Test plan
 
-- New session, no cookies → behaves as today (redirect to login).
-- Login → cookie set, session works.
-- Delete session cookie only, refresh protected page → session rehydrates silently, no redirect, page renders, validator rotated (verify in DB).
-- Delete session cookie, tamper with validator portion, refresh → theft response triggers, all user's tokens deleted, cookie cleared, redirect to login.
-- Delete session cookie, wait past `expires_at`, refresh → falls through to redirect, expired row cleaned up.
-- Logout → cookie cleared, row deleted, other devices' tokens unaffected.
-- Two browsers logged in as same user → both have independent tokens, logging out one doesn't affect the other.
-- Push subscribe with no session but valid remember-me cookie → rehydrates and succeeds.
-- Push subscribe with no session and no cookie → 401 as today.
-
-## Out of scope (intentionally)
-
-- Replacing PHP sessions with JWTs.
-- Adding non-Google identity providers.
-- Server-side push of "you've been logged out" notifications.
-- Google revocation hooks.
-- A user-facing "active sessions" management page (easy to add later given the schema).
+- No cookies → redirect to login, as today.
+- Sign in (OAuth, and emailed link) → remember cookie set, row created.
+- Delete the session cookie, open a protected page → page renders, no redirect, validator
+  rotated in the table.
+- Delete the session cookie, tamper with the validator → all of the user's rows deleted,
+  cookie cleared, redirect to login.
+- Past `expires_at` → redirect, row removed.
+- Logout → cookie cleared, row deleted, other devices unaffected.
+- Unverified account with a valid remember cookie → not logged in.
+- API-token request → no remember cookie issued.
+- `/push/subscribe` with no session but a valid remember cookie → succeeds; with neither →
+  401 for a JSON caller.

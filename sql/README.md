@@ -3,7 +3,7 @@
 ## core.sql
 
 `core.sql` creates every table and view that core and its bundled modules read or write, as they
-are defined on the live unisolu database. A new site loads it once, after creating an empty
+are defined on the live database. A new site loads it once, after creating an empty
 database:
 
 ```bash
@@ -53,16 +53,16 @@ hand, in this order. A module's file is prefixed with the lowercase module name.
 | # | File | What it is |
 |---|---|---|
 | 1 | `group_rename.sql` | One-off for a database that still has the tables `group` and `group_member`: renames them to `user_group` and `user_group_member`. Run before 5. |
-| 2 | `users.sql` | Table definition for `users`, folded into `core.sql`. For a database with no `users` table. |
-| 3 | `user_profile.sql` | Table definition for `user_profile`, folded into `core.sql`. |
-| 4 | `user_view.sql` | The `user_view` compatibility view, folded into `core.sql`. Re-run it to restore the view after an entity type named `user` replaced it. |
-| 5 | `group.sql` | Table definitions for `user_group` and `user_group_member`, folded into `core.sql`. |
-| 6 | `permission.sql` | Table definition for `permission`, folded into `core.sql`. |
+| 2 | `users.sql` | Table definition for `users`. For a database with no `users` table. |
+| 3 | `user_profile.sql` | Table definition for `user_profile`. |
+| 4 | `user_view.sql` | The `user_view` compatibility view. Re-run it to restore the view after an entity type named `user` replaced it. |
+| 5 | `group.sql` | Table definitions for `user_group` and `user_group_member`. |
+| 6 | `permission.sql` | Table definition for `permission`. |
 | 7 | `users_migration.sql` | SPENT. One-off data move from the EAV `user` entity into `users`, applied 2026-08-08. Needs 2 and 4. Do not run again. |
 | 8 | `permission_migration.sql` | One-off for a database that has the old per-module grant tables: copies their grants into `permission`. Needs 6. |
 | 9 | `capability_migration.sql` | One-off for a database whose capabilities are still rows in `user_settings`: copies them into `permission`. Needs 6. |
-| 10 | `auth_auth_manual.sql` | Table definition for `auth_token`, folded into `core.sql`. |
-| 11 | `auth_oauth_provider.sql` | Table definition and seed for `oauth_provider`, folded into `core.sql`. |
-| 12 | `auth_oauth_token.sql` | Table definition for `oauth_token`, folded into `core.sql`. |
+| 10 | `auth_auth_manual.sql` | Table definition for `auth_token`. |
+| 11 | `auth_oauth_provider.sql` | Table definition and seed for `oauth_provider`. |
+| 12 | `auth_oauth_token.sql` | Table definition for `oauth_token`. |
 | - | `user_view_eav_rollback.sql` | Rollback only: restores the EAV form of `user_view`. Not part of any sequence. |
 | - | `auth_user_schema.sql` | A reference snapshot of the account tables. Not a script; do not run it. |

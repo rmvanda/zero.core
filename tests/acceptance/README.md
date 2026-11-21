@@ -9,6 +9,10 @@ The tests: the home page, the login page, register / verify-link / sign-in-link 
 profile page, `/admin` with and without `allow.admin`, a module switched off in `modules.ini`
 answering 404, and a probe that every request ran on the throwaway database.
 
+```bash
+./vendor/bin/phpunit --testsuite Acceptance    # from the site root
+```
+
 ## Needs
 
 - A mysql client whose option files (`~/.my.cnf`) may create and drop `zerotest_bare_site`.
