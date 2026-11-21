@@ -144,6 +144,36 @@ class ConsoleTest extends ZeroTestCase
         $this->assertStringContainsString('192.168.1.100', $content);
     }
 
+    public function testAForwardingHeaderFromAnUntrustedPeerIsNotLogged(): void
+    {
+        $saved = $_SERVER;
+        $_SERVER['REMOTE_ADDR']           = '203.0.113.99';
+        $_SERVER['HTTP_X_FORWARDED_FOR']  = '198.51.100.1';
+        $_SERVER['HTTP_CF_CONNECTING_IP'] = '198.51.100.2';
+        try {
+            Console::log('spoof test', 'DEBUG', $this->testLogFile);
+        } finally {
+            $_SERVER = $saved;
+        }
+
+        $content = file_get_contents($this->testLogFile);
+        $this->assertStringContainsString('[203.0.113.99]', $content);
+        $this->assertStringNotContainsString('198.51.100.', $content);
+    }
+
+    public function testACommandLineRunIsLoggedAsCli(): void
+    {
+        $saved = $_SERVER;
+        unset($_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_X_FORWARDED_FOR'], $_SERVER['HTTP_CF_CONNECTING_IP']);
+        try {
+            Console::log('cli test', 'DEBUG', $this->testLogFile);
+        } finally {
+            $_SERVER = $saved;
+        }
+
+        $this->assertStringContainsString('[cli]', file_get_contents($this->testLogFile));
+    }
+
     public function testLogIncludesCallerFile(): void
     {
         Console::log('caller test', 'DEBUG', $this->testLogFile);

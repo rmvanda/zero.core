@@ -109,13 +109,11 @@ class Console {
         $caller = '[' . basename($frame['file'] ?? 'unknown') . ':' . ($frame['line'] ?? '?') . '] ';
 
         $date  = '[' . gmdate('Y-m-d H:i:s') . '] ';
-        $ip    = '[' . (
-            
-                $_SERVER['HTTP_X_FORWARDED_FOR']  ??
-                $_SERVER['HTTP_CF_CONNECTING_IP'] ??
-                $_SERVER['REMOTE_ADDR'] ??
-            'cli'
-            ) . '] ';
+        // The same resolver everything else uses: a forwarding header is
+        // believed only from a Cloudflare edge, so a client connecting straight
+        // to the origin cannot put an address of its choosing in the log.
+        $client = Request::clientIp();
+        $ip     = '[' . ($client !== '' ? $client : 'cli') . '] ';
         $level = "[{$loglvlstring}]: ";
 
         if (!$logfile) {
