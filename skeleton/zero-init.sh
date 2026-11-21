@@ -23,7 +23,6 @@
 #   ├── storage/cache/         what core caches (must be writable by the web server)
 #   └── app/
 #       ├── config/            settings and secrets: fill in database.ini (never committed)
-#       ├── config-tmpl/       blank copies of config/, committed
 #       ├── strings/site.ini   the site's wording
 #       ├── modules.ini        which modules are on
 #       └── frontend/
@@ -113,7 +112,7 @@ sed_escape() {
 }
 
 # ─── Directories ─────────────────────────────────────────────────────
-mkdir -p "$SITE_DIR/app/config" "$SITE_DIR/app/config-tmpl" "$SITE_DIR/modules" \
+mkdir -p "$SITE_DIR/app/config" "$SITE_DIR/modules" \
          "$SITE_DIR/entity" "$SITE_DIR/etc"
 # The cache holds what core generates at runtime; the web server writes to it.
 mkdir -p -m 775 "$SITE_DIR/storage/cache"

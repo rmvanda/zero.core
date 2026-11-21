@@ -36,7 +36,7 @@ One `Zero\Entity\Event`:
 |---|---|
 | `event` | `$eventType` |
 | `datetime` | Now. Set by `Event`. |
-| `ip` | `$_SERVER['REMOTE_ADDR']`. Set by `Event`. This is the peer address, which behind Cloudflare is the edge and not `Request::clientIp()`. |
+| `ip` | The client's address, `Request::clientIp()`. Set by `Event`. |
 | `detail` | One string, parts joined by ` \| `, in the order below. |
 
 `detail` parts:

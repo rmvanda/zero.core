@@ -86,7 +86,7 @@ Plugin hooks fire along the way (`afterAutoloaders`, `afterParseRequest`, `after
 - The root is the folder that holds `core/`; the site folder may carry any name.
 - The entity framework (`Entity`, `GenericEntity`, `Event`) is in `core/entity/`; a site's own and generated entity classes live in its `entity/`. A site class named like a framework class is not loaded. See `core/entity/README.md`.
 
-A request loads through `Application::autoloader()`, which logs a warning for a `Zero\` class it cannot place. `registerAutoloaders()` registers it, then an autoloader passed as its argument, then Composer's `vendor/autoload.php` from `ROOT_PATH` and from `ZERO_ROOT`. Composer loads third-party packages only: no class of the framework or of a module needs an entry in `composer.json`.
+A request loads through `Application::autoloader()`, which logs a warning for a `Zero\` class it cannot place. `registerAutoloaders()` registers it, then the autoloader or list of autoloaders passed as its argument, then Composer's `vendor/autoload.php` from `ROOT_PATH` and from `ZERO_ROOT`. Composer loads third-party packages only: no class of the framework or of a module needs an entry in `composer.json`.
 
 Code that does not run through `index.php` (a command-line script, a cron job, the test bootstrap) includes `core/autoload.php`, which registers the same rule, points `Modules` at the site's `modules/` and `core/modules/`, and includes `vendor/autoload.php` when the site has one:
 
@@ -102,11 +102,12 @@ Logic that another module uses lives in the providing module's `lib/` folder:
 `modules/{Name}/lib/{Class}.php`, namespace `Zero\Module\{Name}\Lib`. Other modules call the
 provider's `lib/`, never its `model/`, so the provider's rules apply wherever its data changes.
 Example: `Zero\Module\Lists\Lib\ListService`, which Lists' own endpoints, Notebook and Index0 use.
+In core, `Zero\Module\Push\Lib\PushHelper` is how any module sends a push notification.
 Other examples are `Zero\Module\Llm\Lib\OllamaClient`, `Zero\Module\Comfy\Lib\ComfyUIClient` and
 `Zero\Module\ApiConfig\Lib\ServiceClient`.
 
 The libraries that belong to no module are in `core/lib/`: `Zero\Lib\Http`, `Zero\Lib\Mail`,
-`Zero\Lib\CloudFlare`, `Zero\Lib\Push`, `Zero\Lib\Net` (`Cidr`, `TrustedProxy`) and the class `Zero\Lib\Crypto`.
+`Zero\Lib\CloudFlare`, `Zero\Lib\Net` (`Cidr`, `TrustedProxy`) and the class `Zero\Lib\Crypto`.
 
 - A `lib/` class takes the acting user and its dependencies as arguments rather than reading the
   session. For a Bearer-token caller (`#[AllowWithToken]`) the session exists only after the

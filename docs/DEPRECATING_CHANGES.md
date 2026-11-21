@@ -10,6 +10,23 @@ that text belongs in this file.
 
 Newest first.
 
+## 2026-11 — `PushHelper` belongs to the Push module
+
+### `Zero\Lib\Push\PushHelper` (`core/lib/Push/`) — MOVED to `Zero\Module\Push\Lib\PushHelper`
+
+```php
+// gone
+use Zero\Lib\Push\PushHelper;
+
+// use
+use Zero\Module\Push\Lib\PushHelper;
+```
+
+The file is `core/modules/Push/lib/PushHelper.php`; the methods are the same. A module's
+`lib/` class loads whether or not the module is switched on. The older copy at
+`core/modules/Push/PushHelper.php`, which nothing loaded and which did not store a
+notification's `image`, is deleted.
+
 ## 2026-11 — `Entity::where()` prints nothing
 
 ### An unknown search key printed into the page — REPLACED by a `Console` warning

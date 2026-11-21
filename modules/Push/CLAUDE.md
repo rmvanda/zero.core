@@ -13,7 +13,7 @@ Any module can send push notifications using the `PushHelper` library class.
 ### Basic Usage
 
 ```php
-use \Zero\Lib\Push\PushHelper;
+use \Zero\Module\Push\Lib\PushHelper;
 
 // 1. Create a notification
 $notificationId = PushHelper::createNotification([
@@ -49,14 +49,14 @@ public function addComment($postId) {
     // Notify post author
     $post = $this->getPost($postId);
 
-    $notificationId = \Zero\Lib\Push\PushHelper::createNotification([
+    $notificationId = \Zero\Module\Push\Lib\PushHelper::createNotification([
         'title' => 'New Comment',
         'body' => 'Someone commented on your post',
         'url' => "/blog/post/{$postId}",
         'created_by' => $userId
     ]);
 
-    \Zero\Lib\Push\PushHelper::sendPush($notificationId, [$post['author_id']]);
+    \Zero\Module\Push\Lib\PushHelper::sendPush($notificationId, [$post['author_id']]);
 }
 ```
 
@@ -67,7 +67,7 @@ public function addComment($postId) {
 public function sendSystemAlert() {
     $message = $_POST['message'];
 
-    $notificationId = \Zero\Lib\Push\PushHelper::createNotification([
+    $notificationId = \Zero\Module\Push\Lib\PushHelper::createNotification([
         'title' => 'System Alert',
         'body' => $message,
         'icon' => '/assets/img/alert-icon.png',
@@ -76,7 +76,7 @@ public function sendSystemAlert() {
     ]);
 
     // Send to all subscribed users
-    \Zero\Lib\Push\PushHelper::sendPushToAll($notificationId);
+    \Zero\Module\Push\Lib\PushHelper::sendPushToAll($notificationId);
 }
 ```
 
@@ -95,14 +95,14 @@ public function updateOrderStatus($orderId, $status) {
         'cancelled' => 'Your order has been cancelled'
     ];
 
-    $notificationId = \Zero\Lib\Push\PushHelper::createNotification([
+    $notificationId = \Zero\Module\Push\Lib\PushHelper::createNotification([
         'title' => 'Order Update',
         'body' => $statusMessages[$status] ?? 'Order status updated',
         'url' => "/shop/order/{$orderId}",
         'created_by' => 1 // System user
     ]);
 
-    \Zero\Lib\Push\PushHelper::sendPush($notificationId, [$order['customer_id']]);
+    \Zero\Module\Push\Lib\PushHelper::sendPush($notificationId, [$order['customer_id']]);
 }
 ```
 
@@ -116,6 +116,7 @@ Creates a notification record in the database.
 - `$data['title']` (string, required) - Notification title
 - `$data['body']` (string, required) - Notification message
 - `$data['icon']` (string, optional) - Icon URL (defaults to `/assets/img/logo.png`)
+- `$data['image']` (string, optional) - URL of a large image shown in the notification
 - `$data['url']` (string, optional) - Destination URL when clicked (defaults to `/`)
 - `$data['target_type']` (string, optional) - 'all' or 'specific' (defaults to 'specific')
 - `$data['created_by']` (int, required) - User ID of creator
@@ -241,7 +242,7 @@ The `sendPush()` method automatically handles:
 $result = PushHelper::sendPush($notificationId, [123]);
 
 if ($result['failed'] > 0) {
-    error_log("Some notifications failed to send");
+    \Zero\Core\Console::warn("Some notifications failed to send");
     // Optionally: send email fallback
 }
 ```
@@ -320,11 +321,11 @@ on every page load, anonymous ones included, and a VAPID *public* key is public
 by definition. That is why the gate is per-method rather than class-level.
 
 **Never accept the user id from the caller** — not from a cookie, not from the
-request body, not from a query string. This module shipped that once and it was
-remotely exploitable by anyone: `subscribe` registered the caller's push endpoint
-against a named account, so the attacker received the victim's notifications;
-`unsubscribe` deregistered the victim's devices; `status` disclosed whether an
-arbitrary account was subscribed. `DEPRECATING_CHANGES.md` has the detail.
+request body, not from a query string. An id the caller supplies is remotely
+exploitable by anyone: `subscribe` would register the caller's push endpoint
+against a named account, so the attacker receives the victim's notifications;
+`unsubscribe` would deregister the victim's devices; `status` would disclose
+whether an arbitrary account is subscribed. `core/docs/DEPRECATING_CHANGES.md` has the detail.
 
 A service worker that has lost its session needs a real credential — a signed
 subscription token, or an API token via `#[AllowWithToken]` — not an asserted id.

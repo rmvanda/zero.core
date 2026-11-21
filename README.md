@@ -111,7 +111,7 @@ core's `composer.json` at runtime; it documents what to install.
 | Path | What it is |
 |---|---|
 | `modules/` | The modules every site gets: `Auth`, `User`, `Admin`, `AccessRequest`, `Sitemap`, `Push`, `Entity`, and the examples `Module`, `HelloWorld`, `Test`. `modules/Module/README` is the reference module. |
-| `lib/` | Libraries any site can use (`Zero\Lib`): `Crypto` (AES-256-GCM at-rest encryption), `Net\Cidr` (IP and CIDR matching), `Net\TrustedProxy` (which peers may say who the real client is), `Http` (`Client`, `Response`, `ExternalRequest`), `Mail`, `CloudFlare`, `Push`. |
+| `lib/` | Libraries any site can use (`Zero\Lib`): `Crypto` (AES-256-GCM at-rest encryption), `Net\Cidr` (IP and CIDR matching), `Net\TrustedProxy` (which peers may say who the real client is), `Http` (`Client`, `Response`, `ExternalRequest`), `Mail`, `CloudFlare`. |
 | `Console.php` | Threshold-based logging. `Console::warn()`, `Console::debug()` and friends via `__callStatic`; messages are also retrievable in-process for the DevToolbar. |
 | `PluginLoader.php` | Discovers the plugins in the site's `plugin/` folder and fires their hooks. See [docs/PLUGINS.md](docs/PLUGINS.md). |
 | `skeleton/` | The template for a new site, and the defaults core falls back to. See [skeleton/README.md](skeleton/README.md). |

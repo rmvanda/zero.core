@@ -16,7 +16,7 @@
 --
 -- Order: tables first, views after the tables they read. See core/sql/README.md.
 
--- users: one row per account. Owner: core (Zero\Core\User); see core/PERMISSIONS.md
+-- users: one row per account. Owner: core (Zero\Core\Access\User); see core/PERMISSIONS.md
 CREATE TABLE IF NOT EXISTS `users` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(191) DEFAULT NULL,
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   KEY `idx_created` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- user_profile: per-account profile fields (some encrypted). Owner: core (Zero\Core\User)
+-- user_profile: per-account profile fields (some encrypted). Owner: core (Zero\Core\Access\User)
 CREATE TABLE IF NOT EXISTS `user_profile` (
   `user_id` int(10) unsigned NOT NULL,
   `field_key` varchar(64) NOT NULL,
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS `user_profile` (
   PRIMARY KEY (`user_id`,`field_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- user_settings: per-account key/value settings. Owner: core (Zero\Core\User)
+-- user_settings: per-account key/value settings. Owner: core (Zero\Core\Access\User)
 CREATE TABLE IF NOT EXISTS `user_settings` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,

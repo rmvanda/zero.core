@@ -28,7 +28,6 @@ class AutoloadMapTest extends TestCase
      */
     private const NOT_AUTOLOADED = [
         'Zero\\Core\\TrackedStatement' => 'second class in core/Database.php, used only once Database is loaded',
-        'Zero\\Lib\\Push\\PushHelper' => 'stale copy in core/modules/Push/; the class loads from core/lib/Push/',
     ];
 
     private string $root;
@@ -72,7 +71,7 @@ class AutoloadMapTest extends TestCase
             'Zero\\Lib\\Mail\\Mail'             => 'core/lib/Mail/Mail.php',
             'Zero\\Lib\\Http\\Client'           => 'core/lib/Http/Client.php',
             'Zero\\Lib\\CloudFlare\\CloudFlare' => 'core/lib/CloudFlare/CloudFlare.php',
-            'Zero\\Lib\\Push\\PushHelper'       => 'core/lib/Push/PushHelper.php',
+            'Zero\\Module\\Push\\Lib\\PushHelper' => 'core/modules/Push/lib/PushHelper.php',
         ];
         foreach ($core as $class => $path) {
             $found = Application::classFile($class);

@@ -784,16 +784,18 @@ class Application {
         Modules::configure([MODULE_PATH, ZERO_ROOT . "core/modules/"], ZERO_ROOT . "app/modules.ini");
         spl_autoload_register("\Zero\Core\Application::autoloader"); 
         // if you want to add external autoloaders
+        // One autoloader (a callable array such as [$object, 'method'] included)
+        // or a list of them.
         if ($autoloader) {
-            if (is_array($autoloader)) {
-                if(is_callable($autoloader)){
-                    foreach ($autoloader as $al) {
+            if (is_callable($autoloader)) {
+                spl_autoload_register($autoloader);
+            } else if (is_array($autoloader)) {
+                foreach ($autoloader as $al) {
+                    if (is_callable($al)) {
                         spl_autoload_register($al);
                     }
                 }
-            } else if (is_callable($autoloader)) {
-                    spl_autoload_register($autoloader);
-            } 
+            }
         }
         // for Composer + PSR compatability
         if (file_exists($file = ROOT_PATH . "vendor/autoload.php")) {

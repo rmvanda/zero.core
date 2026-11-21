@@ -7,7 +7,7 @@ use Zero\Core\Session;
 use Zero\Core\Attribute\RequirePermission;
 use Zero\Core\Attribute\AllowedMethods;
 use Zero\Core\Attribute\AuditLog;
-use Zero\Lib\Push\PushHelper;
+use Zero\Module\Push\Lib\PushHelper;
 
 /**
  * Push notification admin: send a notification and manage the history

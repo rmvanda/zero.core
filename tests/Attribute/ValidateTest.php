@@ -47,6 +47,23 @@ class ValidateTest extends ZeroTestCase
         $attr->handler();
     }
 
+    public function testBoolAcceptsFalseValuesAsWellAsTrueOnes(): void
+    {
+        foreach (['1', 'true', 'on', 'yes', '0', 'false', 'off', 'no', 'FALSE'] as $value) {
+            $_POST = ['flag' => $value];
+            $this->assertTrue((new Validate(['flag' => 'bool']))->handler(), $value);
+        }
+    }
+
+    public function testBoolRejectsWhatIsNotABoolean(): void
+    {
+        $_POST = ['flag' => 'maybe'];
+
+        $this->expectException(HTTPError::class);
+        $this->expectExceptionCode(400);
+        (new Validate(['flag' => 'bool']))->handler();
+    }
+
     public function testValidInt(): void
     {
         $_POST = ['age' => '25'];

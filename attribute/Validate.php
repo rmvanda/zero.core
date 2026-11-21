@@ -116,7 +116,12 @@ class Validate {
 
         // Built-in filter_var validators
         if (isset(self::VALIDATORS[$rule])) {
-            if (filter_var($value, self::VALIDATORS[$rule]) === false) {
+            // FILTER_VALIDATE_BOOL answers false for a valid "no", so a bad
+            // value has to come back as null to be told apart from it.
+            $failed = $rule === 'bool'
+                ? filter_var($value, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) === null
+                : filter_var($value, self::VALIDATORS[$rule]) === false;
+            if ($failed) {
                 $this->errors[] = "{$param} must be a valid {$rule}";
                 return false;
             }

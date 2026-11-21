@@ -43,7 +43,7 @@
 
 
 -- ---------------------------------------------------------------------------
--- users — the account of record. Written by Zero\Core\User.
+-- users — the account of record. Written by Zero\Core\Access\User.
 --
 -- Auth::findOrCreateUser() is the only code that creates rows here. `verified`
 -- means the EMAIL is confirmed (by a provider or by a magic link), which is the
@@ -67,7 +67,7 @@ CREATE TABLE `users` (
 -- user_profile — values for the configurable registration fields declared in
 -- core/modules/Auth/registration-fields.json. One row per (user_id, field_key).
 --
--- Auth is the ONLY consumer, through Zero\Core\User's ->storeProfile()/
+-- Auth is the ONLY consumer, through Zero\Core\Access\User's ->storeProfile()/
 -- ->profile() instance methods — there is no separate UserProfile class. No
 -- other module touches it. `encrypted` is authoritative per row — trust the
 -- column, never sniff the value.
@@ -119,7 +119,7 @@ CREATE TABLE `user_settings` (
 -- with no readers, rather than dropped.
 --
 -- The column list is frozen on purpose. Adding a column here would change what
--- any future reader sees. New columns are read from Zero\Core\User or from
+-- any future reader sees. New columns are read from Zero\Core\Access\User or from
 -- `users` directly.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE SQL SECURITY INVOKER VIEW `user_view` AS

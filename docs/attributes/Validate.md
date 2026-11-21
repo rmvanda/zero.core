@@ -50,7 +50,7 @@ a rule constrains a value only when one is sent. Add `required` to insist on it.
 | `url` | `FILTER_VALIDATE_URL` accepts it | `{field} must be a valid url` |
 | `int` | `FILTER_VALIDATE_INT` accepts it | `{field} must be a valid int` |
 | `float` | `FILTER_VALIDATE_FLOAT` accepts it | `{field} must be a valid float` |
-| `bool` | The value is a **true** boolean: `1`, `true`, `on`, `yes`. `0`, `false`, `off` and `no` fail, as any non-boolean does. | `{field} must be a valid bool` |
+| `bool` | The value reads as a boolean: `1`, `true`, `on`, `yes`, `0`, `false`, `off` or `no`, in any case. | `{field} must be a valid bool` |
 | `in:a,b,c` | The value is one of the comma-separated items | `{field} must be one of: a,b,c` |
 | `length:min,max` | `strlen()` (bytes) is within the bounds. Omit `max` for no upper bound (`length:8,`); an omitted `min` is 0 (`length:,255`). | `{field} must be at least {min} characters` / `at most {max} characters` |
 | `range:min,max` | The value, cast to float, is within the bounds. Either bound may be omitted. A non-numeric value counts as 0. | `{field} must be at least {min}` / `at most {max}` |
