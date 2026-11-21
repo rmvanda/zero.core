@@ -306,7 +306,7 @@ class Auth extends \Zero\Core\Module {
             "\n\tverified: ". ($identity['verified'] ? "true" : "false");
         \Zero\Lib\Mail\Mail::sendEmailToAdmin("New User Registered", $email_body);
 
-        Console::info("New User Registered. Notified ".NOTIFY_EMAIL." body: \n$email_body .");
+        Console::info("New user registered: " . $identity['email'] . " (verified: " . ($identity['verified'] ? "true" : "false") . ")");
 
         $_SESSION['user']['new'] = true;
 

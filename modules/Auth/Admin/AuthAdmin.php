@@ -68,6 +68,7 @@ class AuthAdmin extends AdminResponse {
             }
             return $out;
         } catch (\Throwable $e) {
+            \Zero\Core\Console::warn("Auth admin could not count OAuth connections: " . $e->getMessage());
             return [];
         }
     }

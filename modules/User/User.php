@@ -57,7 +57,7 @@ class User extends \Zero\Core\Module {
             $providers = array_values($bySlug);
             usort($providers, fn($a, $b) => ($a['sort_order'] ?? 0) <=> ($b['sort_order'] ?? 0));
         } catch (\Throwable $e) {
-            error_log("Profile OAuth providers load failed: " . $e->getMessage());
+            \Zero\Core\Console::error("Profile OAuth providers load failed: " . $e->getMessage());
             $providers = [];
             $connections = [];
         }
@@ -137,7 +137,7 @@ class User extends \Zero\Core\Module {
             $stmt->execute([$userId]);
             $tokens = $stmt->fetchAll();
         } catch (\Exception $e) {
-            error_log("Error fetching tokens: " . $e->getMessage());
+            \Zero\Core\Console::error("Error fetching tokens: " . $e->getMessage());
             $tokens = [];
         }
 
@@ -174,7 +174,7 @@ class User extends \Zero\Core\Module {
                 'id'    => $db->lastInsertId()
             ]);
         } catch (\Exception $e) {
-            error_log("Error creating token: " . $e->getMessage());
+            \Zero\Core\Console::error("Error creating token: " . $e->getMessage());
             $this->export(['error' => 'Failed to create token']);
         }
     }
@@ -214,7 +214,7 @@ class User extends \Zero\Core\Module {
 
             $this->export(['message' => 'Token revoked']);
         } catch (\Exception $e) {
-            error_log("Error deleting token: " . $e->getMessage());
+            \Zero\Core\Console::error("Error deleting token: " . $e->getMessage());
             $this->export(['error' => 'Failed to delete token']);
         }
     }
@@ -234,7 +234,7 @@ class User extends \Zero\Core\Module {
             // \Throwable, not \Exception: Database::getConnection() throws
             // \Error on a misconfiguration, same reasoning as
             // Zero\Core\Access\User::settings() and getAllPermissions() below.
-            error_log("Error fetching permission: " . $e->getMessage());
+            \Zero\Core\Console::error("Error fetching permission: " . $e->getMessage());
             return null;
         }
     }
@@ -258,7 +258,7 @@ class User extends \Zero\Core\Module {
             // \Throwable, not \Exception: Database::getConnection() throws
             // \Error on a misconfiguration, same reasoning as
             // Zero\Core\Access\User::settings().
-            error_log("Error fetching permissions: " . $e->getMessage());
+            \Zero\Core\Console::error("Error fetching permissions: " . $e->getMessage());
             return [];
         }
     }

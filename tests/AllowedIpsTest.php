@@ -46,6 +46,21 @@ class AllowedIpsTest extends ZeroTestCase
         $this->assertFalse(Application::isAllowedIp('203.0.113.5', $this->file));
     }
 
+    public function testAFileThatCannotBeReadAllowsNobody(): void
+    {
+        if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+            $this->markTestSkipped('root reads any file');
+        }
+        file_put_contents($this->file, "203.0.113.5\n");
+        chmod($this->file, 0000);
+        try {
+            $this->assertSame([], Application::allowedIps($this->file));
+            $this->assertFalse(Application::isAllowedIp('203.0.113.5', $this->file));
+        } finally {
+            chmod($this->file, 0600);
+        }
+    }
+
     public function testAListedIpAndAnIpInAListedRangeAreAllowed(): void
     {
         file_put_contents($this->file, "203.0.113.5\n198.51.100.0/24\n2001:db8::/32\n");

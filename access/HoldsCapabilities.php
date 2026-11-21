@@ -49,7 +49,7 @@ trait HoldsCapabilities
         } catch (\Throwable $e) {
             // \Throwable, not \Exception: Database::getConnection() throws \Error
             // on a misconfiguration. A lookup failure must deny, never grant.
-            error_log(static::class . "::capabilities() failed: " . $e->getMessage());
+            \Zero\Core\Console::error(static::class . "::capabilities() failed: " . $e->getMessage());
             return $this->capabilities = [];
         }
     }
@@ -88,7 +88,7 @@ trait HoldsCapabilities
             return $ok;
         } catch (\Throwable $e) {
             // A write failure reports false, the same as User::setSetting().
-            error_log(static::class . "::" . ($grant ? 'grant' : 'revoke') . "() failed: " . $e->getMessage());
+            \Zero\Core\Console::error(static::class . "::" . ($grant ? 'grant' : 'revoke') . "() failed: " . $e->getMessage());
             return false;
         }
     }

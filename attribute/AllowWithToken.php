@@ -112,7 +112,7 @@ class AllowWithToken {
             // and re-thrown as 500 "Authentication error".
             throw $e;
         } catch (\Exception $e) {
-            error_log("AllowWithToken error: " . $e->getMessage());
+            \Zero\Core\Console::error("AllowWithToken error: " . $e->getMessage());
             throw new HTTPError(500, "Authentication error");
         }
 

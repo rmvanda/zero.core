@@ -233,7 +233,7 @@ class User extends Model implements Holder
         } catch (\Throwable $e) {
             // \Throwable, not \Exception: Database::getConnection() throws \Error
             // on a misconfiguration. A lookup failure must deny, never grant.
-            error_log("User::settings() failed: " . $e->getMessage());
+            \Zero\Core\Console::error("User::settings() failed: " . $e->getMessage());
             return $this->settings = [];
         }
     }
@@ -277,7 +277,7 @@ class User extends Model implements Holder
             // \Throwable, not \Exception: Database::getConnection() throws \Error
             // on a misconfiguration, same reasoning as settings() above — a
             // write failure must report false, not propagate.
-            error_log("User::setSetting() failed: " . $e->getMessage());
+            \Zero\Core\Console::error("User::setSetting() failed: " . $e->getMessage());
             return false;
         }
     }

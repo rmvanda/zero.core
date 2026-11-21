@@ -65,7 +65,7 @@ class PushAdmin extends AdminResponse {
                 header("Location: /admin/push");
                 exit;
             } catch (\Exception $e) {
-                error_log("Push notification send error: " . $e->getMessage());
+                \Zero\Core\Console::error("Push notification send error: " . $e->getMessage());
                 $this->error('Failed to send notification: ' . $e->getMessage());
             }
         }
@@ -215,7 +215,7 @@ class PushAdmin extends AdminResponse {
             exit;
         } catch (\Exception $e) {
             $db->rollBack();
-            error_log("Error deleting push notifications: " . $e->getMessage());
+            \Zero\Core\Console::error("Error deleting push notifications: " . $e->getMessage());
             $this->error('Failed to delete: ' . $e->getMessage());
 
             header("Location: /admin/push");

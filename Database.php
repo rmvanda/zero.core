@@ -236,7 +236,7 @@ class Database {
                     self::$connection->setAttribute(\PDO::ATTR_STATEMENT_CLASS, [TrackedStatement::class, []]);
                 }
             } catch (\PDOException $e) {
-                error_log("Database connection failed: " . $e->getMessage());
+                \Zero\Core\Console::critical("Database connection failed: " . $e->getMessage());
                 throw new \Exception("Database connection failed");
             }
         }

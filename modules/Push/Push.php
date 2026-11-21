@@ -98,7 +98,7 @@ class Push extends \Zero\Core\Module {
 
             $this->export(['success' => true, 'message' => 'Subscription saved']);
         } catch (\Exception $e) {
-            error_log("Push subscription error: " . $e->getMessage());
+            \Zero\Core\Console::error("Push subscription error: " . $e->getMessage());
             http_response_code(500);
             $this->export(['error' => 'Failed to save subscription'], ['status' => 'error', 'code' => 500]);
         }
@@ -147,7 +147,7 @@ class Push extends \Zero\Core\Module {
 
             $this->export(['success' => true, 'message' => 'Subscription removed']);
         } catch (\Exception $e) {
-            error_log("Push unsubscribe error: " . $e->getMessage());
+            \Zero\Core\Console::error("Push unsubscribe error: " . $e->getMessage());
             http_response_code(500);
             $this->export(['error' => 'Failed to remove subscription'], ['status' => 'error', 'code' => 500]);
         }

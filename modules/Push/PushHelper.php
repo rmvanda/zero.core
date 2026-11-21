@@ -189,7 +189,7 @@ class PushHelper {
             $stmt->execute([$notificationId, $userId]);
             return true;
         } catch (\Exception $e) {
-            error_log("Failed to track push click: " . $e->getMessage());
+            \Zero\Core\Console::error("Failed to track push click: " . $e->getMessage());
             return false;
         }
     }

@@ -30,7 +30,7 @@ class RequiredParams {
 
         if (!empty($missing)) {
             $missingList = implode(', ', $missing);
-            Console::error("RequiredParams attribute blocked request - Missing: {$missingList}");
+            Console::warn("RequiredParams attribute blocked request - Missing: {$missingList}");
             throw new HTTPError(400, "Missing required parameter(s): $missingList");
         }
 

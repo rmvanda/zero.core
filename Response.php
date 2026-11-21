@@ -359,7 +359,9 @@ class Response
             $this->build($view);
         }
 
-        Console::error("$code - $message" . ($detail ? " : $detail" : ""));
+        // A 5xx is a fault here; anything else is the request's own doing.
+        $level = $code >= 500 ? 'error' : 'warn';
+        Console::$level("$code - $message" . ($detail ? " : $detail" : ""));
         exit();
     }
 
@@ -401,7 +403,7 @@ class Response
         } else {
             echo $view; 
             
-            Console::warn("Built view with text instead of file path."); 
+            Console::debug("Built view with text instead of file path."); 
             /*
             Console::warn("Building bad view with text instead of file path:\n".
             "\tview: $view\n\n".

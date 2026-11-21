@@ -155,7 +155,7 @@ class Admin extends AdminResponse {
             header("Location: /admin/manage/user/$userId");
             exit;
         } catch (\Exception $e) {
-            error_log("Error updating permission: " . $e->getMessage());
+            \Zero\Core\Console::error("Error updating permission: " . $e->getMessage());
             $this->error('Failed to update permission', ['error' => $e->getMessage()]);
 
             // For HTML requests, redirect back with error
@@ -207,7 +207,7 @@ class Admin extends AdminResponse {
             $this->success('User deleted successfully', ['user_id' => $userId]);
         } catch (\Exception $e) {
             $db->rollBack();
-            error_log("Error deleting user: " . $e->getMessage());
+            \Zero\Core\Console::error("Error deleting user: " . $e->getMessage());
             $this->error('Failed to delete user: ' . $e->getMessage());
         }
     }
@@ -466,7 +466,7 @@ class Admin extends AdminResponse {
                     exit;
                 }
             } catch (\Exception $e) {
-                error_log("Error saving group: " . $e->getMessage());
+                \Zero\Core\Console::error("Error saving group: " . $e->getMessage());
                 $duplicate = $e instanceof \PDOException && \Zero\Core\Model::isDuplicateKey($e);
                 $this->error('Failed to save group', [
                     'error' => $duplicate ? 'A group with that name already exists' : $e->getMessage()
@@ -529,7 +529,7 @@ class Admin extends AdminResponse {
             header("Location: /admin/manage/groups");
             exit;
         } catch (\Exception $e) {
-            error_log("Error deleting group: " . $e->getMessage());
+            \Zero\Core\Console::error("Error deleting group: " . $e->getMessage());
             $this->error('Failed to delete group: ' . $e->getMessage());
             header("Location: /admin/manage/groups");
             exit;
@@ -556,7 +556,7 @@ class Admin extends AdminResponse {
             header("Location: /admin/manage/group/$groupId");
             exit;
         } catch (\Exception $e) {
-            error_log("Error adding user to group: " . $e->getMessage());
+            \Zero\Core\Console::error("Error adding user to group: " . $e->getMessage());
             $this->error('Failed to add user to group: ' . $e->getMessage());
             header("Location: /admin/manage/group/$groupId");
             exit;
@@ -582,7 +582,7 @@ class Admin extends AdminResponse {
             header("Location: /admin/manage/group/$groupId");
             exit;
         } catch (\Exception $e) {
-            error_log("Error removing user from group: " . $e->getMessage());
+            \Zero\Core\Console::error("Error removing user from group: " . $e->getMessage());
             $this->error('Failed to remove user from group: ' . $e->getMessage());
             header("Location: /admin/manage/group/$groupId");
             exit;
@@ -609,7 +609,7 @@ class Admin extends AdminResponse {
             header("Location: /admin/manage/group/$groupId");
             exit;
         } catch (\Exception $e) {
-            error_log("Error updating user role: " . $e->getMessage());
+            \Zero\Core\Console::error("Error updating user role: " . $e->getMessage());
             $this->error('Failed to update user role: ' . $e->getMessage());
             header("Location: /admin/manage/group/$groupId");
             exit;

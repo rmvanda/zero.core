@@ -87,7 +87,7 @@ class Validate {
 
         if (!empty($this->errors)) {
             $errorList = implode('; ', $this->errors);
-            Console::error("Validation failed: {$errorList}");
+            Console::warn("Validation failed: {$errorList}");
             throw new HTTPError(400, "Validation failed: {$errorList}");
         }
 

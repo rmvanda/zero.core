@@ -169,8 +169,7 @@ class Module extends Response {
         $moduleDir = dirname((new \ReflectionClass(get_class($this)))->getFileName());
         $submodulePath = $moduleDir . '/submodule/' . $submoduleName . '/' . $submoduleName . '.php';
 
-        Console::debug("Module::__call('{$func}') on " . get_class($this) . " — looking for: {$submodulePath}");
-        Console::debug("Module::__call file_exists: " . (file_exists($submodulePath) ? 'true' : 'false'));
+        Console::debug("Module::__call('{$func}') on " . get_class($this) . " — looking for: {$submodulePath} (" . (file_exists($submodulePath) ? 'found' : 'not found') . ")");
 
         if (file_exists($submodulePath)) {
             require_once $submodulePath;

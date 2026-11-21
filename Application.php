@@ -234,12 +234,18 @@ class Application {
      * The entries of an allowed-ips list file: one plain IP or CIDR range per
      * line. Blank lines are skipped and `#` starts a comment, on its own line
      * or after an entry. A file that is missing or unreadable is an empty list.
+     * A site need not have the file: a missing one says nothing, and one that
+     * is there but cannot be read leaves an info line in the log.
      *
      * @return string[]
      */
     public static function allowedIps(string $file): array
     {
-        if(!is_file($file) || !is_readable($file)){
+        if(!is_file($file)){
+            return [];
+        }
+        if(!is_readable($file)){
+            Console::info("Allowed-ips list {$file} cannot be read, so no client is exempt from a ban");
             return [];
         }
         $entries = [];
@@ -761,7 +767,7 @@ class Application {
         if ($file !== null) {
            return require_once $file;  
         } 
-        Console::warn("Could not find a $module module that is switched on in " . (Modules::path($module) ?? "any module folder"));
+        Console::debug("Could not find a $module module that is switched on in " . (Modules::path($module) ?? "any module folder"));
         return false; 
     }
 

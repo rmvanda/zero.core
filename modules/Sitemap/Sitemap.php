@@ -143,7 +143,7 @@ class Sitemap extends \Zero\Core\Response {
                     ];
                 }
             } catch (\Exception $e) {
-                error_log("Sitemap: Error reflecting {$className}: " . $e->getMessage());
+                \Zero\Core\Console::warn("Sitemap: Error reflecting {$className}: " . $e->getMessage());
             }
         }
 

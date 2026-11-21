@@ -148,7 +148,7 @@ class Mail {
      */
     public static function sendEmailToAdmin($subject, $message) {
         if (!defined('NOTIFY_EMAIL')) {
-            error_log("Mail::sendEmailToAdmin() called but NOTIFY_EMAIL is not defined");
+            \Zero\Core\Console::warn("Mail::sendEmailToAdmin() called but NOTIFY_EMAIL is not defined; nothing was sent");
             return false;
         }
 

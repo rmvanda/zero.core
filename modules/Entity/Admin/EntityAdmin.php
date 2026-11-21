@@ -90,7 +90,7 @@ class EntityAdmin extends AdminResponse {
                 header("Location: /admin/entity/manage/{$entityLabel}");
                 exit;
             } catch (\Exception $e) {
-                error_log("Error creating {$entityLabel}: " . $e->getMessage());
+                \Zero\Core\Console::error("Error creating {$entityLabel}: " . $e->getMessage());
                 $this->error('Failed to create ' . $entityLabel . ': ' . $e->getMessage());
                 // Fall through to show form again
             }
@@ -182,7 +182,7 @@ class EntityAdmin extends AdminResponse {
             header("Location: /admin/entity/manage/{$entityLabel}");
             exit;
         } catch (\Exception $e) {
-            error_log("Error deleting entity: " . $e->getMessage());
+            \Zero\Core\Console::error("Error deleting entity: " . $e->getMessage());
             $this->error('Failed to delete: ' . $e->getMessage());
             header("Location: /admin/entity/manage/{$entityLabel}");
             exit;
@@ -230,7 +230,7 @@ class EntityAdmin extends AdminResponse {
                 'value' => $value
             ]);
         } catch (\Exception $e) {
-            error_log("Error updating entity: " . $e->getMessage());
+            \Zero\Core\Console::error("Error updating entity: " . $e->getMessage());
             $this->error('Failed to update: ' . $e->getMessage());
         }
     }
@@ -311,7 +311,7 @@ class EntityAdmin extends AdminResponse {
                 header("Location: /admin/entity");
                 exit;
             } catch (\Exception $e) {
-                error_log("Error creating entity: " . $e->getMessage());
+                \Zero\Core\Console::error("Error creating entity: " . $e->getMessage());
                 $this->error('Failed to create entity: ' . $e->getMessage());
                 // Fall through to show form again with error
             }

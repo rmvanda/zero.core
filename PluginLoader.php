@@ -59,14 +59,14 @@ class PluginLoader {
             //Console::debug("PluginLoader: Looking for class {$class}");
 
             if (!class_exists($class)) {
-                //Console::warn("Plugin file {$file} exists but class {$class} not found");
+                Console::warn("Plugin file {$file} exists but class {$class} not found");
                 continue;
             }
 
             $plugin = new $class();
 
             if (!$plugin instanceof Plugin) {
-                //Console::warn("Plugin {$class} does not extend \\Zero\\Plugin base class");
+                Console::warn("Plugin {$class} does not extend \\Zero\\Plugin base class");
                 continue;
             }
 
@@ -100,7 +100,7 @@ class PluginLoader {
             } catch (\Throwable $e) {
                 // Plugins must never break the framework
                 $name = get_class($plugin);
-                //Console::error("Plugin {$name}::{$hook}() threw: " . $e->getMessage());
+                Console::error("Plugin {$name}::{$hook}() threw: " . $e->getMessage());
             }
         }
     }
