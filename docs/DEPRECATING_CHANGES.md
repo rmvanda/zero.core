@@ -10,6 +10,12 @@ that text belongs in this file.
 
 Newest first.
 
+## 2026-11 — The admin and permissions docs are in `core/docs/`
+
+### `core/ADMIN_ARCHITECTURE.md`, `core/ADMIN_ASSETS.md`, `core/PERMISSIONS.md` — MOVED to `core/docs/`
+
+The three files, unchanged, beside the rest of the framework's documentation.
+
 ## 2026-11 — Framework helpers are protected, not public
 
 ### Public `getAuxiliary()`, `framePiecePath()`, `framePieceFile()`, `findModuleView()`, `linkAssets()` — now PROTECTED
@@ -594,7 +600,7 @@ The OAuth token store, provider registry and token broker are Auth's own, so the
 ## 2026-11 — Session, User, Group and Permission reshaped
 
 One design for the four classes: `Session` is the request, `User` and `Group` are row objects
-that can both hold permissions, `Permission` grants to either. See `core/PERMISSIONS.md`.
+that can both hold permissions, `Permission` grants to either. See `core/docs/PERMISSIONS.md`.
 `User`, `Group`, `Permission` and `Holder` are in `Zero\Core\Access` (see "Users, groups and
 permissions are in `core/access/`" above); older entries name them `Zero\Core\...`.
 
@@ -697,7 +703,7 @@ name the tables.
 ## 2026-11 — Permissions: one core table
 
 Sharing an item with a group is core's job. `Zero\Core\Permission` (`Zero\Core\Access\Permission`
-since) owns one `permission` table for every module; see `core/PERMISSIONS.md`.
+since) owns one `permission` table for every module; see `core/docs/PERMISSIONS.md`.
 
 ### Per-module permission tables — REPLACED by `permission`
 

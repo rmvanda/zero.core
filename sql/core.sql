@@ -16,7 +16,7 @@
 --
 -- Order: tables first, views after the tables they read. See core/sql/README.md.
 
--- users: one row per account. Owner: core (Zero\Core\Access\User); see core/PERMISSIONS.md
+-- users: one row per account. Owner: core (Zero\Core\Access\User); see core/docs/PERMISSIONS.md
 CREATE TABLE IF NOT EXISTS `users` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(191) DEFAULT NULL,

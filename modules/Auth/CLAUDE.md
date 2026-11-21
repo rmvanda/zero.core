@@ -229,4 +229,4 @@ by hand after touching `register()`:
 
 - `core/` — the `user` record lives in the `users` table via `Zero\Core\Access\User`; `user_view` is a compatibility view over it
 - `entity/CLAUDE.md`, `/entityframework` skill — the EAV framework, which `user` does not use
-- `core/ADMIN_ARCHITECTURE.md` — the `/admin/auth` panel
+- `core/docs/ADMIN_ARCHITECTURE.md` — the `/admin/auth` panel

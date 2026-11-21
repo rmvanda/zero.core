@@ -7,8 +7,8 @@ Every other admin screen belongs to the module it administers, which offers it f
 - A module never depends on the Admin module. A site without Admin loses the screens and nothing
   else.
 - Every admin controller extends `AdminResponse`, which requires `allow.admin`.
-- Admin CSS and JS are inlined, never served by URL. See `core/ADMIN_ASSETS.md`.
-- Sessions, users, groups and capabilities (`allow.*`) are core's. See `core/PERMISSIONS.md`.
+- Admin CSS and JS are inlined, never served by URL. See `core/docs/ADMIN_ASSETS.md`.
+- Sessions, users, groups and capabilities (`allow.*`) are core's. See `core/docs/PERMISSIONS.md`.
 
 ---
 
@@ -47,8 +47,8 @@ Abstract base class of every admin controller. Extends `Module`.
 | Method | Purpose |
 |--------|---------|
 | `__construct()` | Requires `allow.admin`; removes the public asset link `Module::__construct()` made |
-| `getStylesheets()` / `getScripts()` | Inline the page's admin assets (see `core/ADMIN_ASSETS.md`) |
-| `loadInlineAsset()`, `loadAdminStyles()`, `loadAdminScripts()` | Inline assets from a view (see `core/ADMIN_ASSETS.md`) |
+| `getStylesheets()` / `getScripts()` | Inline the page's admin assets (see `core/docs/ADMIN_ASSETS.md`) |
+| `loadInlineAsset()`, `loadAdminStyles()`, `loadAdminScripts()` | Inline assets from a view (see `core/docs/ADMIN_ASSETS.md`) |
 | `getAdminModules()` | The offerings the user may see |
 | `setBreadcrumbs(array $crumbs)` | Sets `$this->breadcrumbs` to an "Admin" crumb (`/admin`) followed by `$crumbs`, each `['label' => ..., 'url' => ...]` |
 | `routeToModuleAdmin($module, $method, $params)` | Call an offering's endpoint |
@@ -85,7 +85,7 @@ modules/YourModule/
     ├── YourModuleAdmin.php     # Admin controller (extends AdminResponse)
     ├── admin-config.php        # Optional: the dashboard card
     ├── view/                   # Admin views
-    └── assets/                 # Admin-only assets, inlined (see core/ADMIN_ASSETS.md)
+    └── assets/                 # Admin-only assets, inlined (see core/docs/ADMIN_ASSETS.md)
 ```
 
 ```php
@@ -180,7 +180,7 @@ letter, then lowercase), in `getAdminModules()`.
 
 ## Access
 
-Capabilities themselves are described in `core/PERMISSIONS.md`. The admin layers are:
+Capabilities themselves are described in `core/docs/PERMISSIONS.md`. The admin layers are:
 
 1. **`AdminResponse::__construct()`**: a user without `allow.admin` is redirected to
    `/user/login?r=y`, with the requested URL kept in `$_SESSION['return_url']` when it is

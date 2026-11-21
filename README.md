@@ -89,7 +89,7 @@ core's `composer.json` at runtime; it documents what to install.
 | `Request.php` | The request, parsed once into static properties: module, endpoint, args, protocol, subdomain, whether the caller wants JSON, whether it came from AJAX. Also `clientIp()` and `redirect()`. |
 | `Response.php` | Decides what kind of response to give. Wraps a view in head, header, sideNav and footer and loads the module's css and scripts; answers JSON when the client asks for it; leaves the frame off for AJAX. Finds a view or a standalone page when the method does not exist, and renders error pages. |
 | `Module.php` | Response under the name your code extends. Semantics! Think Modular! *Be* Modular. Also links the module's public assets and resolves submodules. |
-| `AdminResponse.php` | Base class for admin controllers. A Module subclass whose assets are inlined, never web-accessible. See [ADMIN_ARCHITECTURE.md](ADMIN_ARCHITECTURE.md) and [ADMIN_ASSETS.md](ADMIN_ASSETS.md). |
+| `AdminResponse.php` | Base class for admin controllers. A Module subclass whose assets are inlined, never web-accessible. See [ADMIN_ARCHITECTURE.md](docs/ADMIN_ARCHITECTURE.md) and [ADMIN_ASSETS.md](docs/ADMIN_ASSETS.md). |
 | `Modules.php`, `ModulesIni.php` | Where a module is and whether it is on; the one writer of `app/modules.ini`. |
 | `Strings.php` | Wording as constants, from `strings/*.ini`. |
 | `exception/` | The exceptions core throws (`Zero\Core\Exception`): `HTTPError`, `StaleFileException`, `FileNotWritableException`. `throw new HTTPError(404, $detail)` anywhere in a request renders the error page in the module's own frame; a JSON client gets `HTTPError::toArray()`. |
@@ -103,7 +103,7 @@ core's `composer.json` at runtime; it documents what to install.
 | `Model.php` | A thin typed row gateway over a real table. Deliberately not an ORM and deliberately not `Zero\Entity`: for models that want a real schema with real constraints. |
 | `entity/` | The entity framework (`Zero\Entity`), a git submodule. See [entity/README.md](entity/README.md). |
 | `Session.php` | Who is making this request: `userId()`, `user()`, `isLoggedIn()`, `can()`. `establish()` is the single writer of the login session and `end()` the single teardown. See `modules/Auth/CLAUDE.md` for the session contract. |
-| `access/` | Users, groups and permissions (`Zero\Core\Access`): `User`, `Group`, `Permission`, the `Holder` interface and the `HoldsCapabilities` trait. The only code that reads or writes the `user_group`, `user_group_member` and `permission` tables. See [PERMISSIONS.md](PERMISSIONS.md). |
+| `access/` | Users, groups and permissions (`Zero\Core\Access`): `User`, `Group`, `Permission`, the `Holder` interface and the `HoldsCapabilities` trait. The only code that reads or writes the `user_group`, `user_group_member` and `permission` tables. See [PERMISSIONS.md](docs/PERMISSIONS.md). |
 | `sql/` | `core.sql`, the schema for an empty database, and older one-off scripts. See [sql/README.md](sql/README.md). |
 
 ## Everything else
@@ -129,8 +129,8 @@ core's `composer.json` at runtime; it documents what to install.
 | [modules/Module/README](modules/Module/README) | Writing a module; `mkmod` scaffolds one |
 | [docs/MODULE_PHILOSOPHY.md](docs/MODULE_PHILOSOPHY.md) | What makes a module worth writing |
 | [docs/ATTRIBUTES.md](docs/ATTRIBUTES.md) | The attribute gates |
-| [PERMISSIONS.md](PERMISSIONS.md) | Session, users, groups, capabilities, sharing |
-| [ADMIN_ARCHITECTURE.md](ADMIN_ARCHITECTURE.md), [ADMIN_ASSETS.md](ADMIN_ASSETS.md) | Admin screens |
+| [PERMISSIONS.md](docs/PERMISSIONS.md) | Session, users, groups, capabilities, sharing |
+| [ADMIN_ARCHITECTURE.md](docs/ADMIN_ARCHITECTURE.md), [ADMIN_ASSETS.md](docs/ADMIN_ASSETS.md) | Admin screens |
 | [docs/PLUGINS.md](docs/PLUGINS.md) | Plugins and their hooks |
 | [docs/PUSH_NOTIFICATIONS.md](docs/PUSH_NOTIFICATIONS.md) | Web push |
 | [docs/DEPRECATING_CHANGES.md](docs/DEPRECATING_CHANGES.md) | What was removed or replaced, and what to use instead |

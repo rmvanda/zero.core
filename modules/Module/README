@@ -129,7 +129,7 @@ groups or users builds a Permission with its own name and the thing's name,
 
 and checks "is the owner, or $perm->can($id, $userId, 'update')". It keeps no
 permission table, writes no SQL against the group or permission tables, and
-calls $perm->forget($id) when it deletes the thing. See core/PERMISSIONS.md.
+calls $perm->forget($id) when it deletes the thing. See core/docs/PERMISSIONS.md.
 
 A module never depends on the Admin module. It offers its admin screens in
 Admin/ (above) and the Admin module picks them up if the site has it.

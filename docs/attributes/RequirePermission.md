@@ -22,7 +22,7 @@ A key is a **capability**: `allow.` and then lowercase words joined by dots
 (`allow.admin`, `allow.receipt.view`, `allow.aws.bill.read`), held by the user
 directly or through an active group. What a capability is, how it is stored and
 how to grant one (`$user->grant()`, `$user->revoke()`) are in
-[core/PERMISSIONS.md](../../PERMISSIONS.md#capabilities).
+[core/docs/PERMISSIONS.md](../PERMISSIONS.md#capabilities).
 
 ## Parameters
 

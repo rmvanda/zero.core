@@ -274,11 +274,11 @@ Each tag carries the file's modification time, `/assets/lists/js/view.js?v=17945
 
 See `/zeromodule` skill for the full convention, frame-override method signatures (`getStylesheets`, `getScripts`, `getComponents`), and submodule asset details.
 
-Admin modules override this — assets are served inline, never web-accessible. See `core/ADMIN_ASSETS.md`.
+Admin modules override this — assets are served inline, never web-accessible. See `core/docs/ADMIN_ASSETS.md`.
 
 ## Permission System
 
-Two independent systems — they answer different questions. Both are rows in core's `permission` table, read and written only through `Zero\Core\Access`. A module keeps no permission table of its own, writes no SQL against `user_group`, `user_group_member` or `permission`, and does not depend on the Admin module, whose screens use the same classes. See `core/PERMISSIONS.md`.
+Two independent systems — they answer different questions. Both are rows in core's `permission` table, read and written only through `Zero\Core\Access`. A module keeps no permission table of its own, writes no SQL against `user_group`, `user_group_member` or `permission`, and does not depend on the Admin module, whose screens use the same classes. See `core/docs/PERMISSIONS.md`.
 
 - **Capabilities**: "may this user use this feature at all?" Named `allow.*` keys, gated with `#[RequirePermission]` and read with `Session::can()`.
 - **Sharing**: "may this user read, update or delete *this item*?" A grant to a `Group` or a `User` under a `{module}.{entity}` key, checked in the endpoint body, since an attribute runs before the row is loaded.

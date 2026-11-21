@@ -2,7 +2,7 @@
 /*
  * This module's admin CSS is inlined automatically — there is no manual
  * loading step to call from a view. Auto mode already inlines it, and that
- * is the documented preference (core/ADMIN_ASSETS.md).
+ * is the documented preference (core/docs/ADMIN_ASSETS.md).
  *
  * AdminResponse::getStylesheets() -> inlineAdminAssets('css') searches
  *   1. core/modules/Admin/assets/css/   (shared base: admin.css)

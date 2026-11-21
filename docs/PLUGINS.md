@@ -216,7 +216,7 @@ $db = Database::getConnection();
 Console::debug("...");  Console::info("...");  Console::warn("...");  Console::error("...");
 ```
 
-Capabilities and `auth.level` are not in `$_SESSION`; ask `Session`. See `core/PERMISSIONS.md`,
+Capabilities and `auth.level` are not in `$_SESSION`; ask `Session`. See `core/docs/PERMISSIONS.md`,
 and `core/modules/Auth/CLAUDE.md` for what the session holds.
 
 ## Patterns
