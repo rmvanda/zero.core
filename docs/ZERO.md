@@ -126,6 +126,26 @@ The libraries that belong to no module are in `core/lib/`: `Zero\Lib\Http`, `Zer
   `Zero\Core\Access\Permission` (`Group::forUser($userId)`, `$perm->can(...)`, `$perm->sqlCan(...)`
   for a listing) and never writes SQL against their tables. See Permission System.
 
+## Sending mail
+
+Every message goes through `Zero\Lib\Mail\Mail`. A module never calls PHP's `mail()`.
+
+```php
+use \Zero\Lib\Mail\Mail;
+
+Mail::sendEmailTo($to, $subject, $message);                  // from the site's own address
+Mail::sendEmailTo($to, $subject, $message, null, $replyTo);  // with a Reply-To
+Mail::sendEmailToAdmin($subject, $message);                  // to NOTIFY_EMAIL
+```
+
+`Mail` does four things a direct `mail()` call does not:
+
+- It sends from `Mail::sender()`: `MAIL_FROM`, or `noreply@` + `PRIMARY_DOMAIN` when that is blank.
+- It sets the HTML content type when the message is HTML.
+- It records each message as a `Mail Sent` event (`Zero\Entity\Event`): recipient, subject, sender,
+  length and whether the send succeeded. The body is not kept.
+- It obeys `MAIL_CAPTURE_DIR`: when set, the message is written to a file there and not sent.
+
 ## How a module is found
 
 `Zero\Core\Modules` answers every question about where a module is and whether it is on.

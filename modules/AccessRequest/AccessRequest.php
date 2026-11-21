@@ -5,6 +5,7 @@ namespace Zero\Module;
 use \Zero\Core\Module;
 use \Zero\Core\Request;
 use \Zero\Core\Console;
+use \Zero\Lib\Mail\Mail;
 use \Zero\Core\Attribute\{AllowedMethods, RequiredParams, RequireLogin};
 
 /**
@@ -183,19 +184,12 @@ class AccessRequest extends Module {
         ";
 
         // Send email to admin
-        $headers = array(
-            'From' => FROM_EMAIL,
-            'Reply-To' => $userEmail,
-            'Content-Type' => 'text/html; charset=UTF-8'
-        );
-
-        $headersString = '';
-        foreach ($headers as $key => $value) {
-            $headersString .= "$key: $value\r\n";
-        }
+        // Mail::sendEmailTo() sends from the site's own address (MAIL_FROM), marks
+        // the message as HTML, records it, and honours MAIL_CAPTURE_DIR.
+        $replyTo = filter_var($userEmail, FILTER_VALIDATE_EMAIL) ? $userEmail : null;
 
         try {
-            $emailSent = mail(NOTIFY_EMAIL, $subject, $message, $headersString);
+            $emailSent = Mail::sendEmailTo(NOTIFY_EMAIL, $subject, $message, null, $replyTo);
 
             if ($emailSent) {
                 Console::info("Access request email sent to " . NOTIFY_EMAIL);

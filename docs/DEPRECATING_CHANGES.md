@@ -417,6 +417,12 @@ stored value needs converting.
 The default `From` and `Reply-To` is `Mail::sender()`: `MAIL_FROM` when the site's config defines it
 (and it is not blank), otherwise `noreply@` + `PRIMARY_DOMAIN`.
 
+### `FROM_EMAIL` — REMOVED
+
+Core does not read `FROM_EMAIL`. AccessRequest was the last user: it called `mail()` itself. It sends
+through `Mail::sendEmailTo()`, so the sender is `Mail::sender()` (`MAIL_FROM`). A site may delete the
+key from its `config.ini`.
+
 ### `CapabilityKeys::all($modulesDir)` and `declared($modulesDir)` — REPLACED
 
 They take a list of module directories (each with a trailing slash), or none to read every module that
