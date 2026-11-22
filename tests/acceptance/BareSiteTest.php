@@ -310,6 +310,17 @@ final class BareSiteTest extends TestCase
         $this->assertStringContainsString('<form action="/auth/signin" method="post"', $r['body']);
         $this->assertStringContainsString('name="email"', $r['body']);
         $this->assertStringContainsString('Email me a sign-in link', $r['body']);
+
+        // every page the sign-in screen links to is there: core's own Index has the privacy page.
+        // A link under /auth/ starts a sign-in with a provider and is not a page.
+        preg_match_all('~<a [^>]*href="(/[^"#?]*)~', $r['body'], $links);
+        $this->assertContains('/privacy', $links[1]);
+        foreach (array_unique($links[1]) as $href) {
+            if (str_starts_with($href, '/auth/')) {
+                continue;
+            }
+            $this->assertSame(200, $this->page($href)['status'], "$href, linked from the sign-in page");
+        }
     }
 
     /**
