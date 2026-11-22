@@ -21,7 +21,7 @@ core/skeleton/zero-init.sh            # or: core/skeleton/zero-init.sh /path/to/
 ```
 
 The script builds the site folder around `core/`: `app/` (config, strings, `modules.ini`,
-frames and web root), `modules/Index/`, an empty `entity/` for the site's own entity classes,
+frames and web root), an empty `modules/` and an empty `entity/` for the site's own entity classes,
 `storage/cache/` and `etc/`. It clones nothing and needs no root. It never overwrites a file
 that exists, so running it again is safe. Without a domain argument the folder's name stands
 in for `PRIMARY_DOMAIN` in `app/config/config.ini`.
@@ -38,7 +38,6 @@ It prints the next steps: fill in `app/config/database.ini`, load `core/sql/core
 | `frontend/www/` | Web root: `index.php` (defines `ZERO_ROOT` and loads core), `.htaccess` (sends every non-file URL to `index.php`), `assets/css/main.css` (light and dark by `prefers-color-scheme`). |
 | `strings/site.ini` | The site's wording: `SITE_NAME` and the labels the frames show. Also core's English default for each label a site leaves out. |
 | `modules.ini` | Which modules are on; lists only departures from the defaults. Copied to `app/modules.ini`. |
-| `modules/Index/` | The landing page module. |
 | `config-templates/` | Blank `config.ini`, `database.ini`, `constants.ini`, and `allowed-ips.lst` (the clients that are never banned). Copied to `app/config/` (never committed). |
 | `config/` | Defaults core itself reads when `app/config/` has no file of the same name: `constants.ini`, `error_codes.ini`. Not copied. |
 | `etc/` | Apache and nginx vhost samples. `{{DOMAIN}}` and `{{SITE_DIR}}` are filled in on the way to the site's `etc/`. |

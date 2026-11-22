@@ -19,7 +19,7 @@
 #   ├── core/                  (already there: the framework)
 #   ├── etc/                   Apache and nginx vhost samples for the domain
 #   ├── entity/                the site's own entity classes
-#   ├── modules/Index/         the landing page module
+#   ├── modules/               the site's own modules (core's Index serves / until the site has one)
 #   ├── storage/cache/         what core caches (must be writable by the web server)
 #   └── app/
 #       ├── config/            settings and secrets: fill in database.ini (never committed)
@@ -151,11 +151,6 @@ if [ "$STRINGS_NEW" = 1 ] && [ -f "$SITE_DIR/app/strings/site.ini" ]; then
     sed -i "s|My Zero App|$(sed_escape "$DOMAIN")|g" "$SITE_DIR/app/strings/site.ini"
 fi
 ok "app/ ready."
-
-# ─── modules/Index ───────────────────────────────────────────────────
-info "Setting up the Index module..."
-copy_tree "$SKEL/modules/Index" "$SITE_DIR/modules/Index"
-ok "modules/Index ready."
 
 # ─── Web server samples ──────────────────────────────────────────────
 info "Writing webserver samples..."

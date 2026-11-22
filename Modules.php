@@ -24,9 +24,17 @@ namespace Zero\Core;
  */
 class Modules
 {
-    private const REQUIRED = ['Auth', 'User', 'Admin', 'AccessRequest'];
+    private const REQUIRED = ['Index', 'Auth', 'User', 'Admin', 'AccessRequest'];
     private const OPTIONAL = ['Push', 'Entity'];
     private const EXAMPLE = ['Module', 'HelloWorld', 'Test'];
+
+    /**
+     * Bundled modules a site replaces by having its own of the same name.
+     * Index is the landing page and the home of standalone pages: core ships
+     * one so a site works without any, and a site's modules/Index is the
+     * site's own. For every other name, two roots holding it is a clash.
+     */
+    private const OVERRIDABLE = ['Index'];
 
     /** @var string[] Existing roots in priority order, each with a trailing slash */
     private static array $roots = [];
@@ -180,7 +188,8 @@ class Modules
     /**
      * Throw when two roots hold the same module name, compared the way path()
      * compares (case-insensitive, hyphens ignored). The message names both
-     * paths. Reads the cached listing.
+     * paths. Reads the cached listing. A module a site may replace
+     * (OVERRIDABLE) under its exact name in two roots is not a clash.
      */
     public static function assertNoClash(): void
     {
@@ -189,6 +198,10 @@ class Modules
             $key = self::fold($entry);
             if (isset($seen[$key])) {
                 [$first, $firstEntry] = $seen[$key];
+                // The earlier root (the site's) wins in all(), which is the override
+                if ($entry === $firstEntry && in_array($entry, self::OVERRIDABLE, true)) {
+                    continue;
+                }
                 if (self::isModuleDirName($entry) || self::isModuleDirName($firstEntry)) {
                     throw new \RuntimeException(
                         "Module name clash: {$first}{$firstEntry}/ and {$root}{$entry}/ are the same module name"

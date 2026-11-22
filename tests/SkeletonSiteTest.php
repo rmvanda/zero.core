@@ -53,14 +53,16 @@ final class SkeletonSiteTest extends ZeroTestCase
         [$code, $out] = $this->init();
         $this->assertSame(0, $code, $out);
         foreach (['app/config', 'app/frontend/frame', 'app/frontend/www/assets/css', 'app/strings',
-                  'modules/Index/view', 'entity', 'storage/cache'] as $dir) {
+                  'modules', 'entity', 'storage/cache'] as $dir) {
             $this->assertDirectoryExists($this->site . '/' . $dir);
         }
         foreach (['app/modules.ini', 'app/strings/site.ini', 'app/frontend/www/index.php',
                   'app/frontend/www/.htaccess', 'app/frontend/www/assets/css/main.css',
-                  'app/config/config.ini', 'app/config/database.ini', 'modules/Index/Index.php'] as $file) {
+                  'app/config/config.ini', 'app/config/database.ini'] as $file) {
             $this->assertFileExists($this->site . '/' . $file);
         }
+        // Index is core's: the site gets none until it writes its own
+        $this->assertDirectoryDoesNotExist($this->site . '/modules/Index');
         $this->assertStringContainsString('core.sql', $out);
         $this->assertStringContainsString('database.ini', $out);
     }
@@ -141,6 +143,7 @@ final class SkeletonSiteTest extends ZeroTestCase
         $this->init();
         file_put_contents($this->site . '/app/config/database.ini', "HOST=edited\n");
         file_put_contents($this->site . '/app/strings/site.ini', "SITE_NAME=\"Mine\"\n");
+        mkdir($this->site . '/modules/Index');
         file_put_contents($this->site . '/modules/Index/Index.php', "<?php // mine\n");
         [$code, $out] = $this->init();
         $this->assertSame(0, $code, $out);
@@ -156,7 +159,7 @@ final class SkeletonSiteTest extends ZeroTestCase
         [$code, $out] = $this->init([$other]);
         $this->assertSame(0, $code, $out);
         $this->assertFileExists($other . '/app/frontend/www/index.php');
-        $this->assertFileExists($other . '/modules/Index/Index.php');
+        $this->assertDirectoryExists($other . '/modules');
     }
 
     public function testTheFourFramePiecesAreValidPhp(): void

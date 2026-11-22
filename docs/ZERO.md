@@ -154,8 +154,9 @@ Mail::sendEmailToAdmin($subject, $message);                  // to NOTIFY_EMAIL
 - **Names.** A directory in a root is a module when its name matches `^[A-Z][A-Za-z0-9]*$`. A folder such as `Links (old)` or `Evil&Co` is not one: the router never serves it and `app/modules.ini` cannot hold it.
 - **Paths.** Core never builds a module path from `MODULE_PATH`: it asks `Modules::path()`, which accepts any spelling of a name (`ApiConfig`, `apiconfig`, `api-config`), and `Modules::name()` for the real directory name.
 - **Clashes.** Two roots holding the same name (compared ignoring case and hyphens) is a configuration error: `Application::run()` logs it and the request fails with a 500.
+- **Index is the exception.** Core ships `core/modules/Index/`, the landing page and the home of standalone pages, so a site works with no Index of its own. A site that has `modules/Index/` replaces core's entirely: the site's root comes first, and the two are not a clash.
 
-The nine modules every site gets (`Auth`, `User`, `Admin`, `AccessRequest`, `Push`, `Entity`, `Module`, `HelloWorld`, `Test`) live in `core/modules/`; every other module lives in the site's `modules/`. Their namespaces (`Zero\Module\Auth`) and URLs are the same wherever the folder is.
+The ten modules every site gets (`Index`, `Auth`, `User`, `Admin`, `AccessRequest`, `Push`, `Entity`, `Module`, `HelloWorld`, `Test`) live in `core/modules/`; every other module lives in the site's `modules/`. Their namespaces (`Zero\Module\Auth`) and URLs are the same wherever the folder is.
 
 `core/modules/Module/mkmod` writes a new module into the site's `modules/`, never into `core/` (`--dest <dir>` overrides), and refuses a name a bundled module has. Tests that check every module live in `core/tests/module/` and walk `Modules::all()`.
 
@@ -163,7 +164,7 @@ The nine modules every site gets (`Auth`, `User`, `Admin`, `AccessRequest`, `Pus
 
 | Tier | Modules | Default |
 |---|---|---|
-| required | `Auth`, `User`, `Admin`, `AccessRequest` | always on |
+| required | `Index`, `Auth`, `User`, `Admin`, `AccessRequest` | always on |
 | optional | `Push`, `Entity` | on |
 | site | every module not named here | on |
 | example | `Module`, `HelloWorld`, `Test` | off |

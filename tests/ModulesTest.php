@@ -91,6 +91,37 @@ class ModulesTest extends TestCase
         Modules::assertNoClash();
     }
 
+    public function testASitesIndexReplacesCoresAndIsNotAClash(): void
+    {
+        $this->make($this->site, 'Index');
+        $this->make($this->bundled, 'Index');
+        $this->configure();
+
+        Modules::assertNoClash();
+        $this->assertSame($this->site . 'Index/', Modules::path('Index'), 'the site\'s root comes first');
+        $this->assertSame('required', Modules::tier('Index'));
+        $this->assertTrue(Modules::enabled('Index'));
+    }
+
+    public function testCoresIndexServesASiteThatHasNone(): void
+    {
+        $this->make($this->bundled, 'Index');
+        $this->configure();
+
+        Modules::assertNoClash();
+        $this->assertSame($this->bundled . 'Index/', Modules::path('Index'));
+    }
+
+    public function testOnlyTheExactNameIndexMayBeReplaced(): void
+    {
+        $this->make($this->site, 'index');
+        $this->make($this->bundled, 'Index');
+        $this->configure();
+
+        $this->expectException(\RuntimeException::class);
+        Modules::assertNoClash();
+    }
+
     public function testNoClashWhenNamesDiffer(): void
     {
         $this->make($this->site, 'Lists');
@@ -154,7 +185,7 @@ class ModulesTest extends TestCase
     {
         $this->configure();
 
-        foreach (['Auth', 'User', 'Admin', 'AccessRequest'] as $name) {
+        foreach (['Index', 'Auth', 'User', 'Admin', 'AccessRequest'] as $name) {
             $this->assertSame('required', Modules::tier($name), $name);
         }
         foreach (['Push', 'Entity'] as $name) {

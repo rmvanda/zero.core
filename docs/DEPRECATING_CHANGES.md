@@ -10,6 +10,14 @@ that text belongs in this file.
 
 Newest first.
 
+## 2026-11 — Index is a core module
+
+### `core/skeleton/modules/Index/`, copied into each site by `zero-init.sh` — MOVED to `core/modules/Index/`
+
+Index is a required module that ships with core: `/` works on a site that has no Index of its
+own. `zero-init.sh` creates an empty `modules/` and copies no module. A site's own
+`modules/Index/` replaces core's, and is the one name two module roots may both hold.
+
 ## 2026-11 — Admin's own screens are submodules; a non-admin gets a 404
 
 ### The `/admin/manage/...` URLs and Admin's flat action URLs — REPLACED

@@ -14,7 +14,7 @@ use Zero\Core\Modules;
  */
 class BundledModulesTest extends TestCase
 {
-    private const BUNDLED = ['Auth', 'User', 'Admin', 'AccessRequest', 'Push', 'Entity', 'Module', 'HelloWorld', 'Test'];
+    private const BUNDLED = ['Index', 'Auth', 'User', 'Admin', 'AccessRequest', 'Push', 'Entity', 'Module', 'HelloWorld', 'Test'];
 
     private string $root;
     private ?string $tmp = null;
@@ -45,6 +45,12 @@ class BundledModulesTest extends TestCase
     public function testEachBundledModuleResolvesIntoCore(): void
     {
         foreach (self::BUNDLED as $name) {
+            $this->assertDirectoryExists($this->root . 'core/modules/' . $name, "$name ships with core");
+            if ($name === 'Index' && is_dir($this->root . 'modules/Index')) {
+                // Index is the one module a site replaces with its own
+                $this->assertSame($this->root . 'modules/Index/', Modules::path($name), $name);
+                continue;
+            }
             $this->assertSame($this->root . 'core/modules/' . $name . '/', Modules::path($name), $name);
             $this->assertDirectoryDoesNotExist($this->root . 'modules/' . $name, "$name is not left in the site folder");
         }
@@ -55,6 +61,9 @@ class BundledModulesTest extends TestCase
         foreach (self::BUNDLED as $name) {
             if ($name === 'Entity') {
                 continue;   // Entity is a library and an admin offering: it has no controller
+            }
+            if ($name === 'Index' && is_dir($this->root . 'modules/Index')) {
+                continue;   // the site's own Index is the one that resolves
             }
             $this->assertSame(
                 $this->root . 'core/modules/' . $name . '/' . $name . '.php',

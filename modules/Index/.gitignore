@@ -1,0 +1,7 @@
+# Editor swap files.
+*swp
+# Site configuration and secrets stay on the server. config-tmpl/ holds a
+# blank copy of each config file, and that is what is committed.
+config/
+config.ini
+!**/config-tmpl/config.ini
