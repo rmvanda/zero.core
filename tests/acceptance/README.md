@@ -9,6 +9,16 @@ The tests: the home page, the login page, register / verify-link / sign-in-link 
 profile page, `/admin` with and without `allow.admin`, a module switched off in `modules.ini`
 answering 404, and a probe that every request ran on the throwaway database.
 
+`AdminEndpointsTest` drives every endpoint of Admin's own screens on the same kind of site: users
+(capabilities, settings, disabling, the paged list), groups and their members, a capability for
+many holders at once, modules, the audit log's filters, and the firewall's refusal. For each it
+checks what a call that works changes, what a form and a script are answered, each refusal with
+its status and reason, and that a caller without `allow.admin` gets a 404 and changes nothing.
+
+Both classes get their site from the `BareSite` trait (`BareSite.php`): the build, the lock, one
+request per PHP process, the captured mail. A new acceptance class uses the trait and
+`require_once`s it, since the test autoloader does not map this folder.
+
 ```bash
 ./vendor/bin/phpunit --testsuite Acceptance    # from the site root
 ```
@@ -26,7 +36,7 @@ reads the link from the captured message.
 
 ## One run at a time
 
-The test holds a lock on `<tmp>/zerotest_bare_site.lock` for the whole class. A run that cannot
+Each class holds a lock on `<tmp>/zerotest_bare_site.lock` for the whole class. A run that cannot
 take it skips with "another run is using zerotest_bare_site" and drops and removes nothing; a run
 removes only the database and folder it created. Folders of killed runs (`zerotest-baresite-*`
 older than an hour) are removed at the start of the next run. `BareSiteLockTest` proves the guard.

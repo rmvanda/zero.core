@@ -648,7 +648,8 @@ class Response
         $export = array_merge($export, $extra);
 
         $export['status'] = $extra['status'] ?? $this->status ?: "unknown";
-        $export['code'] = $extra['code'] ?? $this->code ?: 200;
+        // no response declares a code of its own unless a subclass does: 200 then
+        $export['code'] = ($extra['code'] ?? $this->code ?? null) ?: 200;
 
         static::$built = true;
         header("Content-Type: application/json");
