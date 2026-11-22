@@ -6,6 +6,8 @@ use \Zero\Core\AdminResponse;
 use \Zero\Core\Console;
 use \Zero\Core\Attribute\RequirePermission;
 use \Zero\Core\Attribute\AllowedMethods;
+use \Zero\Core\Attribute\AuditLog;
+use \Zero\Core\Exception\HTTPError;
 use \Zero\Lib\CloudFlare\CloudFlare;
 
 /**
@@ -39,8 +41,7 @@ class Firewall extends AdminResponse {
         $data = CloudFlare::list($filters, $page, $perPage);
 
         if ($data === null) {
-            $this->export(['success' => false, 'error' => 'Failed to fetch rules from CloudFlare']);
-            return;
+            throw new HTTPError(502, 'Failed to fetch rules from CloudFlare');
         }
 
         $this->export([
@@ -53,20 +54,23 @@ class Firewall extends AdminResponse {
     /**
      * API: Unblock an IP address
      */
+    #[AuditLog('firewall_unblock', includeParams: true)]
     #[AllowedMethods('POST')]
     public function unblock() {
         $ip = trim($_POST['ip'] ?? '');
 
         if (empty($ip)) {
-            $this->export(['success' => false, 'error' => 'No IP provided']);
-            return;
+            throw new HTTPError(400, 'No IP provided');
         }
 
-        $result = CloudFlare::unblock($ip);
+        if (!CloudFlare::unblock($ip)) {
+            throw new HTTPError(502, "Failed to unblock {$ip}");
+        }
+
         $this->export([
-            'success' => $result,
+            'success' => true,
             'ip' => $ip,
-            'message' => $result ? "Unblocked {$ip}" : "Failed to unblock {$ip}",
+            'message' => "Unblocked {$ip}",
         ]);
     }
 }

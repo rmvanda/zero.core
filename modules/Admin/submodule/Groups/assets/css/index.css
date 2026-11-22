@@ -7,3 +7,8 @@
     width: 100%;
     text-align: center;
 }
+
+/* The column that holds the expand chevron */
+.expandable-table .expand-col {
+    width: 30px;
+}

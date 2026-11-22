@@ -18,14 +18,22 @@ class AdminUrlsTest extends TestCase
 
     public function testNoOldAdminUrlAnywhere(): void
     {
-        // Admin URLs that moved into module offerings (see DEPRECATING_CHANGES.md).
-        // /admin/manage/users and /admin/manage/groups are still valid.
+        // Admin URLs that moved into module offerings or into Admin's own
+        // screens (see DEPRECATING_CHANGES.md).
         $oldUrls = [
-            '/admin/manage/event',
+            '/admin/manage/',
+            '/admin/set-module',
+            '/admin/update-permission',
+            '/admin/disable-user',
+            '/admin/enable-user',
+            '/admin/group-form',
+            '/admin/delete-group',
+            '/admin/add-group-member',
+            '/admin/remove-group-member',
+            '/admin/update-group-member-role',
             '/admin/create-entity',
             '/admin/update-entity',
             '/admin/delete-entity',
-            '/admin/manage/api-transactions',
             '/admin/view-api-response',
             '/admin/expire-api-cache',
             '/admin/web-socket',

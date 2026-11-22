@@ -36,18 +36,18 @@ loaded once, from the first):
 |------|----|
 | `admin.{css\|js}` | The shared base, on every admin page |
 | `{class}.{css\|js}` | The controller's class name in lowercase: `linksadmin.css` for `LinksAdmin`, `firewall.css` for `Firewall`, `admin.css` for `Admin` |
-| `{endpoint}.{css\|js}` | The endpoint of the request, in both its camelCase form and as written in the URL (`groupForm.css` or `group-form.css` for `/admin/group-form`) |
+| `{endpoint}.{css\|js}` | The endpoint of the request (below) |
 
 What "the endpoint" is depends on the controller:
 
-- **Admin itself**: the URL's second segment. `/admin/group-form` loads `group-form.css`.
-  `Admin::manage()` sets it to `manage-{type}`, so `/admin/manage/users` loads
-  `manage-users.css` and `/admin/manage/group/5` loads `manage-group.css`.
+- **Admin itself**: the dashboard, `index`.
 - **An offering** (`/admin/links/edit/5`): the URL's second segment is the module, so the endpoint
   is `links` on every page of the offering. `linksadmin.css` and `links.css` both load on all of
   them; `edit.css` does not load. An offering that wants a file for one page loads it from the
   view (manual mode) or sets `$this->activeEndpoint` before `build()`.
-- **An Admin submodule** (`/admin/firewall/list`): the submodule's own endpoint, `list`.
+- **An Admin submodule** (`/admin/groups/members/5`): the submodule's own endpoint, the method
+  name: `members.css`, and `setMemberRole.css` for `/admin/groups/set-member-role`. `groups.css`
+  loads on every Groups page.
 
 Each file is printed in its own block, with the filename in a comment:
 
@@ -93,8 +93,7 @@ whose name does not fit the convention.
 ```
 core/modules/Admin/assets/
 ├── css/
-│   ├── admin.css              # shared base: every admin page
-│   └── manage-users.css       # Admin's own /admin/manage/users
+│   └── admin.css              # shared base: every admin page
 ├── js/
 │   └── admin.js
 └── component/

@@ -401,6 +401,7 @@ class Response
         static::$built = true; 
         $this -> add("head");
         $this -> add("header");
+        $this -> beforeView();
         if(file_exists($view)){
             include $view ; 
         } else {
@@ -419,6 +420,12 @@ class Response
         $this -> add("sideNav");  // not necessary in all contexts. 
         $this -> add("footer");
     }
+
+    /**
+     * Printed between the header and the view. Nothing here; AdminResponse
+     * prints its breadcrumbs.
+     */
+    protected function beforeView(): void {}
 
     private function add(string $piece){
         if(($this->included[$piece] ?? false) || Request::$madeWithAJAX){

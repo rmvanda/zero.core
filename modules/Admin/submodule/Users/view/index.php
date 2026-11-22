@@ -1,39 +1,20 @@
 <div class="content-wrapper">
     <h1>User Management</h1>
-    <p><a href="/admin">&larr; Back to Admin Panel</a></p>
-
-    <?php
-    $db = \Zero\Core\Database::getConnection();
-    $stmt = $db->query("SELECT id, email, name, pic, verified, disabled FROM users ORDER BY id asc");
-    $users = $stmt->fetchAll();
-
-    // Pre-fetch permission counts and group memberships per user
-    $userMeta = [];
-    foreach ($users as $u) {
-        $sid = $u['id'];
-        $account = \Zero\Core\Access\User::find((int) $sid);
-        $permCount = count(\Zero\Core\Access\Permission::capabilities($account));
-
-        // Inactive groups too: this screen manages them.
-        $groups = array_map(fn(\Zero\Core\Access\Group $group) => $group->group_name, $account->groups(false));
-
-        $userMeta[$sid] = ['perm_count' => $permCount, 'groups' => $groups];
-    }
-    ?>
 
     <div class="mt-2">
-        <table class="admin-table expandable-table">
+        <table class="admin-table expandable-table users-table">
             <thead>
                 <tr>
-                    <th width="30"></th>
+                    <th class="col-expand"></th>
                     <th>User</th>
                     <th>Email</th>
                     <th class="text-center">Actions</th>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($users as $user): ?>
-                <tr class="main-row<?= $user['disabled'] ? ' user-disabled' : '' ?>" data-user-id="<?= $user['id'] ?>">
+                <?php foreach ($this->userRows as $user): ?>
+                <?php $name = htmlspecialchars($user['name'] ?? 'Unknown', ENT_QUOTES); ?>
+                <tr class="main-row<?= $user['disabled'] ? ' user-disabled' : '' ?>" data-user-id="<?= (int) $user['id'] ?>">
                     <td>
                         <span class="material-symbols-outlined expand-icon">chevron_right</span>
                     </td>
@@ -46,34 +27,35 @@
                             <?php else: ?>
                                 <span class="material-symbols-outlined icon-md">account_circle</span>
                             <?php endif; ?>
-                            <span><?= htmlspecialchars($user['name'] ?? 'Unknown') ?></span>
+                            <span><?= $name ?></span>
                             <span class="status-badge status-inactive user-disabled-badge">Disabled</span>
                         </div>
                     </td>
                     <td>
-                        <?= htmlspecialchars($user['email']) ?>
+                        <?= htmlspecialchars((string) $user['email']) ?>
                     </td>
                     <td class="text-center actions-cell">
-                        <a href="/admin/manage/users/<?= $user['id'] ?>"
+                        <a href="/admin/users/edit/<?= (int) $user['id'] ?>"
                            class="btn-small">
                             Permissions
                         </a>
-                        <button class="btn-icon btn-disable"
-                                data-user-id="<?= $user['id'] ?>"
-                                data-user-name="<?= htmlspecialchars($user['name'] ?? 'Unknown', ENT_QUOTES) ?>"
+                        <button type="button"
+                                class="btn-icon btn-disable"
+                                data-user-id="<?= (int) $user['id'] ?>"
+                                data-user-name="<?= $name ?>"
                                 data-disabled="<?= $user['disabled'] ? '1' : '0' ?>"
                                 title="<?= $user['disabled'] ? 'Enable user' : 'Disable user' ?>">
                             <span class="material-symbols-outlined"><?= $user['disabled'] ? 'person_check' : 'person_off' ?></span>
                         </button>
                     </td>
                 </tr>
-                <tr class="details-row" data-user-id="<?= $user['id'] ?>">
+                <tr class="details-row" data-user-id="<?= (int) $user['id'] ?>">
                     <td colspan="4" class="details-cell">
                         <div class="details-content">
                             <div class="details-grid details-grid-3col">
                                 <div class="detail-item">
                                     <span class="detail-label">User ID</span>
-                                    <span class="detail-value"><?= $user['id'] ?></span>
+                                    <span class="detail-value"><?= (int) $user['id'] ?></span>
                                 </div>
                                 <div class="detail-item">
                                     <span class="detail-label">Verified</span>
@@ -81,18 +63,17 @@
                                 </div>
                                 <div class="detail-item">
                                     <span class="detail-label">Permissions</span>
-                                    <span class="detail-value"><?= $userMeta[$user['id']]['perm_count'] ?> capabilities</span>
+                                    <span class="detail-value"><?= (int) $user['capabilityCount'] ?> capabilities</span>
                                 </div>
                             </div>
-                            <?php $groups = $userMeta[$user['id']]['groups']; ?>
-                            <?php if (!empty($groups)): ?>
+                            <?php if (!empty($user['groups'])): ?>
                             <div class="group-members-list">
                                 <span class="detail-label">Groups</span>
                                 <div class="members-chips">
-                                    <?php foreach ($groups as $groupName): ?>
+                                    <?php foreach ($user['groups'] as $groupName): ?>
                                         <span class="member-chip">
                                             <span class="material-symbols-outlined">group</span>
-                                            <?= htmlspecialchars($groupName) ?>
+                                            <?= htmlspecialchars((string) $groupName) ?>
                                         </span>
                                     <?php endforeach; ?>
                                 </div>
@@ -105,4 +86,23 @@
             </tbody>
         </table>
     </div>
+
+    <nav class="pagination" aria-label="Pages of users">
+        <span class="pagination-info">
+            <?= (int) $this->userTotal ?> <?= (int) $this->userTotal === 1 ? 'user' : 'users' ?>
+        </span>
+        <div class="pagination-controls">
+            <?php if ($this->listPage > 1): ?>
+                <a class="pagination-btn" rel="prev" href="/admin/users?page=<?= (int) $this->listPage - 1 ?>">Previous</a>
+            <?php else: ?>
+                <span class="pagination-btn disabled" aria-disabled="true">Previous</span>
+            <?php endif; ?>
+            <span class="pagination-current">Page <?= (int) $this->listPage ?> of <?= (int) $this->listPages ?></span>
+            <?php if ($this->listPage < $this->listPages): ?>
+                <a class="pagination-btn" rel="next" href="/admin/users?page=<?= (int) $this->listPage + 1 ?>">Next</a>
+            <?php else: ?>
+                <span class="pagination-btn disabled" aria-disabled="true">Next</span>
+            <?php endif; ?>
+        </div>
+    </nav>
 </div>

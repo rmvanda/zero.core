@@ -1,0 +1,29 @@
+/* Manage Users - a disabled account: dimmed row, badge shown */
+.user-disabled-badge {
+    display: none;
+    margin-left: 0.5rem;
+}
+
+.main-row.user-disabled .user-disabled-badge {
+    display: inline-block;
+}
+
+.main-row.user-disabled .user-info {
+    opacity: 0.55;
+}
+
+/* Manage Users - the narrow first column that holds the expand arrow */
+.users-table .col-expand {
+    width: 30px;
+}
+
+/* Manage Users - a previous / next link with nowhere to go */
+.pagination-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-btn.disabled:hover {
+    background: rgba(var(--surface-bg-rgb), 0.3);
+    border-color: var(--border-color);
+}

@@ -1,12 +1,14 @@
 # Admin Architecture
 
-The Admin module (`core/modules/Admin/`) is the `/admin` hub: users, groups, modules, firewall.
-Every other admin screen belongs to the module it administers, which offers it from its own
-`Admin/` folder. Admin lists the offerings it finds and routes `/admin/{module}/...` to them.
+The Admin module (`core/modules/Admin/`) is the `/admin` hub: the dashboard and the router. Its
+own screens (Users, Groups, Modules, Firewall) are its submodules. Every other admin screen
+belongs to the module it administers, which offers it from its own `Admin/` folder. Admin lists
+the screens it finds and routes `/admin/{name}/...` to them.
 
 - A module never depends on the Admin module. A site without Admin loses the screens and nothing
   else.
-- Every admin controller extends `AdminResponse`, which requires `allow.admin`.
+- Every admin controller extends `AdminResponse`, which answers 404 to anyone without
+  `allow.admin`.
 - Admin CSS and JS are inlined, never served by URL. See `core/docs/ADMIN_ASSETS.md`.
 - Sessions, users, groups and capabilities (`allow.*`) are core's. See `core/docs/PERMISSIONS.md`.
 
@@ -17,7 +19,7 @@ Every other admin screen belongs to the module it administers, which offers it f
 > **A feature's admin screen lives in its own module's `Admin/` directory as a module admin
 > controller, whether or not the module has a public controller.**
 >
-> **Admin's `submodule/` directory is for Admin's own screens (Firewall).**
+> **Admin's `submodule/` directory is for Admin's own screens (Users, Groups, Modules, Firewall).**
 
 | Feature | Location |
 |---------|----------|
@@ -30,6 +32,9 @@ Every other admin screen belongs to the module it administers, which offers it f
 | WebSocket monitor | `modules/Ws/Admin/WsAdmin.php` |
 | Entity types, records, event log | `core/modules/Entity/Admin/EntityAdmin.php` |
 | Push notifications | `core/modules/Push/Admin/PushAdmin.php` |
+| Users, their capabilities and settings | `core/modules/Admin/submodule/Users/` (Admin's own screen) |
+| Groups and their members | `core/modules/Admin/submodule/Groups/` (Admin's own screen) |
+| Which modules are on, and their order | `core/modules/Admin/submodule/Modules/` (Admin's own screen) |
 | Firewall rules | `core/modules/Admin/submodule/Firewall/` (Admin's own screen) |
 
 **Namespaces:**
@@ -46,32 +51,74 @@ Abstract base class of every admin controller. Extends `Module`.
 
 | Method | Purpose |
 |--------|---------|
-| `__construct()` | Requires `allow.admin`; removes the public asset link `Module::__construct()` made |
+| `__construct()` | Answers 404 without `allow.admin` (see Access); removes the public asset link `Module::__construct()` made |
 | `getStylesheets()` / `getScripts()` | Inline the page's admin assets (see `core/docs/ADMIN_ASSETS.md`) |
 | `loadInlineAsset()`, `loadAdminStyles()`, `loadAdminScripts()` | Inline assets from a view (see `core/docs/ADMIN_ASSETS.md`) |
 | `getAdminModules()` | The offerings the user may see |
-| `setBreadcrumbs(array $crumbs)` | Sets `$this->breadcrumbs` to an "Admin" crumb (`/admin`) followed by `$crumbs`, each `['label' => ..., 'url' => ...]` |
+| `done($message, $url, $data = [])` | Finishes an action that worked (see Actions) |
+| `setBreadcrumbs(array $crumbs)`, `addBreadcrumb($label, $url = null)` | The page's breadcrumbs (see Breadcrumbs) |
 | `routeToModuleAdmin($module, $method, $params)` | Call an offering's endpoint |
 
 ### `Admin` (`core/modules/Admin/Admin.php`)
 
-`Zero\Module\Admin`, `#[RequirePermission('allow.admin')]` on the class. Holds the user, group
-and module screens, and routes `/admin/{module}/*` to offerings through `__call`.
+`Zero\Module\Admin`, `#[RequirePermission('allow.admin')]` on the class. It holds the dashboard
+and routes everything else through `__call`.
 
 ```
 /admin                    → Admin::index()
-/admin/manage/users       → Admin::manage('users')
-/admin/manage/user/5      → Admin::manage('user', '5')
-/admin/manage/groups      → Admin::manage('groups')
-/admin/manage/modules     → Admin::manage('modules')
-/admin/firewall           → Admin::__call('firewall', ...) → Firewall::index()   (submodule)
-/admin/links              → Admin::__call('links', ...) → LinksAdmin::index()
+/admin/users              → Admin::__call('users', ...) → Users::index()         (Admin's own)
+/admin/users/edit/5       → Admin::__call('users', ...) → Users::edit('5')
+/admin/groups             → Admin::__call('groups', ...) → Groups::index()
+/admin/modules            → Admin::__call('modules', ...) → Modules::index()
+/admin/firewall           → Admin::__call('firewall', ...) → Firewall::index()
+/admin/links              → Admin::__call('links', ...) → LinksAdmin::index()    (a module's)
 /admin/links/edit/5       → Admin::__call('links', ...) → LinksAdmin::edit('5')
 ```
 
-The `/admin` dashboard has two sections. "Users and access" holds the Users, Groups, Modules and
-Firewall cards, the only links written into the view. "Modules" holds one card per offering that
+The `/admin` dashboard has two sections, and the view writes no link itself. "Users and access"
+holds one card per screen `Admin::ownScreens()` finds. "Modules" holds one card per offering
 `getAdminModules()` returns, so a module's screens appear there with no change to Admin.
+
+---
+
+## Admin's own screens
+
+```
+core/modules/Admin/submodule/Users/
+├── Users.php               # Zero\Module\Admin\Users, extends AdminResponse
+├── admin-config.php        # The dashboard card
+├── view/
+└── assets/css/, assets/js/ # Inlined: users.css on every screen, {method}.css on that one
+```
+
+`Admin::ownScreens()` lists every folder in `submodule/` that holds its controller and an
+`admin-config.php`. The file returns the card:
+
+```php
+<?php
+return [
+    'label' => 'Users',
+    'icon' => 'group',
+    'description' => 'Accounts, their capabilities and settings',
+    'order' => 10,      // among Admin's own cards, lowest first, then by name
+];
+```
+
+| Screen | URLs |
+|--------|------|
+| Users | `/admin/users`, `/admin/users/edit/{id}`; POST `set-capability`, `set-setting`, `remove-setting`, `disable`, `enable` |
+| Groups | `/admin/groups`, `/admin/groups/members/{id}`, `/admin/groups/form[/{id}]`; POST `save[/{id}]`, `delete/{id}`, `add-member`, `remove-member`, `set-member-role` |
+| Modules | `/admin/modules`; POST `set` (see The modules screen) |
+| Firewall | `/admin/firewall`; `list`, POST `unblock` |
+
+A capability (an `allow.*` row in `permission`) and a user setting (a row in `user_settings`)
+are different things with different endpoints: `set-capability` grants or revokes, `set-setting`
+and `remove-setting` write `user_settings` through `User::setSetting()` and
+`User::removeSetting()`.
+
+One of Admin's own screens wins over a module of the same name: a module called `Users` cannot
+take over `/admin/users`. When such a module offers an admin screen, `Admin::__call` logs a
+warning that the offering is unreachable.
 
 ---
 
@@ -156,8 +203,8 @@ without an order last, then by name. Each card carries `name`, `slug`, `label`, 
 2. `Admin::__call('links', ['edit', '5'])` turns `links` into `Links`. It looks for
    `Zero\Module\Links\Admin\LinksAdmin` only when `Application::isModuleName()` and
    `Modules::routable()` both pass, so the admin file of a module that is switched off is never
-   loaded. Without the class, the call falls through to `Module::__call` (Admin's submodules,
-   then `Response::__call`), exactly as for a module with no offering.
+   loaded. A name that is one of Admin's own screens, or that has no such class, goes to
+   `Module::__call` (Admin's submodules, then `Response::__call`).
 3. `routeToModuleAdmin('Links', 'edit', ['5'])`:
    - repeats the `Modules::routable()` check and the class check (404
      `Admin interface not found for module: ...`),
@@ -182,12 +229,12 @@ letter, then lowercase), in `getAdminModules()`.
 
 Capabilities themselves are described in `core/docs/PERMISSIONS.md`. The admin layers are:
 
-1. **`AdminResponse::__construct()`**: a user without `allow.admin` is redirected to
-   `/user/login?r=y`, with the requested URL kept in `$_SESSION['return_url']` when it is
-   site-relative. Every admin controller inherits this, so an offering always needs
-   `allow.admin` whatever else it asks for.
-2. **`#[RequirePermission('allow.admin')]` on `Admin`**: checked by `Application::run()` for
-   every `/admin/*` request.
+1. **`AdminResponse::__construct()`**: anyone without `allow.admin`, signed in or not, gets the
+   404 an unknown URL gets: the same page, from a plain `Response`, with the same detail. There
+   is no login redirect and no access request, so nothing says an admin lives at the URL. Every
+   admin controller inherits this, so an offering always needs `allow.admin` whatever else it
+   asks for.
+2. **`#[RequirePermission('allow.admin')]` on `Admin`** and on each of its own screens.
 3. **Attributes on an offering or submodule**, class or method level
    (`#[RequirePermission('allow.aws.bill.read')]` on `BillingAdmin`): checked before the controller is constructed, by
    `routeToModuleAdmin()` for an offering and by `Module::__call` for a submodule.
@@ -196,9 +243,40 @@ Capabilities themselves are described in `core/docs/PERMISSIONS.md`. The admin l
 
 ---
 
+## Actions
+
+An endpoint that changes something is POST only and carries `#[AuditLog]`.
+
+- **It worked**: `$this->done('Group saved', '/admin/groups', ['group_id' => $id])`. A JSON
+  client gets `{"data": {"success": true, "message": ..., ...}}`; a browser is redirected to the
+  URL, so a reload does not post the form again.
+- **It did not**: `throw new HTTPError(409, 'A group with that name already exists')`. A browser
+  gets the error page, in the admin frame, with the detail; a JSON client gets it as `detail`.
+  An endpoint never redirects after a failure.
+
+---
+
+## Breadcrumbs
+
+Every admin page prints its breadcrumbs above the view (`AdminResponse::beforeView()`); a view
+prints none. A screen that sets nothing gets "Admin", then its own card's label. The dashboard
+has none.
+
+```php
+$this->addBreadcrumb($group->group_name);              // Admin › Groups › Family
+$this->setBreadcrumbs([                                // Admin › Links › Edit
+    ['label' => 'Links', 'url' => '/admin/links'],
+    ['label' => 'Edit'],
+]);
+```
+
+The last crumb is the page itself and is not a link.
+
+---
+
 ## The modules screen
 
-`/admin/manage/modules` (assets `manage-modules.css`, `manage-modules.js`; wording in
+`/admin/modules` (`core/modules/Admin/submodule/Modules/`, assets `modules.css`, `modules.js`; wording in
 `core/modules/Admin/strings/admin.ini`, `ADMIN_MODULES_*`) lists `Modules::all()` ordered by tier
 (required, optional, example, site) then name. Each row shows the real folder name, the tier,
 where it lives (`core` under `core/modules/`, otherwise `site`), on or off, whether that is the
@@ -209,7 +287,7 @@ default or a departure, and the order.
   `Null`) shows no controls and a note: its name cannot be a key in `app/modules.ini`.
 - Each row's form carries the hash of `app/modules.ini` as the screen was drawn.
 
-`POST /admin/set-module` (`#[AuditLog('module_setting_change')]`, POST only, `module` and `hash`
+`POST /admin/modules/set` (`#[AuditLog('module_setting_change')]`, POST only, `module` and `hash`
 required; `enabled` is `on`, `off` or `default`; `order` is a whole number from 0 to 9999, empty
 to remove it; a field that is missing changes nothing):
 
@@ -234,7 +312,8 @@ changes `app/modules.ini`, which a site tracks in git; the site commits the chan
 
 - `var_dump($this->getAdminModules())` in `Admin::index()` shows what discovery returns.
 - `var_dump(Session::can('allow.admin'))` shows whether the logged-in user is an admin.
-- `/admin` is the dashboard, `/admin/{module}` an offering, `/admin/invalid` a 404.
+- `/admin` is the dashboard, `/admin/{name}` one of Admin's own screens or an offering,
+  `/admin/invalid` a 404. Every `/admin` URL is a 404 for a user without `allow.admin`.
 - An offering that is missing from the dashboard: check that the module is on
-  (`/admin/manage/modules`), that the class name and namespace are exact, and the log for
+  (`/admin/modules`), that the class name and namespace are exact, and the log for
   `Admin offering {Module} failed to load`.

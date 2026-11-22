@@ -771,3 +771,39 @@
         max-width: 150px;
     }
 }
+
+/* Breadcrumbs: printed above every admin view by AdminResponse::beforeView() */
+
+.admin-breadcrumbs {
+    max-width: 1200px;
+    margin: 0 auto 1rem;
+    font-size: 0.9rem;
+}
+
+.admin-breadcrumbs ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.admin-breadcrumbs li + li::before {
+    content: "\203A";
+    margin-right: 0.5rem;
+    opacity: 0.6;
+}
+
+.admin-breadcrumbs a {
+    color: var(--accent-primary);
+    text-decoration: none;
+}
+
+.admin-breadcrumbs a:hover {
+    text-decoration: underline;
+}
+
+.admin-breadcrumbs [aria-current="page"] {
+    opacity: 0.8;
+}

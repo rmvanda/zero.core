@@ -187,9 +187,9 @@ Links = 10
 
 ### The Admin modules screen
 
-`/admin/manage/modules` (Admin) lists every module of both roots with its tier, where it lives (`core` or `site`), whether it is on and whether that is the default, and its order. A required module has no switch, and a module named like an INI keyword (`On`, `Off`, `Yes`, `No`, `True`, `False`, `None`, `Null`) cannot be set.
+`/admin/modules` (Admin) lists every module of both roots with its tier, where it lives (`core` or `site`), whether it is on and whether that is the default, and its order. A required module has no switch, and a module named like an INI keyword (`On`, `Off`, `Yes`, `No`, `True`, `False`, `None`, `Null`) cannot be set.
 
-`POST /admin/set-module` (`module`, `hash`, `enabled` = `on`, `off` or `default`, `order`) changes one module. The form carries the file's hash from when the screen was drawn, and the post is refused with 409 when the file has changed since. When the file cannot be written, the screen shows the error with the path and changes nothing.
+`POST /admin/modules/set` (`module`, `hash`, `enabled` = `on`, `off` or `default`, `order`) changes one module. The form carries the file's hash from when the screen was drawn, and the post is refused with 409 when the file has changed since. When the file cannot be written, the screen shows the error with the path and changes nothing.
 
 `Zero\Core\ModulesIni` is the only writer of `app/modules.ini`. It:
 

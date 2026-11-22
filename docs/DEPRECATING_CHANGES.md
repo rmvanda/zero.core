@@ -10,6 +10,60 @@ that text belongs in this file.
 
 Newest first.
 
+## 2026-11 — Admin's own screens are submodules; a non-admin gets a 404
+
+### The `/admin/manage/...` URLs and Admin's flat action URLs — REPLACED
+
+| Gone | Use |
+|------|-----|
+| `/admin/manage/users` | `/admin/users` |
+| `/admin/manage/user/{id}` | `/admin/users/edit/{id}` |
+| `POST /admin/update-permission` | `POST /admin/users/set-capability` (a capability), `POST /admin/users/set-setting` and `POST /admin/users/remove-setting` (a row in `user_settings`) |
+| `POST /admin/disable-user`, `/admin/enable-user` | `POST /admin/users/disable`, `/admin/users/enable` |
+| `/admin/manage/groups` | `/admin/groups` |
+| `/admin/manage/group/{id}` | `/admin/groups/members/{id}` |
+| `/admin/group-form[/{id}]` | `GET /admin/groups/form[/{id}]`, `POST /admin/groups/save[/{id}]` |
+| `POST /admin/delete-group/{id}` | `POST /admin/groups/delete/{id}` |
+| `POST /admin/add-group-member`, `/admin/remove-group-member`, `/admin/update-group-member-role` | `POST /admin/groups/add-member`, `/admin/groups/remove-member`, `/admin/groups/set-member-role` |
+| `/admin/manage/modules` | `/admin/modules` |
+| `POST /admin/set-module` | `POST /admin/modules/set` |
+
+`Admin::manage()` and the action methods on `Admin` are gone. Users, Groups and Modules are
+submodules of Admin (`core/modules/Admin/submodule/`), as Firewall is, each with its own views,
+assets and dashboard card. `POST /admin/update-permission` took a `kind` and an `action` and
+guessed between a capability and a setting; the two have separate endpoints.
+
+### A failed admin action redirecting with no message — REPLACED by `HTTPError`
+
+```php
+// gone
+$this->error('Failed to add user to group: ' . $e->getMessage());
+header("Location: /admin/manage/group/$groupId");
+exit;
+
+// use
+throw new HTTPError(409, 'That user is already a member');
+```
+
+An action that worked ends with `$this->done($message, $url, $data)`. See `core/docs/ADMIN_ARCHITECTURE.md`, "Actions".
+
+### `AdminResponse` redirecting a non-admin to `/user/login?r=y` — REPLACED by a 404
+
+Anyone without `allow.admin`, signed in or not, gets the 404 an unknown URL gets, for every
+`/admin` URL. Nothing is stored in `$_SESSION['return_url']`.
+
+### Breadcrumbs written in a view — REPLACED by `AdminResponse`
+
+Every admin page prints its breadcrumbs above the view. A view that printed
+`$this->breadcrumbs` itself, or a "Back to Admin Panel" link, drops it. `setBreadcrumbs()` is
+unchanged and `addBreadcrumb()` adds one crumb to the default.
+
+### The Firewall endpoints answering a failure with HTTP 200 — REPLACED by `HTTPError`
+
+`/admin/firewall/list` and `/admin/firewall/unblock` answered `{"success": false}` with a 200.
+A failure is a 400 (no IP) or a 502 (Cloudflare refused), with the reason in `detail`.
+`unblock` is audited as `firewall_unblock`.
+
 ## 2026-11 — The admin and permissions docs are in `core/docs/`
 
 ### `core/ADMIN_ARCHITECTURE.md`, `core/ADMIN_ASSETS.md`, `core/PERMISSIONS.md` — MOVED to `core/docs/`

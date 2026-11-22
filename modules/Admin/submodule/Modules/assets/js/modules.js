@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var body = new FormData(form);
             // The state select sits in another cell and belongs to the form by its form attribute
             try {
-                var response = await fetch('/admin/set-module', {
+                var response = await fetch('/admin/modules/set', {
                     method: 'POST',
                     headers: { 'Accept': 'application/json' },
                     body: body
@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 var result = await response.json();
                 var data = result.data || result;
                 if (response.ok && data.success) {
-                    window.location.href = '/admin/manage/modules?saved=1';
+                    window.location.href = '/admin/modules?saved=1';
                 } else {
                     show(data.error || data.detail || result.message || 'Could not save', true);
                 }

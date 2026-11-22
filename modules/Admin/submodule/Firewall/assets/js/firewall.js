@@ -30,7 +30,7 @@
         var params = '?page=' + currentPage + '&per_page=' + perPage;
         if (searchVal) params += '&search=' + encodeURIComponent(searchVal);
 
-        fetch('/admin/firewall/list' + params)
+        fetch('/admin/firewall/list' + params, { headers: { 'Accept': 'application/json' } })
             .then(function(r) { return r.json(); })
             .then(function(resp) {
                 hide(loading);
@@ -39,7 +39,8 @@
                 var data = resp.data || resp;
 
                 if (!data.success) {
-                    errorEl.textContent = data.error || 'Unknown error';
+                    /* a refusal is an HTTP error whose reason is in `detail` */
+                    errorEl.textContent = data.detail || data.error || 'Unknown error';
                     show(errorEl);
                     return;
                 }
@@ -116,7 +117,7 @@
         var formData = new FormData();
         formData.append('ip', ip);
 
-        fetch('/admin/firewall/unblock', { method: 'POST', body: formData })
+        fetch('/admin/firewall/unblock', { method: 'POST', headers: { 'Accept': 'application/json' }, body: formData })
             .then(function(r) { return r.json(); })
             .then(function(resp) {
                 var data = resp.data || resp;
@@ -124,7 +125,7 @@
                     showToast('Unblocked ' + ip, 'success');
                     fetchRules();
                 } else {
-                    showToast(data.message || 'Unblock failed', 'error');
+                    showToast(data.detail || 'Unblock failed', 'error');
                     if (row) row.classList.remove('firewall-removing');
                     btn.disabled = false;
                 }

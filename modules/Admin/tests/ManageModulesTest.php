@@ -25,6 +25,8 @@ class ManageModulesTest extends TestCase
     protected function setUp(): void
     {
         \Zero\Core\Strings::loadDefaults(dirname(__DIR__) . '/strings/');
+        // Loaded by path: the fixture roots configured below hold an empty Admin folder.
+        require_once dirname(__DIR__) . '/submodule/Modules/Modules.php';
         $this->base = sys_get_temp_dir() . '/zerotest-managemodules-' . bin2hex(random_bytes(4));
         $this->ini = $this->base . '/app/modules.ini';
         mkdir($this->base . '/app', 0777, true);
@@ -54,7 +56,7 @@ class ManageModulesTest extends TestCase
     private function admin(): object
     {
         $core = "{$this->base}/bundled";
-        return new class($core) extends \Zero\Module\Admin {
+        return new class($core) extends \Zero\Module\Admin\Modules {
             public array $exported = [];
             public ?string $builtView = null;
             public ?string $redirected = null;
@@ -76,7 +78,7 @@ class ManageModulesTest extends TestCase
 
     private function viewDir(): string
     {
-        return dirname(__DIR__) . '/view';
+        return dirname(__DIR__) . '/submodule/Modules/view';
     }
 
     private function iniText(): string
@@ -88,7 +90,7 @@ class ManageModulesTest extends TestCase
 
     public function testThePostEndpointCarriesItsAttributes(): void
     {
-        $method = new \ReflectionMethod(\Zero\Module\Admin::class, 'setModule');
+        $method = new \ReflectionMethod(\Zero\Module\Admin\Modules::class, 'set');
         $attrs = [];
         foreach ($method->getAttributes() as $attr) {
             $attrs[$attr->getName()] = $attr->getArguments();
@@ -102,9 +104,11 @@ class ManageModulesTest extends TestCase
 
     public function testTheWholeAdminModuleSitsBehindTheAdminCapability(): void
     {
-        $attrs = (new \ReflectionClass(\Zero\Module\Admin::class))->getAttributes(\Zero\Core\Attribute\RequirePermission::class);
-        $this->assertCount(1, $attrs);
-        $this->assertSame(['allow.admin'], $attrs[0]->getArguments());
+        foreach ([\Zero\Module\Admin::class, \Zero\Module\Admin\Modules::class] as $class) {
+            $attrs = (new \ReflectionClass($class))->getAttributes(\Zero\Core\Attribute\RequirePermission::class);
+            $this->assertCount(1, $attrs, $class);
+            $this->assertSame(['allow.admin'], $attrs[0]->getArguments(), $class);
+        }
     }
 
     // ---- applying a POST ---------------------------------------------------
@@ -224,7 +228,7 @@ class ManageModulesTest extends TestCase
         $admin->saved = $saved;
         ob_start();
         \Closure::bind(function ($view) { include $view; }, $admin, \Zero\Core\Response::class)(
-            $this->viewDir() . '/manage-modules.php'
+            $this->viewDir() . '/index.php'
         );
 
         return ob_get_clean();
@@ -341,14 +345,14 @@ class ManageModulesTest extends TestCase
         $this->assertStringContainsString($this->ini, $admin->get('saveError'));
     }
 
-    // ---- setModule() -------------------------------------------------------
+    // ---- set() -------------------------------------------------------------
 
     private function post(array $post, bool $json): object
     {
         $_POST = $post;
         Request::$acceptsJSON = $json;
         $admin = $this->admin();
-        $admin->setModule();
+        $admin->set();
 
         return $admin;
     }
@@ -362,7 +366,7 @@ class ManageModulesTest extends TestCase
     {
         $admin = $this->post(['module' => 'Sitemap', 'enabled' => 'off', 'hash' => $this->hash()], false);
         $this->assertStringContainsString("Sitemap = off\n", $this->iniText());
-        $this->assertSame('/admin/manage/modules?saved=1', $admin->redirected);
+        $this->assertSame('/admin/modules?saved=1', $admin->redirected);
         $this->assertNull($admin->builtView);
     }
 
@@ -404,7 +408,7 @@ class ManageModulesTest extends TestCase
 
         $b = $this->post(['module' => 'Sitemap', 'order' => '7', 'hash' => $drawn], false);
 
-        $this->assertStringEndsWith('/view/manage-modules.php', (string) $b->builtView);
+        $this->assertStringEndsWith('/view/index.php', (string) $b->builtView);
         $this->assertStringContainsString('Reload the page', $b->get('saveError'));
         $this->assertSame($this->hash(), $b->get('modulesHash'));
         $this->assertSame(409, http_response_code());
@@ -436,7 +440,7 @@ class ManageModulesTest extends TestCase
         $html = $this->post(['module' => 'Sitemap', 'enabled' => 'off', 'hash' => $hash], false);
         $this->assertSame(500, http_response_code());
         $this->assertStringContainsString($this->ini, $html->get('saveError'));
-        $this->assertStringEndsWith('/view/manage-modules.php', (string) $html->builtView);
+        $this->assertStringEndsWith('/view/index.php', (string) $html->builtView);
 
         chmod($this->base . '/app', 0777);
         $this->assertSame("[enabled]\nPush = off\n", $this->iniText());

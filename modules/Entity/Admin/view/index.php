@@ -1,6 +1,5 @@
 <div class="content-wrapper">
     <h1>Entities</h1>
-    <p><a href="/admin">&larr; Back to Admin Panel</a></p>
 
     <?php if (!$this->tablesInstalled): ?>
     <div class="admin-info-box">The entity tables are not installed on this site.</div>

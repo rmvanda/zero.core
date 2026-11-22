@@ -4,22 +4,15 @@
 
     <h2 class="mt-2">Users and access</h2>
     <div class="admin-card-grid">
-        <a href="/admin/manage/users" class="btn-primary admin-card">
-            <span class="material-symbols-outlined icon-lg">group</span>
-            <span class="admin-card-title">User Management</span>
+        <?php foreach ($this->ownScreens ?? [] as $screen): ?>
+        <a href="<?= htmlspecialchars($screen['url']) ?>" class="btn-primary admin-card">
+            <span class="material-symbols-outlined icon-lg"><?= htmlspecialchars($screen['icon']) ?></span>
+            <span class="admin-card-title"><?= htmlspecialchars($screen['label']) ?></span>
+            <?php if (!empty($screen['description'])): ?>
+            <span class="admin-card-desc"><?= htmlspecialchars($screen['description']) ?></span>
+            <?php endif; ?>
         </a>
-        <a href="/admin/manage/groups" class="btn-primary admin-card">
-            <span class="material-symbols-outlined icon-lg">groups</span>
-            <span class="admin-card-title">Group Management</span>
-        </a>
-        <a href="/admin/manage/modules" class="btn-primary admin-card">
-            <span class="material-symbols-outlined icon-lg">extension</span>
-            <span class="admin-card-title">Module Management</span>
-        </a>
-        <a href="/admin/firewall" class="btn-primary admin-card">
-            <span class="material-symbols-outlined icon-lg">security</span>
-            <span class="admin-card-title">Firewall</span>
-        </a>
+        <?php endforeach; ?>
     </div>
 
     <h2 class="mt-2">Modules</h2>

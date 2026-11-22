@@ -256,7 +256,7 @@ $group->delete();                 // gone, with its members and every grant made
 An account is closed by disabling it, never by deleting it: `$user->disable()` sets `users.disabled`,
 and `$user->enable()` clears it. A disabled account cannot sign in (provider, email link or API
 token), `Session::endIfDisabled()` ends its open session at the next request, and all its data stays.
-The Admin users screen does this (`/admin/disable-user`, `/admin/enable-user`). No page deletes an
+The Admin users screen does this (`/admin/users/disable`, `/admin/users/enable`). No page deletes an
 account.
 
 No foreign key removes anything. The objects do:

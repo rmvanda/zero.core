@@ -1,25 +1,25 @@
 <?php
-// Admin::manage() loads the group and answers 404 when there is none.
+// Groups::members() loads the group, its members and everyone who is not one,
+// and answers 404 when there is no such group.
 /** @var \Zero\Core\Access\Group $group */
 $group = $this->group;
+$groupId = (int) $group->group_id;
 
-$members = $group->members();
-$nonMembers = $group->nonMembers();
-$createdBy = $group->created_by ? \Zero\Core\Access\User::find($group->created_by) : null;
+$members = $this->members;
+$nonMembers = $this->nonMembers;
 ?>
 
 <div class="content-wrapper">
     <h1>Manage Group: <?= htmlspecialchars($group->group_name) ?></h1>
     <p>
-        <a href="/admin/manage/groups">&larr; Back to Groups</a>
-        | <a href="/admin/group-form/<?= $group->group_id ?>">Edit Group Details</a>
+        <a href="/admin/groups/form/<?= $groupId ?>">Edit Group Details</a>
     </p>
 
     <div class="group-info-box">
         <h3>Group Information</h3>
         <p><strong>Description:</strong> <?= htmlspecialchars($group->description ?? 'No description') ?></p>
-        <p><strong>Total Members:</strong> <?= number_format($group->memberCount()) ?></p>
-        <p><strong>Created:</strong> <?= date('Y-m-d H:i', strtotime($group->created_at)) ?> by <?= htmlspecialchars($createdBy?->name ?? 'System') ?></p>
+        <p><strong>Total Members:</strong> <?= number_format(count($members)) ?></p>
+        <p><strong>Created:</strong> <?= date('Y-m-d H:i', strtotime($group->created_at)) ?> by <?= htmlspecialchars($this->createdByName) ?></p>
         <p><strong>Status:</strong>
             <span class="event-badge <?= $group->is_active ? 'active' : 'inactive' ?>">
                 <?= $group->is_active ? 'Active' : 'Inactive' ?>
@@ -31,8 +31,8 @@ $createdBy = $group->created_by ? \Zero\Core\Access\User::find($group->created_b
     <?php if (!empty($nonMembers)): ?>
         <div class="add-member-section">
             <h2>Add Members</h2>
-            <form method="post" action="/admin/add-group-member" class="add-member-form">
-                <input type="hidden" name="group_id" value="<?= $group->group_id ?>">
+            <form method="post" action="/admin/groups/add-member" class="add-member-form">
+                <input type="hidden" name="group_id" value="<?= $groupId ?>">
 
                 <div class="form-row">
                     <div class="form-field">
@@ -40,7 +40,7 @@ $createdBy = $group->created_by ? \Zero\Core\Access\User::find($group->created_b
                         <select name="user_id" id="user_id" required>
                             <option value="">Choose a user...</option>
                             <?php foreach ($nonMembers as $user): ?>
-                                <option value="<?= $user['user_id'] ?>">
+                                <option value="<?= (int) $user['user_id'] ?>">
                                     <?= htmlspecialchars($user['username']) ?>
                                     (<?= htmlspecialchars($user['email']) ?>)
                                 </option>
@@ -98,9 +98,9 @@ $createdBy = $group->created_by ? \Zero\Core\Access\User::find($group->created_b
                         <td><strong><?= htmlspecialchars($member['username']) ?></strong></td>
                         <td><?= htmlspecialchars($member['email']) ?></td>
                         <td>
-                            <form method="post" action="/admin/update-group-member-role" class="form-inline">
-                                <input type="hidden" name="group_id" value="<?= $group->group_id ?>">
-                                <input type="hidden" name="user_id" value="<?= $member['user_id'] ?>">
+                            <form method="post" action="/admin/groups/set-member-role" class="form-inline">
+                                <input type="hidden" name="group_id" value="<?= $groupId ?>">
+                                <input type="hidden" name="user_id" value="<?= (int) $member['user_id'] ?>">
                                 <select name="role" class="role-select role-auto-submit">
                                     <option value="member" <?= $member['role'] === 'member' ? 'selected' : '' ?>>Member</option>
                                     <option value="admin" <?= $member['role'] === 'admin' ? 'selected' : '' ?>>Admin</option>
@@ -111,9 +111,9 @@ $createdBy = $group->created_by ? \Zero\Core\Access\User::find($group->created_b
                         <td><?= htmlspecialchars($member['added_by_username'] ?? 'System') ?></td>
                         <td><?= date('Y-m-d H:i', strtotime($member['added_at'])) ?></td>
                         <td>
-                            <form method="post" action="/admin/remove-group-member" class="form-inline">
-                                <input type="hidden" name="group_id" value="<?= $group->group_id ?>">
-                                <input type="hidden" name="user_id" value="<?= $member['user_id'] ?>">
+                            <form method="post" action="/admin/groups/remove-member" class="form-inline">
+                                <input type="hidden" name="group_id" value="<?= $groupId ?>">
+                                <input type="hidden" name="user_id" value="<?= (int) $member['user_id'] ?>">
                                 <button type="submit" class="btn-small btn-danger btn-confirm-remove" data-member-name="<?= htmlspecialchars($member['username'], ENT_QUOTES) ?>">
                                     Remove
                                 </button>

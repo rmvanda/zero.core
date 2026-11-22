@@ -361,14 +361,25 @@ final class BareSiteTest extends TestCase
     }
 
     #[Depends('testEmailLinkSignIn')]
-    public function testAdminDashboardNeedsTheCapability(string $sid): void
+    public function testAdminDashboardNeedsTheCapability(string $sid): string
     {
-        $denied = $this->request('/admin', 'GET', [], $sid);
-        $this->assertSame([], $denied['errors']);
-        $this->assertTrue(
-            $denied['status'] === 403 || $denied['status'] === 302,
-            'a user without allow.admin is turned away from /admin (status ' . $denied['status'] . ')'
+        // Without allow.admin every /admin URL is the 404 of a URL that does not exist,
+        // signed in or not: no redirect to the sign-in page, nothing that says an admin is there.
+        $unknown = $this->page('/no-such-module/users', 'GET', [], $sid);
+        $this->assertSame(404, $unknown['status']);
+        foreach ([$sid, null] as $who) {
+            foreach (['/admin', '/admin/users', '/admin/users/edit/1', '/admin/modules', '/admin/firewall', '/admin/push'] as $uri) {
+                $denied = $this->page($uri, 'GET', [], $who);
+                $this->assertSame(404, $denied['status'], "$uri without allow.admin");
+                $this->assertSame([], preg_grep('~^Location:~i', $denied['headers'] ?? []), "$uri does not redirect");
+            }
+        }
+        $this->assertSame(
+            $this->errorText($unknown['body']),
+            $this->errorText($this->page('/admin/users', 'GET', [], $sid)['body']),
+            'the refusal reads exactly like an unknown URL'
         );
+        $this->assertSame(404, $this->page('/admin/modules/set', 'POST', ['module' => 'Push', 'hash' => 'x'], $sid)['status']);
 
         $id = (int) $this->dbValue("SELECT id FROM users WHERE email='" . self::$email . "'");
         $this->request('/', 'GET', [], null, '(\\Zero\\Core\\Access\\User::find(' . $id . '))->grant("allow.admin");');
@@ -376,10 +387,102 @@ final class BareSiteTest extends TestCase
 
         $ok = $this->page('/admin', 'GET', [], $sid);
         $this->assertSame(200, $ok['status']);
-        // the screens core's own cards open, and the labels of the bundled modules that ship an Admin/ folder and are on
-        foreach (['User Management', 'Group Management', 'Module Management', 'OAuth Providers', 'Entities', 'Push Notifications'] as $offering) {
+        // Admin's own screens, and the labels of the bundled modules that ship an Admin/ folder and are on
+        foreach (['href="/admin/users"', 'href="/admin/groups"', 'href="/admin/modules"', 'href="/admin/firewall"', 'OAuth Providers', 'Entities', 'Push Notifications'] as $offering) {
             $this->assertStringContainsString($offering, $ok['body'], "the dashboard lists $offering");
         }
+        $this->assertStringNotContainsString('admin-breadcrumbs"', $ok['body'], 'the dashboard has no breadcrumbs');
+
+        return $sid;
+    }
+
+    /** The heading and detail of an error page. */
+    private function errorText(string $body): string
+    {
+        preg_match_all('~<h1>[^<]*</h1>|<h4>[^<]*</h4>~', $body, $m);
+        return implode('', array_slice($m[0], 0, 2));
+    }
+
+    #[Depends('testAdminDashboardNeedsTheCapability')]
+    public function testAdminsOwnScreens(string $sid): void
+    {
+        $id = (int) $this->dbValue("SELECT id FROM users WHERE email='" . self::$email . "'");
+
+        // every screen renders, with its breadcrumbs above it
+        foreach ([
+            '/admin/users' => 'Users',
+            "/admin/users/edit/$id" => self::$email,
+            '/admin/groups' => 'Groups',
+            '/admin/groups/form' => 'New group',
+            '/admin/modules' => 'Modules',
+            '/admin/firewall' => 'Firewall',
+        ] as $uri => $text) {
+            $page = $this->page($uri, 'GET', [], $sid);
+            $this->assertSame(200, $page['status'], $uri);
+            $this->assertStringContainsString($text, $page['body'], $uri);
+            $this->assertSame(1, preg_match('~<nav class="admin-breadcrumbs".*?</nav>~s', $page['body'], $nav), "$uri has breadcrumbs");
+            $this->assertStringContainsString('<a href="/admin">Admin</a>', $nav[0], $uri);
+            $this->assertSame(1, substr_count($page['body'], 'admin-breadcrumbs"'), "$uri prints them once");
+            $this->assertStringNotContainsString('Back to Admin Panel', $page['body'], $uri);
+        }
+        $this->assertSame(404, $this->page('/admin/users/edit/999999', 'GET', [], $sid)['status']);
+        $this->assertSame(404, $this->page('/admin/users/edit/abc', 'GET', [], $sid)['status']);
+        $this->assertSame(404, $this->page('/admin/manage/users', 'GET', [], $sid)['status'], 'the old URL is gone');
+
+        // a group: saved, listed, a member added; a second one of the same name is refused with the reason
+        $saved = $this->page('/admin/groups/save', 'POST', ['group_name' => 'Family', 'description' => 'd', 'is_active' => '1'], $sid);
+        $this->assertSame(302, $saved['status']);
+        $gid = (int) $this->dbValue("SELECT group_id FROM user_group WHERE group_name='Family'");
+        $this->assertGreaterThan(0, $gid);
+        $this->assertStringContainsString('Family', $this->page('/admin/groups', 'GET', [], $sid)['body']);
+
+        $again = $this->page('/admin/groups/save', 'POST', ['group_name' => 'Family'], $sid);
+        $this->assertSame(409, $again['status']);
+        $this->assertStringContainsString('already exists', $again['body']);
+        $this->assertSame(400, $this->page('/admin/groups/save', 'POST', ['group_name' => ''], $sid)['status']);
+        $this->assertSame(405, $this->page('/admin/groups/save', 'GET', [], $sid)['status']);
+
+        $added = $this->page('/admin/groups/add-member', 'POST', ['group_id' => $gid, 'user_id' => $id, 'role' => 'member'], $sid);
+        $this->assertSame(302, $added['status']);
+        $this->assertSame('1', $this->dbValue("SELECT COUNT(*) FROM user_group_member WHERE group_id=$gid AND user_id=$id"));
+        $this->assertSame(409, $this->page('/admin/groups/add-member', 'POST', ['group_id' => $gid, 'user_id' => $id], $sid)['status']);
+        $members = $this->page("/admin/groups/members/$gid", 'GET', [], $sid);
+        $this->assertSame(200, $members['status']);
+        $this->assertStringContainsString(self::$email, $members['body']);
+        $this->assertSame(302, $this->page('/admin/groups/set-member-role', 'POST', ['group_id' => $gid, 'user_id' => $id, 'role' => 'admin'], $sid)['status']);
+        $this->assertSame(400, $this->page('/admin/groups/set-member-role', 'POST', ['group_id' => $gid, 'user_id' => $id, 'role' => 'king'], $sid)['status']);
+        $this->assertSame(302, $this->page('/admin/groups/remove-member', 'POST', ['group_id' => $gid, 'user_id' => $id], $sid)['status']);
+        $this->assertSame(404, $this->page('/admin/groups/members/999999', 'GET', [], $sid)['status']);
+        $this->assertSame(302, $this->page("/admin/groups/delete/$gid", 'POST', ['hard_delete' => '1'], $sid)['status']);
+        $this->assertSame('0', $this->dbValue("SELECT COUNT(*) FROM user_group WHERE group_id=$gid"));
+
+        // a capability and a setting are different things with different endpoints
+        $r = $this->page('/admin/users/set-capability', 'POST', ['user_id' => $id, 'key' => 'allow.zerotest', 'value' => '1'], $sid); $this->assertSame(302, $r['status'], $this->errorText($r['body']));
+        $this->assertSame('1', $this->dbValue("SELECT COUNT(*) FROM permission WHERE permission_key='allow.zerotest'"));
+        $this->assertSame(302, $this->page('/admin/users/set-capability', 'POST', ['user_id' => $id, 'key' => 'allow.zerotest', 'value' => '0'], $sid)['status']);
+        $this->assertSame('0', $this->dbValue("SELECT COUNT(*) FROM permission WHERE permission_key='allow.zerotest'"));
+        $this->assertSame(400, $this->page('/admin/users/set-setting', 'POST', ['user_id' => $id, 'key' => 'allow.zerotest', 'value' => '1'], $sid)['status'], 'a capability is not a setting');
+
+        $this->assertSame(302, $this->page('/admin/users/set-setting', 'POST', ['user_id' => $id, 'key' => 'zerotest.colour', 'value' => 'blue'], $sid)['status']);
+        $this->assertSame('blue', $this->dbValue("SELECT setting_value FROM user_settings WHERE user_id=$id AND setting_key='zerotest.colour'"));
+        $this->assertSame(302, $this->page('/admin/users/remove-setting', 'POST', ['user_id' => $id, 'key' => 'zerotest.colour'], $sid)['status']);
+        $this->assertSame('0', $this->dbValue("SELECT COUNT(*) FROM user_settings WHERE user_id=$id AND setting_key='zerotest.colour'"));
+        $this->assertSame(404, $this->page('/admin/users/remove-setting', 'POST', ['user_id' => $id, 'key' => 'zerotest.colour'], $sid)['status']);
+        $this->assertSame(404, $this->page('/admin/users/set-setting', 'POST', ['user_id' => 999999, 'key' => 'zerotest.colour', 'value' => 'x'], $sid)['status']);
+
+        // an admin cannot disable the account they are signed in with
+        $self = $this->page('/admin/users/disable', 'POST', ['user_id' => $id], $sid);
+        $this->assertSame(409, $self['status']);
+        $this->assertStringContainsString('own account', $self['body']);
+
+        // the modules screen saves through its own endpoint
+        $modules = $this->page('/admin/modules', 'GET', [], $sid);
+        $this->assertSame(1, preg_match('~name="hash" value="([^"]*)"~', $modules['body'], $hash));
+        $this->assertStringContainsString('action="/admin/modules/set"', $modules['body']);
+        $set = $this->page('/admin/modules/set', 'POST', ['module' => 'Push', 'hash' => html_entity_decode($hash[1]), 'order' => '5'], $sid);
+        $this->assertSame(302, $set['status']);
+        $this->assertStringContainsString('Push = 5', file_get_contents(self::$siteDir . '/app/modules.ini'));
+        $this->assertSame(409, $this->page('/admin/modules/set', 'POST', ['module' => 'Push', 'hash' => 'stale', 'order' => '6'], $sid)['status']);
     }
 
     #[Depends('testEmailLinkSignIn')]

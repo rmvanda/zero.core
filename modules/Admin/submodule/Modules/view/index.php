@@ -1,6 +1,5 @@
 <div class="content-wrapper">
     <h1>Modules</h1>
-    <p><a href="/admin">&larr; Back to Admin Panel</a></p>
     <p><?= htmlspecialchars(ADMIN_MODULES_INTRO) ?></p>
 
     <?php if (!empty($this->saveError)): ?>
@@ -42,7 +41,7 @@
                         <td class="actions-cell"></td>
                     <?php else: ?>
                     <td>
-                        <form id="<?= $formId ?>" class="module-form" method="post" action="/admin/set-module">
+                        <form id="<?= $formId ?>" class="module-form" method="post" action="/admin/modules/set">
                             <input type="hidden" name="module" value="<?= htmlspecialchars($row['name']) ?>">
                             <input type="hidden" name="hash" value="<?= htmlspecialchars($this->modulesHash) ?>">
                             <input type="number" name="order" class="admin-input admin-input-narrow" min="0" max="9999" step="1"

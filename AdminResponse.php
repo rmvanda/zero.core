@@ -36,28 +36,12 @@ abstract class AdminResponse extends Module {
      * and prevents public symlink creation for admin assets
      */
     public function __construct() {
-        // Check base admin access
+        // Anyone who is not an admin, signed in or not, gets the 404 an unknown
+        // URL gets: the same page, from the same plain Response, with the same
+        // detail (the endpoint). Nothing says an admin lives here, and there is
+        // no login redirect or access request to give it away.
         if (!Session::can('allow.admin')) {
-            // Send them to the login page holding on to where they were going.
-            //
-            // This used to redirect to '/auth/login?redirect=<uri>', which was
-            // wrong twice over: there is no Auth::login() and no __call() on
-            // Auth, so /auth/login is a 404 — a denied admin visitor landed on
-            // an error page rather than a login form — and nothing anywhere
-            // reads a 'redirect' query parameter, so the destination was
-            // discarded even if the page had existed. The login page is
-            // /user/login, and the mechanism for coming back afterwards is
-            // $_SESSION['return_url'], which Auth::complete() and Auth::token()
-            // already consume. Same guard #[RequireLogin] uses on the way in:
-            // REQUEST_URI is chosen by the requester and this value ends up in
-            // a Location header.
-            $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
-            if (Request::isSiteRelative($requestUri)) {
-                $_SESSION['return_url'] = $requestUri;
-            }
-
-            header('Location: /user/login?r=y');
-            exit;
+            static::refuse();
         }
 
         parent::__construct();
@@ -76,6 +60,35 @@ abstract class AdminResponse extends Module {
                 $parentDir = dirname($parentDir);
             }
         }
+    }
+
+    /**
+     * Answer as if nothing were at this URL, and end the request.
+     */
+    protected static function refuse(): void {
+        (new Response())->renderError(new HTTPError(404, Request::$endpoint));
+    }
+
+    /**
+     * Finish an action that worked: a JSON client gets the message and $data,
+     * a browser is sent to $url (so a reload does not post the form again).
+     * An action that did not work throws an HTTPError instead: the error page,
+     * or `detail` for a JSON client, says why.
+     */
+    protected function done(string $message, string $url, array $data = []): void {
+        if (Request::$acceptsJSON) {
+            $this->export(array_merge(['success' => true, 'message' => $message], $data));
+        } else {
+            header("Location: {$url}");
+        }
+        $this->finish();
+    }
+
+    /**
+     * End the request after a response that is complete.
+     */
+    protected function finish(): void {
+        exit;
     }
 
     /**
@@ -334,18 +347,78 @@ abstract class AdminResponse extends Module {
     }
 
     /**
-     * Set breadcrumb navigation for admin pages
+     * Set the breadcrumbs of this page: "Admin", then $crumbs.
      *
-     * @param array $crumbs Array of ['label' => 'Text', 'url' => '/path']
+     * A screen that sets none gets "Admin", then its own card's label. Every
+     * admin page prints them above its view (beforeView()); a view prints none.
+     *
+     * @param array $crumbs Array of ['label' => 'Text', 'url' => '/path']; the
+     *                      last one is the page itself and needs no url
      */
     protected function setBreadcrumbs(array $crumbs) {
-        // Always start with Admin home
-        $this->breadcrumbs = [
-            ['label' => 'Admin', 'url' => '/admin']
-        ];
+        $this->breadcrumbs = array_merge([['label' => 'Admin', 'url' => '/admin']], $crumbs);
+    }
 
-        // Append provided crumbs
-        $this->breadcrumbs = array_merge($this->breadcrumbs, $crumbs);
+    /**
+     * Add one crumb after the ones this page already has.
+     */
+    protected function addBreadcrumb(string $label, ?string $url = null): void {
+        if (!$this->breadcrumbs) {
+            $this->breadcrumbs = $this->defaultBreadcrumbs();
+        }
+        $this->breadcrumbs[] = ['label' => $label, 'url' => $url];
+    }
+
+    /**
+     * "Admin", then this screen's card: the label in the admin-config.php
+     * beside the controller and the URL the card links to. The dashboard
+     * itself has none.
+     */
+    protected function defaultBreadcrumbs(): array {
+        $card = $this->card();
+        if ($card === null) {
+            return [];
+        }
+        return [['label' => 'Admin', 'url' => '/admin'], $card];
+    }
+
+    /**
+     * This controller's own card, ['label' => ..., 'url' => ...], or null for
+     * the Admin module itself.
+     */
+    protected function card(): ?array {
+        $class = substr(static::class, strlen('Zero\\Module\\'));
+        $parts = explode('\\', $class);
+        if (count($parts) < 2) {
+            return null;
+        }
+        // An offering is Zero\Module\{X}\Admin\{X}Admin; anything else under
+        // Zero\Module\Admin\ is one of Admin's own screens.
+        $name = $parts[0] === 'Admin' ? $parts[1] : $parts[0];
+        $slug = strtolower(preg_replace('/([a-z])([A-Z])/', '$1-$2', $name));
+        $file = dirname((new \ReflectionClass(static::class))->getFileName()) . '/admin-config.php';
+        $config = is_file($file) ? (array) include $file : [];
+
+        return ['label' => $config['label'] ?? $name, 'url' => '/admin/' . $slug];
+    }
+
+    /**
+     * Print the breadcrumbs above the view.
+     */
+    protected function beforeView(): void {
+        $crumbs = $this->breadcrumbs ?: $this->defaultBreadcrumbs();
+        if (!$crumbs) {
+            return;
+        }
+        $last = count($crumbs) - 1;
+        echo '<nav class="admin-breadcrumbs" aria-label="Breadcrumb"><ol>';
+        foreach (array_values($crumbs) as $i => $crumb) {
+            $label = htmlspecialchars((string) ($crumb['label'] ?? ''));
+            echo $i === $last || empty($crumb['url'])
+                ? '<li' . ($i === $last ? ' aria-current="page"' : '') . '>' . $label . '</li>'
+                : '<li><a href="' . htmlspecialchars((string) $crumb['url']) . '">' . $label . '</a></li>';
+        }
+        echo "</ol></nav>\n";
     }
 
     /**

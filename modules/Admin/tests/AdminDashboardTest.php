@@ -32,12 +32,33 @@ class AdminDashboardTest extends TestCase
 
         preg_match_all('#href="([^"]*)"#', $source, $links);
         $hardCoded = array_values(array_filter($links[1], fn($href) => !str_contains($href, '<?')));
-        sort($hardCoded);
+        $this->assertSame([], $hardCoded, 'the dashboard writes no link itself: every card is discovered');
+    }
+
+    public function testAdminsOwnScreensAreDiscoveredInTheirOrder(): void
+    {
+        $admin = new class extends \Zero\Module\Admin {
+            public function __construct() {}
+            public function __destruct() {}
+            public function screens(): array { return $this->ownScreens(); }
+            public function own(string $segment): bool { return $this->isOwnScreen($segment); }
+        };
+
+        $screens = $admin->screens();
+        $this->assertSame(['Users', 'Groups', 'Modules', 'Firewall'], array_column($screens, 'name'));
         $this->assertSame(
-            ['/admin/firewall', '/admin/manage/groups', '/admin/manage/modules', '/admin/manage/users'],
-            $hardCoded,
-            'Users, Groups, Modules and Firewall are the only hard-coded dashboard links'
+            ['/admin/users', '/admin/groups', '/admin/modules', '/admin/firewall'],
+            array_column($screens, 'url')
         );
+        foreach ($screens as $screen) {
+            $this->assertNotSame('', $screen['label'], $screen['name']);
+            $this->assertNotSame('', $screen['icon'], $screen['name']);
+        }
+
+        $this->assertTrue($admin->own('users'));
+        $this->assertTrue($admin->own('firewall'));
+        $this->assertFalse($admin->own('links'));
+        $this->assertFalse($admin->own('../Admin'));
     }
 
     public function testDiscoveryFindsTheOfferingsOfFixtureModules(): void
@@ -98,6 +119,10 @@ class AdminDashboardTest extends TestCase
             'name' => 'X', 'label' => '<b>Label</b>', 'icon' => 'bolt',
             'description' => '<i>desc</i>', 'url' => '/admin/x',
         ]];
+        $admin->ownScreens = [[
+            'name' => 'Y', 'label' => '<b>Own</b>', 'icon' => 'bolt',
+            'description' => '', 'order' => 1, 'url' => '/admin/y',
+        ]];
 
         ob_start();
         \Closure::bind(function ($view) { include $view; }, $admin, \Zero\Core\Response::class)(
@@ -108,6 +133,7 @@ class AdminDashboardTest extends TestCase
         $this->assertStringContainsString('&lt;b&gt;Label&lt;/b&gt;', $html);
         $this->assertStringNotContainsString('<b>Label</b>', $html);
         $this->assertStringContainsString('href="/admin/x"', $html);
-        $this->assertStringContainsString('href="/admin/firewall"', $html);
+        $this->assertStringContainsString('&lt;b&gt;Own&lt;/b&gt;', $html);
+        $this->assertStringContainsString('href="/admin/y"', $html);
     }
 }

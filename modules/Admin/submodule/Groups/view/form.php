@@ -1,9 +1,8 @@
 <div class="content-wrapper">
     <h1><?= $this->group ? 'Edit Group' : 'Create New Group' ?></h1>
-    <p><a href="/admin/manage/groups">&larr; Back to Groups</a></p>
 
     <div class="form-container">
-        <form method="post" action="<?= $this->group ? '/admin/group-form/' . $this->group->group_id : '/admin/group-form' ?>">
+        <form method="post" action="<?= $this->group ? '/admin/groups/save/' . (int) $this->group->group_id : '/admin/groups/save' ?>">
             <div class="admin-form-field">
                 <label for="group_name">Group Name *</label>
                 <input type="text"
@@ -37,7 +36,7 @@
             </div>
 
             <div class="form-actions">
-                <a href="/admin/manage/groups" class="btn-secondary">Cancel</a>
+                <a href="/admin/groups" class="btn-secondary">Cancel</a>
                 <button type="submit" class="btn-primary">
                     <?= $this->group ? 'Update Group' : 'Create Group' ?>
                 </button>
@@ -48,7 +47,7 @@
             <div class="danger-zone">
                 <h3>Danger Zone</h3>
                 <p>Permanently delete this group and all member associations.</p>
-                <form method="post" action="/admin/delete-group/<?= $this->group->group_id ?>">
+                <form method="post" action="/admin/groups/delete/<?= (int) $this->group->group_id ?>">
                     <input type="hidden" name="hard_delete" value="1">
                     <button type="submit"
                             class="btn-danger btn-confirm-hard-delete">

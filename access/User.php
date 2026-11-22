@@ -320,6 +320,98 @@ class User extends Model implements Holder
         }
     }
 
+    /**
+     * Remove one setting. True when the setting is gone, whether or not it
+     * was there.
+     *
+     * Drops the memo so a read later in the same request sees the write.
+     */
+    public function removeSetting(string $key): bool
+    {
+        if (!$this->hasUsableId()) {
+            // Refuse rather than delete under id 0 (or a meaningless
+            // negative id) — see hasUsableId().
+            return false;
+        }
+        try {
+            $ok = Database::getConnection()->prepare(
+                "DELETE FROM user_settings WHERE user_id = ? AND setting_key = ?"
+            )->execute([$this->id, $key]);
+            $this->settings = null;
+            return $ok;
+        } catch (\Throwable $e) {
+            // \Throwable, not \Exception: same reasoning as setSetting() — a
+            // write failure must report false, not propagate.
+            \Zero\Core\Console::error("User::removeSetting() failed: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * When each of this user's settings was last written, keyed by
+     * setting_key. For a screen that manages settings; the values are
+     * settings(). Lets a database error through.
+     *
+     * @return array<string,string> setting_key => updated_on
+     * @throws \PDOException
+     */
+    public function settingDates(): array
+    {
+        if (!$this->hasUsableId()) {
+            return [];
+        }
+        $stmt = Database::getConnection()->prepare(
+            "SELECT setting_key, updated_on FROM user_settings WHERE user_id = ?"
+        );
+        $stmt->execute([$this->id]);
+
+        return $stmt->fetchAll(\PDO::FETCH_KEY_PAIR);
+    }
+
+    /**
+     * Every setting key any user has: the settings in use on this site. For a
+     * screen that lists what can be set.
+     *
+     * @return string[] Sorted keys
+     * @throws \PDOException
+     */
+    public static function settingKeysInUse(): array
+    {
+        return Database::getConnection()->query(
+            "SELECT DISTINCT setting_key FROM user_settings ORDER BY setting_key"
+        )->fetchAll(\PDO::FETCH_COLUMN);
+    }
+
+    /**
+     * One page of every user, in id order. For a screen that lists users.
+     *
+     * @param int $limit  Most users to give
+     * @param int $offset How many to skip
+     * @return static[]
+     * @throws \PDOException
+     */
+    public static function page(int $limit, int $offset = 0): array
+    {
+        $stmt = Database::getConnection()->query(
+            "SELECT * FROM users ORDER BY id ASC LIMIT " . max(1, $limit) . " OFFSET " . max(0, $offset)
+        );
+
+        return array_map(
+            fn(array $row) => new static($row, true),
+            $stmt->fetchAll(\PDO::FETCH_ASSOC)
+        );
+    }
+
+    /**
+     * How many users there are, disabled ones included.
+     *
+     * @throws \PDOException
+     */
+    public static function total(): int
+    {
+        return (int) Database::getConnection()->query("SELECT COUNT(*) FROM users")->fetchColumn();
+    }
+
     /*
      * Profile storage: values for the configurable registration fields. One
      * row per (user_id, field_key) in `user_profile`, with per-row

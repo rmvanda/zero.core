@@ -1,32 +1,27 @@
+<?php
+// Groups::index() loads every group and each group's members.
+/** @var \Zero\Core\Access\Group[] $groups */
+$groups = $this->groups;
+/** @var array<int,array> $groupMembers Membership rows by group id */
+$groupMembers = $this->groupMembers;
+?>
 
 <div class="content-wrapper">
     <h1>Group Management</h1>
-    <p><a href="/admin">&larr; Back to Admin Panel</a></p>
-
-    <?php
-    // Get all groups
-    $groups = \Zero\Core\Access\Group::all();
-
-    // Pre-fetch members for each group
-    $groupMembers = [];
-    foreach ($groups as $group) {
-        $groupMembers[$group->group_id] = $group->members();
-    }
-    ?>
 
     <div class="action-bar">
-        <a href="/admin/group-form" class="btn-primary">Create New Group</a>
+        <a href="/admin/groups/form" class="btn-primary">Create New Group</a>
     </div>
 
     <?php if (empty($groups)): ?>
         <div class="admin-info-box text-center">
-            No groups found. <a href="/admin/group-form">Create your first group</a>
+            No groups found. <a href="/admin/groups/form">Create your first group</a>
         </div>
     <?php else: ?>
         <table class="admin-table expandable-table">
             <thead>
                 <tr>
-                    <th width="30"></th>
+                    <th class="expand-col"></th>
                     <th>Status</th>
                     <th>Group Name</th>
                     <th>Members</th>
@@ -35,7 +30,7 @@
             </thead>
             <tbody>
                 <?php foreach ($groups as $group): ?>
-                    <tr class="main-row" data-group-id="<?= $group->group_id ?>">
+                    <tr class="main-row" data-group-id="<?= (int) $group->group_id ?>">
                         <td>
                             <span class="material-symbols-outlined expand-icon">chevron_right</span>
                         </td>
@@ -47,15 +42,15 @@
                         <td>
                             <strong><?= htmlspecialchars($group->group_name) ?></strong>
                         </td>
-                        <td><?= number_format($group->member_count) ?></td>
+                        <td><?= number_format((int) $group->member_count) ?></td>
                         <td class="actions-cell">
-                            <a href="/admin/manage/group/<?= $group->group_id ?>" class="btn-small">Manage</a>
+                            <a href="/admin/groups/members/<?= (int) $group->group_id ?>" class="btn-small">Manage</a>
                             <?php if ($group->is_active): ?>
-                                <button type="button" class="btn-small btn-danger btn-deactivate-group" data-group-id="<?= $group->group_id ?>">Deactivate</button>
+                                <button type="button" class="btn-small btn-danger btn-deactivate-group" data-group-id="<?= (int) $group->group_id ?>">Deactivate</button>
                             <?php endif; ?>
                         </td>
                     </tr>
-                    <tr class="details-row" data-group-id="<?= $group->group_id ?>">
+                    <tr class="details-row" data-group-id="<?= (int) $group->group_id ?>">
                         <td colspan="5" class="details-cell">
                             <div class="details-content">
                                 <!-- Description, Created By, Created At on a single row -->
@@ -74,7 +69,7 @@
                                     </div>
                                 </div>
                                 <!-- Group members list -->
-                                <?php $members = $groupMembers[$group->group_id]; ?>
+                                <?php $members = $groupMembers[$group->group_id] ?? []; ?>
                                 <?php if (!empty($members)): ?>
                                     <div class="group-members-list">
                                         <span class="detail-label">Members</span>

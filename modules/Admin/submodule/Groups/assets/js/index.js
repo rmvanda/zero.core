@@ -57,8 +57,10 @@ function showToast(message, type) {
         '<div class="toast-indicator"></div>' +
         '<div class="toast-content">' +
             '<span class="material-symbols-outlined toast-icon">' + (icons[type] || icons['info']) + '</span>' +
-            '<span class="toast-message">' + message + '</span>' +
+            '<span class="toast-message"></span>' +
         '</div>';
+    // The message is text from the server, never markup
+    toast.querySelector('.toast-message').textContent = message;
 
     document.body.appendChild(toast);
     setTimeout(function() { toast.classList.add('show'); }, 10);
@@ -80,7 +82,7 @@ async function deactivateGroup(groupId, buttonElement) {
     try {
         var formData = new FormData();
 
-        var response = await fetch('/admin/delete-group/' + groupId, {
+        var response = await fetch('/admin/groups/delete/' + encodeURIComponent(groupId), {
             method: 'POST',
             headers: {
                 'Accept': 'application/json'
@@ -88,10 +90,12 @@ async function deactivateGroup(groupId, buttonElement) {
             body: formData
         });
 
+        // Success is {"data": {"success": true, "message": ...}}; a refusal is
+        // an HTTP error status with {"status": "error", "message": ..., "detail": ...}
         var result = await response.json();
-        var data = result.data || result;
+        var data = result.data || {};
 
-        if (data.success) {
+        if (response.ok && data.success) {
             showToast(data.message || 'Group deactivated', 'success');
 
             // Update the status badge in the row
@@ -105,7 +109,7 @@ async function deactivateGroup(groupId, buttonElement) {
             // Remove the deactivate button
             buttonElement.remove();
         } else {
-            showToast(data.error || 'Failed to deactivate group', 'error');
+            showToast(result.detail || result.message || 'Failed to deactivate group', 'error');
             buttonElement.disabled = false;
             buttonElement.textContent = 'Deactivate';
         }
