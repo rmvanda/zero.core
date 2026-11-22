@@ -45,9 +45,9 @@ class AdminDashboardTest extends TestCase
         };
 
         $screens = $admin->screens();
-        $this->assertSame(['Users', 'Groups', 'Modules', 'Firewall'], array_column($screens, 'name'));
+        $this->assertSame(['Users', 'Groups', 'Permissions', 'Modules', 'Firewall'], array_column($screens, 'name'));
         $this->assertSame(
-            ['/admin/users', '/admin/groups', '/admin/modules', '/admin/firewall'],
+            ['/admin/users', '/admin/groups', '/admin/permissions', '/admin/modules', '/admin/firewall'],
             array_column($screens, 'url')
         );
         foreach ($screens as $screen) {

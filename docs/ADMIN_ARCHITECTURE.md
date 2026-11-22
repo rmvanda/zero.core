@@ -1,7 +1,7 @@
 # Admin Architecture
 
 The Admin module (`core/modules/Admin/`) is the `/admin` hub: the dashboard and the router. Its
-own screens (Users, Groups, Modules, Firewall) are its submodules. Every other admin screen
+own screens (Users, Groups, Permissions, Modules, Firewall) are its submodules. Every other admin screen
 belongs to the module it administers, which offers it from its own `Admin/` folder. Admin lists
 the screens it finds and routes `/admin/{name}/...` to them.
 
@@ -19,7 +19,7 @@ the screens it finds and routes `/admin/{name}/...` to them.
 > **A feature's admin screen lives in its own module's `Admin/` directory as a module admin
 > controller, whether or not the module has a public controller.**
 >
-> **Admin's `submodule/` directory is for Admin's own screens (Users, Groups, Modules, Firewall).**
+> **Admin's `submodule/` directory is for Admin's own screens (Users, Groups, Permissions, Modules, Firewall).**
 
 | Feature | Location |
 |---------|----------|
@@ -34,6 +34,7 @@ the screens it finds and routes `/admin/{name}/...` to them.
 | Push notifications | `core/modules/Push/Admin/PushAdmin.php` |
 | Users, their capabilities and settings | `core/modules/Admin/submodule/Users/` (Admin's own screen) |
 | Groups and their members | `core/modules/Admin/submodule/Groups/` (Admin's own screen) |
+| Who holds each capability; granting and revoking in bulk | `core/modules/Admin/submodule/Permissions/` (Admin's own screen) |
 | Which modules are on, and their order | `core/modules/Admin/submodule/Modules/` (Admin's own screen) |
 | Firewall rules | `core/modules/Admin/submodule/Firewall/` (Admin's own screen) |
 
@@ -108,6 +109,7 @@ return [
 |--------|------|
 | Users | `/admin/users`, `/admin/users/edit/{id}`; POST `set-capability`, `set-setting`, `remove-setting`, `disable`, `enable` |
 | Groups | `/admin/groups`, `/admin/groups/members/{id}`, `/admin/groups/form[/{id}]`; POST `save[/{id}]`, `delete/{id}`, `add-member`, `remove-member`, `set-member-role` |
+| Permissions | `/admin/permissions`, `/admin/permissions/holders/allow/polly`; POST `grant`, `revoke` |
 | Modules | `/admin/modules`; POST `set` (see The modules screen) |
 | Firewall | `/admin/firewall`; `list`, POST `unblock` |
 
@@ -115,6 +117,18 @@ A capability (an `allow.*` row in `permission`) and a user setting (a row in `us
 are different things with different endpoints: `set-capability` grants or revokes, `set-setting`
 and `remove-setting` write `user_settings` through `User::setSetting()` and
 `User::removeSetting()`.
+
+The Permissions screens are the other way in to the same rows: Users answers "what may this
+user do", Permissions answers "who may do this".
+
+- `/admin/permissions` lists every capability a module asks for or somebody holds
+  (`CapabilityKeys::all()`), with how many users and how many active groups were granted it.
+- `/admin/permissions/holders/allow/polly` shows `allow.polly`: the groups and users granted
+  it, and the users who have it only through a group. A key is written in the URL with slashes
+  for its dots, so no admin URL carries a dotted word.
+- `POST /admin/permissions/grant` and `/revoke` take `key`, `user_ids[]` and `group_ids[]` and
+  change them all. Every id is checked before anything is written, so one bad id changes
+  nothing. An admin cannot revoke `allow.admin` from the account they are signed in with.
 
 The users list is paged, 25 to a page. Its model, `Zero\Module\Admin\Model\UserList`, runs its
 own SQL against `users`, `user_group`, `user_group_member` and `permission`: the one exception

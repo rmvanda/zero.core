@@ -1,0 +1,27 @@
+/* Admin Permissions: the capability list and one capability's holders */
+
+.permissions-table code {
+    font-size: 0.95rem;
+}
+
+.permission-check-col {
+    width: 2.5rem;
+}
+
+.permission-actions {
+    margin-top: 1rem;
+}
+
+.permission-picker {
+    width: 100%;
+    min-height: 9rem;
+}
+
+.permission-self {
+    margin-left: 0.5rem;
+    padding: 0.1rem 0.4rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    opacity: 0.8;
+}

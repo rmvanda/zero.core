@@ -133,8 +133,21 @@ $group->can('allow.polly');              // was it granted to the group itself?
 - The Admin module's user screen lists every key named in a `#[RequirePermission]` attribute
   in the source of the modules that are switched on, plus every key somebody has, and grants or
   revokes with a tick box.
+- The Admin module's permissions screen (`/admin/permissions`) starts from the key: who was
+  granted it, who has it through a group, and granting or revoking it for several users and
+  groups at once.
 - A user asking for a capability they lack goes through the AccessRequest module, which calls
   `grant()` when an admin approves.
+
+Who holds a capability:
+
+```php
+$cap = Permission::capability('allow.polly');
+$cap->groups(0);                         // the active groups granted it
+$cap->users(0);                          // everyone who has it; group_name is null for a direct grant
+Permission::capabilityKeysInUse();       // every key somebody holds
+Permission::capabilityHolderCounts();    // key => ['users' => n, 'groups' => n], direct grants only
+```
 
 ## Who holds a sharing permission
 

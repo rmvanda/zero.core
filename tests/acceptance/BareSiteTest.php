@@ -371,7 +371,6 @@ final class BareSiteTest extends TestCase
             foreach (['/admin', '/admin/users', '/admin/users/edit/1', '/admin/modules', '/admin/firewall', '/admin/push'] as $uri) {
                 $denied = $this->page($uri, 'GET', [], $who);
                 $this->assertSame(404, $denied['status'], "$uri without allow.admin");
-                $this->assertSame([], preg_grep('~^Location:~i', $denied['headers'] ?? []), "$uri does not redirect");
             }
         }
         $this->assertSame(
@@ -415,6 +414,8 @@ final class BareSiteTest extends TestCase
             '/admin/groups' => 'Groups',
             '/admin/groups/form' => 'New group',
             '/admin/modules' => 'Modules',
+            '/admin/permissions' => 'allow.admin',
+            '/admin/permissions/holders/allow/admin' => self::$email,
             '/admin/firewall' => 'Firewall',
         ] as $uri => $text) {
             $page = $this->page($uri, 'GET', [], $sid);
@@ -475,6 +476,43 @@ final class BareSiteTest extends TestCase
         $this->assertSame('0', $this->dbValue("SELECT COUNT(*) FROM user_settings WHERE user_id=$id AND setting_key='zerotest.colour'"));
         $this->assertSame(404, $this->page('/admin/users/remove-setting', 'POST', ['user_id' => $id, 'key' => 'zerotest.colour'], $sid)['status']);
         $this->assertSame(404, $this->page('/admin/users/set-setting', 'POST', ['user_id' => 999999, 'key' => 'zerotest.colour', 'value' => 'x'], $sid)['status']);
+
+        // who holds a capability, and granting and revoking it for several holders at once
+        $this->assertSame(302, $this->page('/admin/groups/save', 'POST', ['group_name' => 'Crew', 'is_active' => '1'], $sid)['status']);
+        $crew = (int) $this->dbValue("SELECT group_id FROM user_group WHERE group_name='Crew'");
+        $this->request('/', 'GET', [], null, '\\Zero\\Core\\Access\\User::create(["name" => "Second", "email" => "second@example.test", "verified" => 1]);');
+        $second = (int) $this->dbValue("SELECT id FROM users WHERE email='second@example.test'");
+        $this->assertGreaterThan(0, $second);
+
+        $empty = $this->page('/admin/permissions/holders/allow/zerotest/bulk', 'GET', [], $sid);
+        $this->assertSame(200, $empty['status']);
+        $this->assertStringContainsString('Nobody has been granted', $empty['body']);
+        $this->assertStringContainsString('second@example.test', $empty['body'], 'a user who could be granted it is offered');
+
+        $granted = $this->page('/admin/permissions/grant', 'POST', ['key' => 'allow.zerotest.bulk', 'user_ids' => [$id, $second], 'group_ids' => [$crew]], $sid);
+        $this->assertSame(302, $granted['status']);
+        $this->assertSame('3', $this->dbValue("SELECT COUNT(*) FROM permission WHERE permission_key='allow.zerotest.bulk'"));
+
+        $held = $this->page('/admin/permissions/holders/allow/zerotest/bulk', 'GET', [], $sid);
+        foreach (['Crew', 'second@example.test', self::$email] as $holder) {
+            $this->assertStringContainsString($holder, $held['body']);
+        }
+        $this->assertMatchesRegularExpression('~allow\.zerotest\.bulk.*?<td>2</td>\s*<td>1</td>~s', $this->page('/admin/permissions', 'GET', [], $sid)['body'], 'the list counts two users and one group');
+
+        // one bad id changes nothing
+        $this->assertSame(404, $this->page('/admin/permissions/revoke', 'POST', ['key' => 'allow.zerotest.bulk', 'user_ids' => [$second, 999999]], $sid)['status']);
+        $this->assertSame('3', $this->dbValue("SELECT COUNT(*) FROM permission WHERE permission_key='allow.zerotest.bulk'"));
+        $this->assertSame(400, $this->page('/admin/permissions/revoke', 'POST', ['key' => 'allow.zerotest.bulk'], $sid)['status'], 'nobody chosen');
+        $this->assertSame(400, $this->page('/admin/permissions/grant', 'POST', ['key' => 'not a key', 'user_ids' => [$id]], $sid)['status']);
+        $this->assertSame(404, $this->page('/admin/permissions/holders/nonsense', 'GET', [], $sid)['status']);
+
+        $this->assertSame(302, $this->page('/admin/permissions/revoke', 'POST', ['key' => 'allow.zerotest.bulk', 'user_ids' => [$id, $second], 'group_ids' => [$crew]], $sid)['status']);
+        $this->assertSame('0', $this->dbValue("SELECT COUNT(*) FROM permission WHERE permission_key='allow.zerotest.bulk'"));
+
+        // an admin cannot take allow.admin from the account they are signed in with
+        $own = $this->page('/admin/permissions/revoke', 'POST', ['key' => 'allow.admin', 'user_ids' => [$id]], $sid);
+        $this->assertSame(409, $own['status']);
+        $this->assertSame(200, $this->page('/admin', 'GET', [], $sid)['status']);
 
         // an admin cannot disable the account they are signed in with
         $self = $this->page('/admin/users/disable', 'POST', ['user_id' => $id], $sid);

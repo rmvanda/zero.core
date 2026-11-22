@@ -154,6 +154,33 @@ class Permission {
         ")->fetchAll(\PDO::FETCH_COLUMN);
     }
 
+    /**
+     * How many holders each capability has: the users granted it directly and
+     * the active groups granted it. A user who has it only through a group is
+     * counted in neither. For a screen that lists the capabilities.
+     *
+     * @return array<string,array{users:int,groups:int}> Keyed by capability key
+     * @throws \PDOException
+     */
+    public static function capabilityHolderCounts(?\PDO $db = null): array {
+        $rows = ($db ?? Database::getConnection())->query("
+            SELECT p.permission_key,
+                   SUM(p.user_id <> 0) AS users,
+                   SUM(g.group_id IS NOT NULL) AS groups_holding
+            FROM permission p
+            LEFT JOIN user_group g ON g.group_id = p.group_id AND g.is_active = 1
+            WHERE p.permission_key LIKE 'allow.%' AND p.entity_id = 0 AND p.can_read = 1
+            GROUP BY p.permission_key
+        ")->fetchAll(\PDO::FETCH_ASSOC);
+
+        $counts = [];
+        foreach ($rows as $row) {
+            $counts[$row['permission_key']] = ['users' => (int) $row['users'], 'groups' => (int) $row['groups_holding']];
+        }
+
+        return $counts;
+    }
+
     /** This object's permission key. */
     public function permissionKey(): string {
         return $this->key;
