@@ -19,7 +19,11 @@
 ?>
 
 <div class="content-wrapper">
-    <h1>Manage Module</h1>
+    <header class="admin-head">
+        <div>
+            <h1>Manage Module</h1>
+        </div>
+    </header>
     <?php /* MKMOD:SKELETON-ONLY-START */ ?>
     <p class="skeleton-admin-note">
         This is the skeleton's admin interface. It is registered by the

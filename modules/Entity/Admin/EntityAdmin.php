@@ -117,6 +117,10 @@ class EntityAdmin extends AdminResponse {
         $this->perPage = $perPage;
         $this->totalPages = $totalPages;
 
+        $this->setBreadcrumbs([
+            ['label' => 'Entities', 'url' => '/admin/entity'],
+            ['label' => ucfirst((string) $entityLabel)],
+        ]);
         $this->build(__DIR__ . '/view/manage.php');
     }
 
@@ -308,6 +312,10 @@ class EntityAdmin extends AdminResponse {
         }
 
         // GET request - show form
+        $this->setBreadcrumbs([
+            ['label' => 'Entities', 'url' => '/admin/entity'],
+            ['label' => 'New entity type'],
+        ]);
         $this->build(__DIR__."/view/create.php");
     }
 }

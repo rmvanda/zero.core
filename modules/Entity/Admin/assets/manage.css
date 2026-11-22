@@ -1,33 +1,54 @@
 /* Manage Entity */
 
-/* Create new entity form box */
-.admin-info-box.entity-create-box {
-    margin-bottom: 2rem;
-}
-
-.admin-info-box.entity-create-box h3 {
+/* The first part of the screen sits straight under the page head */
+.admin .entity-create {
     margin-top: 0;
 }
 
+/* Create new entity form: one field per attribute, as many to a row as fit */
+.admin .entity-create-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+    gap: 1rem;
+    align-items: start;
+}
+
 /* Full-width form submit row */
-.entity-form-submit-row {
+.admin .entity-form-submit-row {
     grid-column: 1 / -1;
     display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
-    margin-top: 1rem;
 }
 
 /* Fixed width column for checkbox */
-.admin-table .col-checkbox {
-    width: 40px;
+.admin .admin-table .col-checkbox {
+    width: 2.5rem;
 }
 
 /* Fixed width column for actions */
-.admin-table .col-actions {
-    width: 80px;
+.admin .admin-table .col-actions {
+    width: 5rem;
 }
 
 /* Bulk delete margin */
-.bulk-delete-bar {
-    margin-bottom: 1rem;
+.admin .bulk-delete-bar {
+    margin-bottom: 0.75rem;
+}
+
+/* The field manage.js puts in a cell while its value is edited */
+.admin .admin-table .inline-edit-input {
+    min-height: 1.875rem;
+    padding: 0.15rem 0.5rem;
+    background: var(--admin-field);
+    border: 1px solid var(--admin-accent);
+    border-radius: var(--admin-radius);
+    color: var(--admin-text-strong);
+    font-family: inherit;
+    font-size: 0.9375rem;
+}
+
+/* A value keeps room to be read: the table scrolls sideways before a date breaks over three lines */
+.admin .admin-table .editable-cell {
+    min-width: 9rem;
 }

@@ -1,14 +1,18 @@
 <?php $this->loadInlineAsset("Entity", "css", "create.css"); ?>
-<div class="content-wrapper entity-form">
-    <h1>Create New Entity</h1>
-    <p><a href="/admin/entity">&larr; Back to Entities</a></p>
+<div class="content-wrapper">
+    <header class="admin-head">
+        <div>
+            <h1>New entity type</h1>
+            <p class="admin-lede">Name the type and define the attributes its records will have.</p>
+        </div>
+    </header>
 
-    <div class="entity-help-text">
-        <strong>Creating a New Entity Type</strong>
+    <div class="admin-info-box entity-help-text">
+        <strong>Creating a new entity type</strong>
         <ul>
-            <li><strong>Entity Name:</strong> Alphanumeric with underscores (e.g., "product", "customer_order")</li>
+            <li><strong>Entity name:</strong> Alphanumeric with underscores (e.g., "product", "customer_order")</li>
             <li><strong>Attributes:</strong> Define the fields your entity will have</li>
-            <li><strong>Default Values:</strong>
+            <li><strong>Default values:</strong>
                 <ul>
                     <li><em>Literal:</em> Static value (e.g., "active", "0")</li>
                     <li><em>Date:</em> Date format (e.g., "Y-m-d H:i:s")</li>
@@ -20,10 +24,10 @@
         </ul>
     </div>
 
-    <form method="POST" action="/admin/entity/create" id="entityForm">
+    <form method="POST" action="/admin/entity/create" id="entityForm" class="admin-panel entity-form">
         <!-- Entity Name -->
         <div class="admin-form-field">
-            <label for="entity_name">Entity Name *</label>
+            <label for="entity_name">Entity name *</label>
             <input type="text"
                    name="entity_name"
                    id="entity_name"
@@ -35,13 +39,13 @@
 
         <!-- Attributes Section -->
         <div class="admin-form-field">
-            <label>Entity Attributes *</label>
+            <label>Entity attributes *</label>
             <div class="attributes-container">
                 <!-- Column Headers -->
                 <div class="attribute-headers">
-                    <div>Attribute Name</div>
-                    <div>Default Value</div>
-                    <div>Default Type</div>
+                    <div>Attribute name</div>
+                    <div>Default value</div>
+                    <div>Default type</div>
                     <div>Unique</div>
                     <div></div>
                 </div>
@@ -81,14 +85,17 @@
                         </div>
                     </div>
                 </div>
-                <button type="button" class="btn-add-attribute">+ Add Attribute</button>
+                <button type="button" class="btn-secondary btn-small btn-add-attribute">
+                    <span class="material-symbols-outlined" aria-hidden="true">add</span>
+                    Add attribute
+                </button>
             </div>
         </div>
 
         <!-- Form Actions -->
         <div class="form-actions">
-            <button type="submit" class="btn-primary">Create Entity</button>
-            <a href="/admin/entity" class="btn-secondary btn-cancel">Cancel</a>
+            <a href="/admin/entity" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-primary">Create entity</button>
         </div>
     </form>
 </div>

@@ -11,9 +11,9 @@
     $totalPages = $this->totalPages ?? 1;
 
     if (!$entityType) {
-        echo '<h1>Entity Not Found</h1>';
-        echo '<p><a href="/admin/entity">&larr; Back to Entities</a></p>';
-        echo '<div class="admin-info-box">The requested entity type was not found.</div>';
+        echo '<header class="admin-head"><div><h1>Entity not found</h1></div></header>';
+        echo '<div class="admin-info-box">The requested entity type was not found. <a href="/admin/entity">See every entity type</a>.</div>';
+        echo '</div>';
         return;
     }
 
@@ -29,18 +29,22 @@
     }
     ?>
 
-    <h1><?= $entityLabelCapitalized ?> Management</h1>
-    <p><a href="/admin/entity">&larr; Back to Entities</a></p>
+    <header class="admin-head">
+        <div>
+            <h1><?= $entityLabelCapitalized ?> management</h1>
+            <p class="admin-lede">The records of the <code><?= $entityLabel ?></code> entity type. Select a cell to change its value.</p>
+        </div>
+    </header>
 
     <?php if (empty($schema)): ?>
         <div class="admin-info-box">
-            No schema defined for this entity type. Please define the entity schema first.
+            No schema is defined for this entity type. Define the entity schema first.
         </div>
     <?php else: ?>
         <!-- Create New Entity Form -->
-        <div class="admin-info-box entity-create-box">
-            <h3>Create New <?= $entityLabelCapitalized ?></h3>
-            <form method="POST" action="/admin/entity/manage/<?= $entityLabel ?>" class="admin-form-grid">
+        <section class="admin-section entity-create">
+            <h2>New <?= $entityLabel ?></h2>
+            <form method="POST" action="/admin/entity/manage/<?= $entityLabel ?>" class="admin-panel entity-create-form">
                 <?php foreach ($schema as $attrName): ?>
                     <div class="admin-form-field">
                         <label for="attr_<?= htmlspecialchars($attrName) ?>">
@@ -57,25 +61,33 @@
                     <button type="reset" class="btn-secondary">Clear</button>
                 </div>
             </form>
-        </div>
+        </section>
 
+        <section class="admin-section">
         <!-- Results Summary -->
-        <div class="admin-info-box">
+        <div class="admin-section-head">
+            <h2>Records <span class="admin-count"><?= number_format($totalRecords) ?></span></h2>
             <?php if ($totalRecords > 0): ?>
+            <p class="admin-note">
                 Showing <?= number_format(min((($page - 1) * $perPage) + 1, $totalRecords)) ?>
                 to <?= number_format(min($page * $perPage, $totalRecords)) ?>
                 of <?= number_format($totalRecords) ?> <?= $entityLabel ?> records
                 <?php if ($totalPages > 1): ?>
                     (Page <?= $page ?> of <?= $totalPages ?>)
                 <?php endif; ?>
-            <?php else: ?>
-                No <?= $entityLabel ?> records found.
+            </p>
             <?php endif; ?>
         </div>
+        <?php if ($totalRecords <= 0): ?>
+        <div class="admin-empty">
+            <span class="material-symbols-outlined" aria-hidden="true">inbox</span>
+            <p>There are no <?= $entityLabel ?> records yet. Create the first one with the form above.</p>
+        </div>
+        <?php endif; ?>
 
         <!-- Pagination Controls (Top) -->
         <?php if ($totalPages > 1): ?>
-        <div class="pagination">
+        <nav class="pagination" aria-label="Pages of records">
             <div class="pagination-info">
                 Page <?= $page ?> of <?= $totalPages ?>
             </div>
@@ -104,7 +116,7 @@
                     Last
                 </a>
             </div>
-        </div>
+        </nav>
         <?php endif; ?>
 
         <!-- Bulk Actions -->
@@ -112,30 +124,31 @@
             <form method="POST" action="/admin/entity/delete" id="bulkDeleteForm">
                 <input type="hidden" name="entity_type" value="<?= $entityLabel ?>">
                 <div class="bulk-delete-bar">
-                    <button type="submit" class="btn-small btn-danger">Delete Selected</button>
+                    <button type="submit" class="btn-small btn-danger">Delete selected</button>
                 </div>
 
                 <!-- Entity Table -->
+                <div class="admin-table-wrap">
                 <table class="admin-table">
                     <thead>
                         <tr>
                             <th class="col-checkbox">
-                                <input type="checkbox" id="selectAll">
+                                <input type="checkbox" id="selectAll" aria-label="Select every record on this page">
                             </th>
                             <th>ID</th>
                             <?php foreach ($schema as $columnName): ?>
                                 <th><?= htmlspecialchars(ucfirst($columnName)) ?></th>
                             <?php endforeach; ?>
-                            <th class="col-actions">Actions</th>
+                            <th class="col-actions text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($records as $record): ?>
                         <tr>
                             <td>
-                                <input type="checkbox" name="entity_ids[]" value="<?= $record['_id'] ?>" class="row-checkbox">
+                                <input type="checkbox" name="entity_ids[]" value="<?= $record['_id'] ?>" class="row-checkbox" aria-label="Select record <?= htmlspecialchars($record['_id']) ?>">
                             </td>
-                            <td class="nowrap"><?= htmlspecialchars($record['_id']) ?></td>
+                            <td class="nowrap dim"><?= htmlspecialchars($record['_id']) ?></td>
                             <?php foreach ($schema as $columnName): ?>
                                 <td class="editable-cell"
                                     data-entity-id="<?= $record['_id'] ?>"
@@ -145,22 +158,23 @@
                                     <?= htmlspecialchars($record[$columnName] ?? '') ?>
                                 </td>
                             <?php endforeach; ?>
-                            <td>
+                            <td class="actions-cell">
                                 <form method="POST" action="/admin/entity/delete" class="form-inline">
                                     <input type="hidden" name="entity_type" value="<?= $entityLabel ?>">
                                     <input type="hidden" name="entity_ids[]" value="<?= $record['_id'] ?>">
-                                    <button type="submit" class="btn-small btn-danger">&times;</button>
+                                    <button type="submit" class="btn-small btn-danger">Delete</button>
                                 </form>
                             </td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+                </div>
             </form>
 
             <!-- Pagination Controls (Bottom) -->
             <?php if ($totalPages > 1): ?>
-            <div class="pagination">
+            <nav class="pagination" aria-label="Pages of records">
                 <div class="pagination-info">
                     Page <?= $page ?> of <?= $totalPages ?>
                 </div>
@@ -189,9 +203,10 @@
                         Last
                     </a>
                 </div>
-            </div>
+            </nav>
             <?php endif; ?>
         <?php endif; ?>
+        </section>
     <?php endif; ?>
 </div>
 

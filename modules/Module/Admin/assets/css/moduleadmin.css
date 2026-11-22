@@ -3,6 +3,12 @@
    Admin assets are never symlinked into the web root, and there is no manual
    loading step to call from a view. */
 
-.skeleton-admin-note {
-    color: var(--text-dimmed);
+/* Admin views are printed inside <div class="admin"> and build from the shared pieces
+   of core/modules/Admin/assets/css/admin.css. A rule here starts with .admin so it wins
+   whichever order the stylesheets load in, and takes its colours from the --admin-*
+   tokens: it names no colour of its own. See "Look" in core/docs/ADMIN_ASSETS.md. */
+
+.admin .content-wrapper .skeleton-admin-note {
+    max-width: 44rem;
+    color: var(--admin-text-dim);
 }
