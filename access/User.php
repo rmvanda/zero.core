@@ -382,36 +382,6 @@ class User extends Model implements Holder
         )->fetchAll(\PDO::FETCH_COLUMN);
     }
 
-    /**
-     * One page of every user, in id order. For a screen that lists users.
-     *
-     * @param int $limit  Most users to give
-     * @param int $offset How many to skip
-     * @return static[]
-     * @throws \PDOException
-     */
-    public static function page(int $limit, int $offset = 0): array
-    {
-        $stmt = Database::getConnection()->query(
-            "SELECT * FROM users ORDER BY id ASC LIMIT " . max(1, $limit) . " OFFSET " . max(0, $offset)
-        );
-
-        return array_map(
-            fn(array $row) => new static($row, true),
-            $stmt->fetchAll(\PDO::FETCH_ASSOC)
-        );
-    }
-
-    /**
-     * How many users there are, disabled ones included.
-     *
-     * @throws \PDOException
-     */
-    public static function total(): int
-    {
-        return (int) Database::getConnection()->query("SELECT COUNT(*) FROM users")->fetchColumn();
-    }
-
     /*
      * Profile storage: values for the configurable registration fields. One
      * row per (user_id, field_key) in `user_profile`, with per-row

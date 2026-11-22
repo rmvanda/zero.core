@@ -116,6 +116,11 @@ are different things with different endpoints: `set-capability` grants or revoke
 and `remove-setting` write `user_settings` through `User::setSetting()` and
 `User::removeSetting()`.
 
+The users list is paged, 25 to a page. Its model, `Zero\Module\Admin\Model\UserList`, runs its
+own SQL against `users`, `user_group`, `user_group_member` and `permission`: the one exception
+to the rule that a module reads those through `Zero\Core\Access`, made because this is the only
+screen that asks about every user at once.
+
 One of Admin's own screens wins over a module of the same name: a module called `Users` cannot
 take over `/admin/users`. When such a module offers an admin screen, `Admin::__call` logs a
 warning that the offering is unreachable.

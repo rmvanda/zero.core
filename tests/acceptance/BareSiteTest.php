@@ -446,6 +446,12 @@ final class BareSiteTest extends TestCase
         $this->assertSame(302, $added['status']);
         $this->assertSame('1', $this->dbValue("SELECT COUNT(*) FROM user_group_member WHERE group_id=$gid AND user_id=$id"));
         $this->assertSame(409, $this->page('/admin/groups/add-member', 'POST', ['group_id' => $gid, 'user_id' => $id], $sid)['status']);
+        // the users list shows the group and counts the capabilities: the user's own and the group's
+        $this->request('/', 'GET', [], null, '(\\Zero\\Core\\Access\\Group::find(' . $gid . '))->grant("allow.zerotest.group");');
+        $this->assertSame('2', $this->dbValue("SELECT COUNT(DISTINCT permission_key) FROM permission WHERE permission_key LIKE 'allow.%' AND (user_id=$id OR group_id=$gid)"), 'allow.admin and the group capability');
+        $list = $this->page('/admin/users', 'GET', [], $sid);
+        $this->assertStringContainsString('Family', $list['body']);
+        $this->assertMatchesRegularExpression('~\b2 capabilities~', strip_tags($list['body']), 'the row counts the user\'s own capability and the group\'s');
         $members = $this->page("/admin/groups/members/$gid", 'GET', [], $sid);
         $this->assertSame(200, $members['status']);
         $this->assertStringContainsString(self::$email, $members['body']);
