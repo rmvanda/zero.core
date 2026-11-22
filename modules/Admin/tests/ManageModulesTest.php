@@ -193,17 +193,17 @@ class ManageModulesTest extends TestCase
 
     public function testRowsAreOrderedByTierThenNameWithWhereAndState(): void
     {
-        file_put_contents($this->ini, "[enabled]\nSitemap = off\nTest = on\n\n[order]\nBlog = 5\n");
+        file_put_contents($this->ini, "[enabled]\nPush = off\nTest = on\n\n[order]\nBlog = 5\n");
         $rows = $this->admin()->rows();
 
         $this->assertSame(
-            ['Admin', 'Auth', 'Push', 'Sitemap', 'Test', 'Blog', 'Null'],
+            ['Admin', 'Auth', 'Push', 'Test', 'Blog', 'Null', 'Sitemap'],
             array_column($rows, 'name')
         );
         $by = array_column($rows, null, 'name');
         $this->assertSame(['required', 'core', true, false], [$by['Admin']['tier'], $by['Admin']['where'], $by['Admin']['enabled'], $by['Admin']['canSwitch']]);
-        $this->assertSame(['optional', false, true, true], [$by['Sitemap']['tier'], $by['Sitemap']['enabled'], $by['Sitemap']['departure'], $by['Sitemap']['canSwitch']]);
-        $this->assertFalse($by['Push']['departure']);
+        $this->assertSame(['optional', false, true, true], [$by['Push']['tier'], $by['Push']['enabled'], $by['Push']['departure'], $by['Push']['canSwitch']]);
+        $this->assertFalse($by['Sitemap']['departure']);
         $this->assertTrue($by['Test']['enabled']);
         $this->assertTrue($by['Test']['departure']);
         $this->assertSame(['site', 'site', 5], [$by['Blog']['tier'], $by['Blog']['where'], $by['Blog']['order']]);

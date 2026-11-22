@@ -177,25 +177,6 @@ final class Session
         // core/attribute/RequirePermission.php and RequireAuthLevel.php.
 
         $_SESSION['created_at'] = time();
-
-        // Non-expiring "probably a returning user" hint. NOT authentication —
-        // it holds a plaintext id and must never be trusted as proof of identity.
-        setcookie(self::hintCookieName(), (string) $user->id, 2147483647, '/', '', true, true);
-    }
-
-    /**
-     * The name of the "returning user" hint cookie: the site's SESSION_HINT_COOKIE
-     * (app/config/constants.ini) when it is defined as a usable cookie name,
-     * zero_user_id otherwise. Every reader and the writer use this name.
-     */
-    public static function hintCookieName(): string
-    {
-        if (defined('SESSION_HINT_COOKIE')
-            && is_string(SESSION_HINT_COOKIE)
-            && preg_match('/^[A-Za-z0-9_]+$/', SESSION_HINT_COOKIE) === 1) {
-            return SESSION_HINT_COOKIE;
-        }
-        return 'zero_user_id';
     }
 
     /**
@@ -249,6 +230,33 @@ final class Session
         }
 
         session_destroy();
+    }
+
+    /**
+     * End the session when its account is disabled. Application::run() calls
+     * this once for each request, before the module is built, so an account an
+     * admin disables is logged out at its next request. One query, and only
+     * for a request that carries a login. When the database cannot be read
+     * the session stays and the failure is logged.
+     */
+    public static function endIfDisabled(): void
+    {
+        $id = self::userId();
+        if ($id === null) {
+            return;
+        }
+        try {
+            $disabled = User::isDisabledId($id);
+        } catch (\Throwable $e) {
+            // No database to ask (a site without one, or an outage): the session
+            // stays. Every permission check reads the same database and fails there.
+            Console::error("Session::endIfDisabled() could not read account $id: " . $e->getMessage());
+            return;
+        }
+        if ($disabled) {
+            Console::info("Session ended: account $id is disabled");
+            self::end();
+        }
     }
 
     /**

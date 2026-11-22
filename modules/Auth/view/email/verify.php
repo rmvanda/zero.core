@@ -1,5 +1,5 @@
 <?php use Zero\Core\Strings; Strings::loadModule('Auth'); ?>
-<p><?= htmlspecialchars(sprintf(AUTH_EMAIL_VERIFY_LEAD, SITE_SHORT_NAME), ENT_NOQUOTES) ?></p>
+<p><?= htmlspecialchars(\Zero\Core\Strings::fill(AUTH_EMAIL_VERIFY_LEAD, SITE_SHORT_NAME), ENT_NOQUOTES) ?></p>
 
 <p><?= htmlspecialchars(AUTH_EMAIL_VERIFY_INSTRUCTIONS, ENT_NOQUOTES) ?>
 
@@ -10,6 +10,6 @@
 <p><?= htmlspecialchars(AUTH_EMAIL_PASTE_LEAD, ENT_NOQUOTES) ?><br>
    <?= htmlspecialchars($link) ?></p>
 
-<p><?= htmlspecialchars(sprintf(AUTH_EMAIL_VERIFY_IGNORE, SITE_SHORT_NAME), ENT_NOQUOTES) ?>
+<p><?= htmlspecialchars(\Zero\Core\Strings::fill(AUTH_EMAIL_VERIFY_IGNORE, SITE_SHORT_NAME), ENT_NOQUOTES) ?>
 
    <?= htmlspecialchars(AUTH_EMAIL_VERIFY_IGNORE_REST, ENT_NOQUOTES) ?></p>

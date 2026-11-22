@@ -27,11 +27,10 @@ How it happens:
 3. PHP persists `$_SESSION` under the session id, so any later request presenting that
    cookie is logged in.
 
-`establish()` adds two costs of its own on every token request:
+`establish()` adds a cost of its own on every token request:
 
 - `session_regenerate_id(true)`: the session is destroyed and recreated, and a new
   `Set-Cookie` is sent, per API call.
-- `setcookie(Session::hintCookieName(), …)`: the "returning user" hint cookie is sent too.
 
 ## Why it matters
 
@@ -80,8 +79,7 @@ nothing is stored.
        session_abort();
    }
    ```
-4. **Skip the hint cookie for token auth.** `Session::establish()` sets it unconditionally;
-   it needs a way to be told not to (a parameter, or a check on `session.use_cookies`).
+
 
 What stays the same: the gates, and interactive login (no `Authorization` header, none of
 this runs). What changes on purpose: every token request must carry the token, and
@@ -99,7 +97,7 @@ revocation is immediate because every request re-validates against `api_tokens`.
 - Check whether `session_start()` + `session_abort()` leaves an empty session file behind
   with the files handler. If it does, use `session_destroy()` in step 3.
 - `establish()`'s `session_regenerate_id(true)` still runs under this variant. It sends no
-  cookie, but it is wasted work; skip it for token auth along with the hint cookie.
+  cookie, but it is wasted work; skip it for token auth.
 - `AllowWithToken` sets `$_SESSION['_api_token_auth'] = true`. It stays per-request.
 - `core/tests/SessionEstablishTest.php` pins what `establish()` writes.
 
@@ -111,7 +109,7 @@ persisting but still sends a `Set-Cookie` for a session id that is already dead.
 ## Verification
 
 1. A request with a valid Bearer token succeeds and the response has no `Set-Cookie` for the
-   session or the hint cookie.
+   session.
 2. A second request carrying only cookies from the first (no `Authorization` header) is
    refused as unauthenticated.
 3. Interactive login still issues a session cookie and session-only endpoints still work.

@@ -11,7 +11,7 @@ use Zero\Core\Exception\StaleFileException;
  * departures from the tier defaults, in two sections:
  *
  *   [enabled]
- *   Sitemap = off
+ *   Push = off
  *
  *   [order]
  *   Blog = 10

@@ -269,6 +269,9 @@ class Application {
             return;
         }
 
+        // A disabled account is logged out here, before any module sees the session.
+        Session::endIfDisabled();
+
         //Console::log("Module: $module Endpoint: $endpoint Args: ".print_r($args,true)); 
 
         if ($this->isModule($Module=ucfirst($module))) {

@@ -25,6 +25,21 @@ class Strings
     private static array $defined = [];
 
     /**
+     * Put values into a string's %s places, in order: fill("Sign in to %s", "Acme").
+     * Use this, not sprintf(), for wording a site may override. sprintf()
+     * throws on a percent sign it does not know ("Save 50% at %s"); this
+     * replaces %s and nothing else, so any other percent sign stays as written.
+     * A %s with no value left becomes an empty string.
+     */
+    public static function fill(string $text, string ...$values): string
+    {
+        $i = 0;
+        return preg_replace_callback('/%s/', function () use (&$i, $values) {
+            return $values[$i++] ?? '';
+        }, $text);
+    }
+
+    /**
      * Whether a name can be a constant name defined from a file:
      * letters, digits and underscores, not starting with a digit.
      */

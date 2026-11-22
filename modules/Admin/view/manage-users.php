@@ -4,7 +4,7 @@
 
     <?php
     $db = \Zero\Core\Database::getConnection();
-    $stmt = $db->query("SELECT id, email, name, pic, verified FROM users ORDER BY id asc");
+    $stmt = $db->query("SELECT id, email, name, pic, verified, disabled FROM users ORDER BY id asc");
     $users = $stmt->fetchAll();
 
     // Pre-fetch permission counts and group memberships per user
@@ -33,7 +33,7 @@
             </thead>
             <tbody>
                 <?php foreach ($users as $user): ?>
-                <tr class="main-row" data-user-id="<?= $user['id'] ?>">
+                <tr class="main-row<?= $user['disabled'] ? ' user-disabled' : '' ?>" data-user-id="<?= $user['id'] ?>">
                     <td>
                         <span class="material-symbols-outlined expand-icon">chevron_right</span>
                     </td>
@@ -47,6 +47,7 @@
                                 <span class="material-symbols-outlined icon-md">account_circle</span>
                             <?php endif; ?>
                             <span><?= htmlspecialchars($user['name'] ?? 'Unknown') ?></span>
+                            <span class="status-badge status-inactive user-disabled-badge">Disabled</span>
                         </div>
                     </td>
                     <td>
@@ -57,11 +58,12 @@
                            class="btn-small">
                             Permissions
                         </a>
-                        <button class="btn-icon btn-delete"
+                        <button class="btn-icon btn-disable"
                                 data-user-id="<?= $user['id'] ?>"
                                 data-user-name="<?= htmlspecialchars($user['name'] ?? 'Unknown', ENT_QUOTES) ?>"
-                                title="Delete user">
-                            <span class="material-symbols-outlined">delete</span>
+                                data-disabled="<?= $user['disabled'] ? '1' : '0' ?>"
+                                title="<?= $user['disabled'] ? 'Enable user' : 'Disable user' ?>">
+                            <span class="material-symbols-outlined"><?= $user['disabled'] ? 'person_check' : 'person_off' ?></span>
                         </button>
                     </td>
                 </tr>

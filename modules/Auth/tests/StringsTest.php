@@ -1,7 +1,6 @@
 <?php
 namespace Zero\Module\Auth\Tests;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Zero\Core\Strings;
 
@@ -19,7 +18,6 @@ class StringsTest extends TestCase
         'User'          => 'USER_',
         'Admin'         => 'ADMIN_',
         'AccessRequest' => 'ACCESS_REQUEST_',
-        'Sitemap'       => 'SITEMAP_',
         'Push'          => 'PUSH_',
     ];
 
@@ -122,27 +120,6 @@ class StringsTest extends TestCase
         }
     }
 
-    #[DataProvider('emailViews')]
-    public function testEmailsRenderByteIdenticalToTheHardCodedOnes(string $view): void
-    {
-        $before = ($_SERVER['HOME'] ?? getenv('HOME')) . '/zero-bundle/before/modules/Auth/view/email/' . $view;
-        if (!is_file($before)) {
-            $this->markTestSkipped('No pre-change copy at ' . $before);
-        }
-        $render = function (string $file): string {
-            $link = 'https://example.invalid/auth/token?t=a&b';
-            ob_start();
-            include $file;
-            return ob_get_clean();
-        };
-        $this->assertSame($render($before), $render($this->root . 'Auth/view/email/' . $view));
-    }
-
-    public static function emailViews(): array
-    {
-        return [['login.php'], ['verify.php']];
-    }
-
     public function testDefaultsReproduceTheHardCodedText(): void
     {
         $this->assertSame('Your Unisolu sign-in link', sprintf(AUTH_EMAIL_LOGIN_SUBJECT, SITE_SHORT_NAME));
@@ -153,6 +130,5 @@ class StringsTest extends TestCase
             'Signing in gives you access to more neat things. <br>Read the privacy policy <a href="/privacy">here</a>',
             USER_LOGIN_BLURB . ' <br>' . USER_LOGIN_PRIVACY . ' <a href="/privacy">' . USER_LOGIN_PRIVACY_LINK . '</a>'
         );
-        $this->assertSame('Complete overview of all pages and modules on Unisolu.', sprintf(SITEMAP_INTRO, SITE_SHORT_NAME));
     }
 }

@@ -253,15 +253,19 @@ $group->delete();                 // gone, with its members and every grant made
 
 ## Deleting
 
+An account is closed by disabling it, never by deleting it: `$user->disable()` sets `users.disabled`,
+and `$user->enable()` clears it. A disabled account cannot sign in (provider, email link or API
+token), `Session::endIfDisabled()` ends its open session at the next request, and all its data stays.
+The Admin users screen does this (`/admin/disable-user`, `/admin/enable-user`). No page deletes an
+account.
+
 No foreign key removes anything. The objects do:
 
 - `$user->delete()` removes the user's group memberships, the permissions granted to them, their
-  settings and their profile. What modules keep about a user is the module's to remove.
+  settings and their profile. It is for tests and a manual clean-up; what modules keep about a user
+  stays.
 - `$group->delete()` removes its memberships and every permission granted to it.
 - A module deleting an item calls `$perm->forget($id)`.
-- The Admin module's delete-user action (`Zero\Module\Admin\Model\UserAdmin::delete()`) clears
-  `auth_token`, `api_tokens`, `oauth_token`, `ws_tokens` and `push_subscriptions` for the user,
-  then calls `$user->delete()`.
 
 The caller owns the transaction.
 

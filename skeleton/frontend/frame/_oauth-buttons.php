@@ -28,7 +28,7 @@ if (function_exists('oauth_provider_icon')) {
         <?php foreach ($oauthButtons as $p): ?>
             <a class="oauth-btn <?= oauth_provider_brand_class($p['slug']) ?>" href="/auth/user?via=<?= (int) $p['via_code'] ?>">
                 <?= oauth_provider_icon($p['slug']) ?>
-                <span><?= htmlspecialchars(sprintf(SITE_SIGN_IN_WITH, $p['name'])) ?></span>
+                <span><?= htmlspecialchars(\Zero\Core\Strings::fill(SITE_SIGN_IN_WITH, $p['name'])) ?></span>
             </a>
         <?php endforeach; ?>
     </div>

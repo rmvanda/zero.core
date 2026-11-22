@@ -27,7 +27,7 @@ if (function_exists('oauth_provider_icon')) {
     <div class="google-signin-wrapper">
         <a class="oauth-btn <?= oauth_provider_brand_class('google') ?>" href="/auth/user?via=<?= (int) $googleProvider['via_code'] ?>">
             <?= oauth_provider_icon('google') ?>
-            <span><?= htmlspecialchars(sprintf(SITE_SIGN_IN_WITH, $googleProvider['name'])) ?></span>
+            <span><?= htmlspecialchars(\Zero\Core\Strings::fill(SITE_SIGN_IN_WITH, $googleProvider['name'])) ?></span>
         </a>
     </div>
 <?php endif; ?>

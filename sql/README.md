@@ -24,7 +24,6 @@ Tables come first and views after the tables they read.
 | AccessRequest | `access_requests` |
 | Push | `push_subscriptions`, `push_notifications`, `push_notification_clicks` |
 | Entity framework | `entity_type`, `entity`, `event_view` |
-| Admin (clears them on account delete; a site's Ws module writes them) | `ws_tokens` |
 
 `user_group_member` carries the one foreign key core has, to `user_group`.
 

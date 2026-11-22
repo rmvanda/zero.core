@@ -19,9 +19,9 @@ class CoreSqlTest extends TestCase
 {
     private const THROWAWAY = 'zerotest_core_sql';
 
-    /** The ten modules that ship with core. */
+    /** The nine modules that ship with core. */
     private const MODULES = [
-        'Auth', 'User', 'Admin', 'AccessRequest', 'Sitemap',
+        'Auth', 'User', 'Admin', 'AccessRequest',
         'Push', 'Entity', 'Module', 'HelloWorld', 'Test',
     ];
 
@@ -49,7 +49,6 @@ class CoreSqlTest extends TestCase
      * statement, or that a bundled view depends on. Each entry names the reason.
      */
     private const NAMED_ELSEWHERE = [
-        'ws_tokens' => 'Admin UserAdmin::CASCADE deletes the account\'s rows from it by name',
         'user_view' => 'compatibility view over users, kept for sites that still join it; no PHP file names it',
     ];
 
@@ -223,12 +222,6 @@ class CoreSqlTest extends TestCase
         $allowed = array_merge(array_keys($this->tablesInCode()), array_keys(self::NAMED_ELSEWHERE));
         $extra = array_diff(array_merge($created['tables'], $created['views']), $allowed);
         $this->assertSame([], array_values($extra), 'core.sql creates tables no scanned code names: ' . implode(', ', $extra));
-    }
-
-    public function testNamedElsewhereTablesAreStillNamed(): void
-    {
-        $admin = self::$root . 'core/modules/Admin/model/UserAdmin.php';
-        $this->assertStringContainsString("'ws_tokens'", file_get_contents($admin));
     }
 
     public function testNothingTheFileMustNotContain(): void

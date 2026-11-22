@@ -1,5 +1,5 @@
 /**
- * Manage Users - Expandable table rows, user deletion, and toast notifications
+ * Manage Users - Expandable table rows, disabling and enabling a user, and toast notifications
  */
 document.addEventListener('DOMContentLoaded', function() {
     // Expandable table rows
@@ -19,13 +19,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Event delegation for delete buttons
+    // Event delegation for the disable / enable buttons
     document.addEventListener('click', function(e) {
-        var btn = e.target.closest('.btn-delete[data-user-id]');
+        var btn = e.target.closest('.btn-disable[data-user-id]');
         if (btn) {
-            var userId = btn.dataset.userId;
-            var userName = btn.dataset.userName;
-            prepareDeleteUser(btn, userId, userName);
+            setUserDisabled(btn, btn.dataset.userId, btn.dataset.userName, btn.dataset.disabled !== '1');
         }
     });
 });
@@ -68,44 +66,13 @@ function getToastIcon(type) {
     return icons[type] || icons['info'];
 }
 
-// Delete User with Double-Click Confirmation
-var deleteConfirmations = {};
-
-function prepareDeleteUser(buttonElement, userId, userName) {
-    // Check if already in confirmation state
-    if (deleteConfirmations[userId]) {
-        // Second click - actually delete
-        delete deleteConfirmations[userId];
-        deleteUser(userId, userName, buttonElement);
-    } else {
-        // First click - prepare for deletion
-        deleteConfirmations[userId] = true;
-
-        // Change icon and add highlight
-        var icon = buttonElement.querySelector('.material-symbols-outlined');
-        icon.textContent = 'delete_forever';
-        buttonElement.classList.add('delete-confirm');
-
-        // Show toast
-        showToast('Click again to confirm deletion', 'warning');
-
-        // Reset after 3 seconds
-        setTimeout(function() {
-            if (deleteConfirmations[userId]) {
-                delete deleteConfirmations[userId];
-                icon.textContent = 'delete';
-                buttonElement.classList.remove('delete-confirm');
-            }
-        }, 3000);
-    }
-}
-
-async function deleteUser(userId, userName, buttonElement) {
+// Disable or enable a user. Nothing is deleted, so one click is enough: the same button undoes it.
+async function setUserDisabled(buttonElement, userId, userName, disable) {
     try {
         var formData = new FormData();
         formData.append('user_id', userId);
 
-        var response = await fetch('/admin/delete-user', {
+        var response = await fetch(disable ? '/admin/disable-user' : '/admin/enable-user', {
             method: 'POST',
             headers: {
                 'Accept': 'application/json'
@@ -117,33 +84,21 @@ async function deleteUser(userId, userName, buttonElement) {
         var data = result.data || result;
 
         if (data.success) {
-            // Remove the user row from the table with animation
+            // Show the new state on the row and on the button
             var row = buttonElement.closest('tr');
             if (row) {
-                row.classList.add('row-removing');
-                setTimeout(function() {
-                    row.remove();
-                }, 300);
+                row.classList.toggle('user-disabled', disable);
             }
-            showToast('User ' + userName + ' deleted successfully', 'success');
+            buttonElement.dataset.disabled = disable ? '1' : '0';
+            buttonElement.title = disable ? 'Enable user' : 'Disable user';
+            buttonElement.querySelector('.material-symbols-outlined').textContent = disable ? 'person_check' : 'person_off';
+            showToast('User ' + userName + (disable ? ' disabled' : ' enabled'), 'success');
         } else {
-            // Reset button on error
-            if (buttonElement) {
-                var icon = buttonElement.querySelector('.material-symbols-outlined');
-                icon.textContent = 'delete';
-                buttonElement.classList.remove('delete-confirm');
-            }
-            showToast(data.message || 'Failed to delete user', 'error');
+            showToast(data.error || data.message || 'Failed to change the user', 'error');
         }
     } catch (error) {
-        console.error('Error deleting user:', error);
-        // Reset button on error
-        if (buttonElement) {
-            var icon = buttonElement.querySelector('.material-symbols-outlined');
-            icon.textContent = 'delete';
-            buttonElement.classList.remove('delete-confirm');
-        }
-        showToast('Failed to delete user. Please try again.', 'error');
+        console.error('Error changing user:', error);
+        showToast('Failed to change the user. Please try again.', 'error');
     }
 }
 

@@ -33,11 +33,6 @@ server rebuilds the session before any HTML is rendered: no redirect, no provide
   `random_bytes`, base64url, validator stored hashed, `expires_at` computed by the database.
   Copy its approach. It is one-time by design, so a remember token needs its own table and
   rotation.
-- **The hint cookie.** `establish()` sets a non-expiring cookie named by
-  `Session::hintCookieName()` (`SESSION_HINT_COOKIE` in `app/config/constants.ini`, default
-  `zero_user_id`) holding the plaintext user id. Nothing in core or the site's modules reads
-  it; `core/modules/Push`, the last reader, now takes the id from the session only. It is not
-  authentication and must not become it.
 - **Persistent login by configuration.** `SESSION_LIFECYCLE_HANDOFF.md` records
   `session.cookie_lifetime = 604800` and `session.gc_maxlifetime = 604800` on the live host
   (measured 2026-08-16): the session cookie already survives browser restarts for seven days.
@@ -62,7 +57,7 @@ Standard selector + validator remember-me:
 - `Path=/; HttpOnly; Secure; SameSite=Lax; Expires=<configurable, default 90 days>`. Lax, not
   Strict, so the cookie is sent on a top-level navigation from another site.
 - Name: the original draft used `unisolu_remember`. Core serves more than one site, so the
-  name should come from configuration, as `SESSION_HINT_COOKIE` does.
+  name should come from configuration.
 - Selector + validator rather than one opaque token: the selector is the indexed lookup key,
   the validator is the secret and only its hash is stored.
 - Not an HMAC-signed user id: that cannot be revoked per device, rotated on use, or detect
@@ -147,14 +142,6 @@ no change of its own.
   remember cookie.
 - **Revoke** in `Auth::logout()`, before `Session::end()`.
 
-### 4. The hint cookie
-
-Remove the `setcookie(self::hintCookieName(), …)` call from `Session::establish()` and
-`hintCookieName()` with it, once it is confirmed that no client outside the PHP code (a
-mobile app, an integration) reads the cookie. It is `HttpOnly`, so page script cannot.
-`core/tests/SessionHintCookieTest.php` covers the current behaviour and goes with it. Expire
-leftover cookies for a couple of weeks after.
-
 ### 5. Config
 
 `app/config/constants.ini` (and the templates in `core/skeleton/`):
@@ -169,7 +156,6 @@ REMEMBER_TOKEN_LIFETIME=7776000
 1. Ship the table. `CREATE TABLE IF NOT EXISTS`.
 2. Ship the code. A user without a remember cookie behaves as today and gets one at their
    next sign-in.
-3. Remove the hint cookie (§4).
 
 No data migration.
 

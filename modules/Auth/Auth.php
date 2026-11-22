@@ -186,6 +186,11 @@ class Auth extends \Zero\Core\Module {
         // auto-linking on email is automatic rather than something each path
         // has to remember.
         $user = $this->findOrCreateUser($_SESSION['user']);
+        if ($user->isDisabled()) {
+            // The provider proved the address, but the account is closed
+            Session::end();
+            throw new \Zero\Core\Exception\HTTPError(403, 'This account is disabled.');
+        }
         Session::establish($user, $_SESSION['user']);
 
         // Persist the provider's OAuth tokens so the server can refresh access
@@ -605,7 +610,9 @@ class Auth extends \Zero\Core\Module {
         if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $user = User::findByEmail($email);
 
-            if ($user && (int) $user->verified === 1) {
+            if ($user && $user->isDisabled()) {
+                // A disabled account gets no link. The page answers as for any address.
+            } elseif ($user && (int) $user->verified === 1) {
                 if ($this->throttle($user->id, 'login')) {
                     $this->sendLoginLink($user);
                 }
@@ -740,7 +747,7 @@ class Auth extends \Zero\Core\Module {
         }
 
         $user = User::find($userId);
-        if (!$user) {
+        if (!$user || $user->isDisabled()) {
             $this->respond($this->viewPath . 'token-invalid.php');
             return;
         }
@@ -806,7 +813,7 @@ class Auth extends \Zero\Core\Module {
         include $this->viewPath . 'email/login.php';
         $body = ob_get_clean();
 
-        Mail::sendEmailTo($user->email, sprintf(AUTH_EMAIL_LOGIN_SUBJECT, SITE_SHORT_NAME), $body);
+        Mail::sendEmailTo($user->email, \Zero\Core\Strings::fill(AUTH_EMAIL_LOGIN_SUBJECT, SITE_SHORT_NAME), $body);
     }
 
     private function loadAdapter($via = null)

@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `name` varchar(191) DEFAULT NULL,
   `email` varchar(254) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
   `verified` tinyint(1) NOT NULL DEFAULT 0,
+  `disabled` tinyint(1) NOT NULL DEFAULT 0,
   `pic` varchar(512) DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
@@ -248,19 +249,6 @@ CREATE TABLE IF NOT EXISTS `push_notification_clicks` (
   KEY `idx_notification_id` (`notification_id`),
   KEY `idx_user_id` (`user_id`),
   KEY `idx_clicked_at` (`clicked_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- ws_tokens: short-lived websocket tokens. Written by a site's Ws module; named here because Admin's account delete clears an account's rows. Owner: site (Ws), read by Admin
-CREATE TABLE IF NOT EXISTS `ws_tokens` (
-  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `user_id` int(10) unsigned NOT NULL,
-  `token` varchar(64) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `expires_at` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `token` (`token`),
-  KEY `idx_token` (`token`),
-  KEY `idx_expires` (`expires_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- entity_type: one row per entity type. Owner: entity framework (Zero\Entity\Entity)

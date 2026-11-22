@@ -157,7 +157,7 @@ class ModulesTest extends TestCase
         foreach (['Auth', 'User', 'Admin', 'AccessRequest'] as $name) {
             $this->assertSame('required', Modules::tier($name), $name);
         }
-        foreach (['Sitemap', 'Push', 'Entity'] as $name) {
+        foreach (['Push', 'Entity'] as $name) {
             $this->assertSame('optional', Modules::tier($name), $name);
         }
         foreach (['Module', 'HelloWorld', 'Test'] as $name) {
@@ -169,11 +169,11 @@ class ModulesTest extends TestCase
     public function testEnabledDefaultsWithoutIni(): void
     {
         $this->make($this->site, 'Lists');
-        $this->make($this->bundled, 'Auth', 'Sitemap', 'HelloWorld');
+        $this->make($this->bundled, 'Auth', 'Push', 'HelloWorld');
         $this->configure($this->ini);
 
         $this->assertTrue(Modules::enabled('Auth'));
-        $this->assertTrue(Modules::enabled('Sitemap'));
+        $this->assertTrue(Modules::enabled('Push'));
         $this->assertFalse(Modules::enabled('HelloWorld'));
         $this->assertTrue(Modules::enabled('Lists'));
         $this->assertFalse(Modules::enabled('Nope'));
@@ -183,11 +183,11 @@ class ModulesTest extends TestCase
     public function testEnabledFollowsIni(): void
     {
         $this->make($this->site, 'Lists');
-        $this->make($this->bundled, 'Auth', 'Sitemap', 'HelloWorld');
-        $this->writeIni("[enabled]\nSitemap = off\nHelloWorld = on\nAuth = off\nLists = off\nGhost = off\n");
+        $this->make($this->bundled, 'Auth', 'Push', 'HelloWorld');
+        $this->writeIni("[enabled]\nPush = off\nHelloWorld = on\nAuth = off\nLists = off\nGhost = off\n");
         $this->configure($this->ini);
 
-        $this->assertFalse(Modules::enabled('Sitemap'));
+        $this->assertFalse(Modules::enabled('Push'));
         $this->assertTrue(Modules::enabled('HelloWorld'));
         $this->assertTrue(Modules::enabled('Auth'));
         $this->assertFalse(Modules::enabled('Lists'));

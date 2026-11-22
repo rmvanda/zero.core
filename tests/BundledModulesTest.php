@@ -14,7 +14,7 @@ use Zero\Core\Modules;
  */
 class BundledModulesTest extends TestCase
 {
-    private const BUNDLED = ['Auth', 'User', 'Admin', 'AccessRequest', 'Sitemap', 'Push', 'Entity', 'Module', 'HelloWorld', 'Test'];
+    private const BUNDLED = ['Auth', 'User', 'Admin', 'AccessRequest', 'Push', 'Entity', 'Module', 'HelloWorld', 'Test'];
 
     private string $root;
     private ?string $tmp = null;

@@ -1,7 +1,7 @@
 <div class="login-container">
     <div class="login-box register-box">
         <h2>Confirm sign-in</h2>
-        <p class="register-sent"><?= htmlspecialchars(sprintf(AUTH_TOKEN_CONFIRM_LEAD, SITE_SHORT_NAME), ENT_NOQUOTES) ?></p>
+        <p class="register-sent"><?= htmlspecialchars(\Zero\Core\Strings::fill(AUTH_TOKEN_CONFIRM_LEAD, SITE_SHORT_NAME), ENT_NOQUOTES) ?></p>
 
         <?php if (!empty($this->account)): ?>
             <p class="register-sent">You are about to sign in as

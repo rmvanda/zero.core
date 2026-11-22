@@ -169,13 +169,31 @@ class Admin extends AdminResponse {
     // ============================================================================
 
     /**
-     * Delete a user
-     * POST /admin/delete-user
+     * Disable a user: the account cannot sign in, and its open sessions end
+     * at their next request. Nothing is deleted. An account is never deleted
+     * from a page; its data stays.
+     * POST /admin/disable-user
      */
-    #[AuditLog('user_delete', includeParams: true)]
+    #[AuditLog('user_disable', includeParams: true)]
     #[AllowedMethods('POST')]
     #[RequiredParams(['user_id'])]
-    public function deleteUser() {
+    public function disableUser() {
+        $this->setUserDisabled(true);
+    }
+
+    /**
+     * Let a disabled user sign in again
+     * POST /admin/enable-user
+     */
+    #[AuditLog('user_enable', includeParams: true)]
+    #[AllowedMethods('POST')]
+    #[RequiredParams(['user_id'])]
+    public function enableUser() {
+        $this->setUserDisabled(false);
+    }
+
+    /** The work of disableUser() and enableUser(). Protected: it is not an endpoint. */
+    protected function setUserDisabled(bool $disabled) {
         $userId = (int)$_POST['user_id'];
 
         if (!$userId) {
@@ -183,32 +201,24 @@ class Admin extends AdminResponse {
             return;
         }
 
-        // Prevent deleting yourself
-        if ($userId == \Zero\Core\Session::userId()) {
-            $this->error('You cannot delete your own account');
+        // Prevent disabling yourself
+        if ($disabled && $userId == \Zero\Core\Session::userId()) {
+            $this->error('You cannot disable your own account');
             return;
         }
 
-        $db = \Zero\Core\Database::getConnection();
+        $user = \Zero\Core\Access\User::find($userId);
+        if (!$user) {
+            $this->error('No such user', ['code' => 404]);
+            return;
+        }
 
         try {
-            $db->beginTransaction();
-
-            // The cascade lives in UserAdmin: there are no foreign keys onto
-            // `users`, so UserAdmin's table list, with what Zero\Core\Access\User::delete()
-            // clears, IS the guarantee, and it needs a home
-            // with a test rather than a controller body. Previously this method
-            // cleared user_settings, user_group_member, api_tokens and oauth_token
-            // but not user_profile or auth_token, both added after it was written.
-            (new \Zero\Module\Admin\Model\UserAdmin($db))->delete($userId);
-
-            $db->commit();
-
-            $this->success('User deleted successfully', ['user_id' => $userId]);
+            $disabled ? $user->disable() : $user->enable();
+            $this->success($disabled ? 'User disabled' : 'User enabled', ['user_id' => $userId, 'disabled' => $disabled]);
         } catch (\Exception $e) {
-            $db->rollBack();
-            \Zero\Core\Console::error("Error deleting user: " . $e->getMessage());
-            $this->error('Failed to delete user: ' . $e->getMessage());
+            \Zero\Core\Console::error("Error changing user $userId: " . $e->getMessage());
+            $this->error('Failed to change the user: ' . $e->getMessage());
         }
     }
 

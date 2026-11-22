@@ -29,7 +29,7 @@ class User extends Model implements Holder
     protected static string $table = 'users';
 
     /** id/created_at/updated_at are owned by the DDL and deliberately absent. */
-    protected static array $columns = ['name', 'email', 'verified', 'pic'];
+    protected static array $columns = ['name', 'email', 'verified', 'disabled', 'pic'];
 
     /**
      * Canonical form of an address, for both storage and lookup.
@@ -160,6 +160,41 @@ class User extends Model implements Holder
     }
 
     /**
+     * Is this account disabled? A disabled account cannot sign in, by a
+     * provider, by an email link or by an API token, and a session it has
+     * open ends at its next request (Session::endIfDisabled()). Its data stays.
+     *
+     * Read it on a user loaded from the database (find(), findByEmail()).
+     * Session::user() is built from the session and does not carry the flag.
+     */
+    public function isDisabled(): bool
+    {
+        return (int) ($this->disabled ?? 0) === 1;
+    }
+
+    /** Disable the account. This is how an account is closed: nothing is deleted. */
+    public function disable(): void
+    {
+        $this->disabled = 1;
+        $this->save();
+    }
+
+    /** Let a disabled account sign in again. */
+    public function enable(): void
+    {
+        $this->disabled = 0;
+        $this->save();
+    }
+
+    /** Is the account with this id disabled? One query, for a caller that holds only an id. */
+    public static function isDisabledId(int $id): bool
+    {
+        $stmt = Database::getConnection()->prepare("SELECT disabled FROM users WHERE id = ?");
+        $stmt->execute([$id]);
+        return (int) $stmt->fetchColumn() === 1;
+    }
+
+    /**
      * Delete the account and everything core keeps about it: its group
      * memberships, the permissions granted to it, its settings and its
      * profile. No foreign key does any of this.
@@ -168,6 +203,9 @@ class User extends Model implements Holder
      * delete. The CALLER owns the transaction.
      *
      * Do not call it on Session::user(): the row goes and the session stays.
+     *
+     * No page calls this. An admin closes an account with disable(), and the
+     * account's data stays. delete() is for tests and for a manual clean-up.
      */
     public function delete(): void
     {

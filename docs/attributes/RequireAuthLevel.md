@@ -56,7 +56,6 @@ would open the endpoint:
 |---|---|---|
 | `User` (core) | `permissions()`, `permission()` | after `#[RequireLogin]` |
 | `Test` (core) | class level, and `auth()` | dev/diagnostic module |
-| `Sitemap` (core) | class level | the sole gate |
 | `HelloWorld` (core) | `secureHello()` | demo endpoint |
 | `Sandbox` (site) | class level | the site's scratch endpoints |
 

@@ -388,12 +388,12 @@ final class BareSiteTest extends TestCase
         $ini = self::$siteDir . '/app/modules.ini';
         $before = file_get_contents($ini);
         try {
-            // Sitemap is #[RequireAuthLevel(1)] and a new account has level 0: raise it
-            $id = (int) $this->dbValue("SELECT id FROM users WHERE email='" . self::$email . "'");
-            $this->request('/', 'GET', [], null, '(\\Zero\\Core\\Access\\User::find(' . $id . '))->setSetting("auth.level", "1");');
-            $this->assertSame(200, $this->page('/sitemap', 'GET', [], $sid)['status'], 'Sitemap is on by default');
-            file_put_contents($ini, $before . "\n[enabled]\nSitemap = off\n");
-            $this->assertSame(404, $this->page('/sitemap', 'GET', [], $sid)['status']);
+            // HelloWorld is an example module: off by default, and its page is public
+            $this->assertSame(404, $this->page('/hello-world', 'GET', [], $sid)['status'], 'HelloWorld is off by default');
+            file_put_contents($ini, $before . "\n[enabled]\nHelloWorld = on\n");
+            $this->assertSame(200, $this->page('/hello-world', 'GET', [], $sid)['status']);
+            file_put_contents($ini, $before . "\n[enabled]\nHelloWorld = off\n");
+            $this->assertSame(404, $this->page('/hello-world', 'GET', [], $sid)['status']);
             $this->assertSame(200, $this->page('/')['status']);
         } finally {
             file_put_contents($ini, $before);

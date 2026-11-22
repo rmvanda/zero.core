@@ -14,7 +14,7 @@
             <h2>Login Required</h2>
             <p class="login-required-message">You must be logged in to view this page.</p>
         <?php else: ?>
-            <h2><?= htmlspecialchars(sprintf(USER_LOGIN_HEADING, SITE_SHORT_NAME), ENT_NOQUOTES) ?></h2>
+            <h2><?= htmlspecialchars(\Zero\Core\Strings::fill(USER_LOGIN_HEADING, SITE_SHORT_NAME), ENT_NOQUOTES) ?></h2>
         <?php endif; ?>
 
         <?php if ($googlePartial = $this->framePiecePath('_google-signin')) { include $googlePartial; } ?>

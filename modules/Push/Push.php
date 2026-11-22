@@ -38,7 +38,7 @@ use \Zero\Module\Push\Lib\PushHelper;
  * The id now comes from the session alone. Do not reintroduce a caller-supplied
  * fallback: a service worker that has lost its session needs a real credential,
  * not an asserted id.
- * The hint cookie's name now comes from `Session::hintCookieName()`, and nothing here reads it.
+ * Core sets no such cookie: Session::establish() writes the session and nothing else.
  */
 class Push extends \Zero\Core\Module {
 

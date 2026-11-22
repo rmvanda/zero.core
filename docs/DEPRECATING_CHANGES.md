@@ -251,9 +251,43 @@ Also moved: `core/SQLAdapter.php` to `core/deprecated/SQLAdapter.php` (nothing l
 
 The endpoint checks that a parent Composer project provides `Google_Client`, which only means something on a site with such a project. It is a Sandbox endpoint (site module) with the gate it had in Test.
 
-### The `unisolu_user_id` cookie name — now `Session::hintCookieName()`
+### Deleting a user from Admin (`/admin/delete-user`, `UserAdmin`) — REPLACED by disabling
 
-The "returning user" hint cookie is named by the `SESSION_HINT_COOKIE` constant (`app/config/constants.ini`) and is `zero_user_id` when the site defines none. A site that wants the old name sets `SESSION_HINT_COOKIE="unisolu_user_id"`.
+An account is disabled, never deleted. `users.disabled` is the flag (`core/sql/migrations/users_disabled.sql`
+adds it to an older site). `$user->disable()` and `$user->enable()` set it, and the Admin users screen
+calls `/admin/disable-user` and `/admin/enable-user`. A disabled account cannot sign in, its open session
+ends at the next request, and its data stays.
+
+`/admin/delete-user` and `Zero\Module\Admin\Model\UserAdmin` are gone. `UserAdmin` deleted the user's rows
+from `auth_token`, `api_tokens`, `oauth_token`, `ws_tokens` and `push_subscriptions` by table name, and two
+of those tables belong to other modules. Admin names no table it does not own. To remove an account for
+good, delete its rows in the database by hand; `$user->delete()` clears core's own tables.
+
+`ws_tokens` is no longer in `core.sql`. It is the site Ws module's table (`modules/Ws/sql/ws_tokens.sql`).
+
+### The `Sitemap` module — ARCHIVED to `core/deprecated/modules/Sitemap/`
+
+Core does not ship a `Sitemap` module, and `/sitemap` answers 404. The module did not find a site's
+pages: `Sitemap::xml()` held a fixed list written for one site (`/zero-framework`, `/ruin-the-web`), and
+the HTML page needed auth level 1. The optional modules are `Push` and `Entity`. The code is kept in
+`core/deprecated/modules/Sitemap/`, where `Modules` does not look. A site may delete `Sitemap` lines from
+its `app/modules.ini` and a `/sitemap` link from its footer.
+
+### The "returning user" hint cookie, `Session::hintCookieName()`, `SESSION_HINT_COOKIE` — REMOVED
+
+`Session::establish()` set a cookie that never expired and held the user's id in plain text. Its name
+was `unisolu_user_id`, later the `SESSION_HINT_COOKIE` constant (default `zero_user_id`).
+
+Why it existed: the Push module read it. A service worker that had lost its session still called
+`/push/subscribe`, `/push/unsubscribe` and `/push/status`, and those endpoints took the user id from
+this cookie when there was no session. That made a value the client can set into proof of identity,
+so the fallback was removed on 2026-08-16 and the Push endpoints got `#[RequireLogin]`. After that
+nothing read the cookie.
+
+Core sets no such cookie. `Session::hintCookieName()` and its test are gone, and a site may delete
+`SESSION_HINT_COOKIE` from its `constants.ini`. A browser that signed in before the removal keeps its
+old cookie; nothing reads it. Do not bring it back: a client that has lost its session needs a real
+credential (see `core/SESSION_IMPROVEMENTS.md`, the remember-me cookie), not an id it asserts.
 
 ### Frame partials `_oauth-brand.php`, `_oauth-buttons.php`, `_google-signin.php` — now found through `Response::framePiecePath()`
 
@@ -1313,16 +1347,6 @@ push notifications. `unsubscribe` was the matching deregistration primitive.
 All four now carry `#[RequireLogin]`. `vapidKey()` stays public — a VAPID *public* key is
 public by definition, and `push-manager.js` fetches it on anonymous page loads — which is why
 the gate is per-method rather than class-level.
-
-### `unisolu_user_id` cookie — UNUSED, safe to delete
-
-`establish()` still sets it; **nothing reads it.** Its only reader was `modules/Push`,
-which resolved the acting user from it: a client-settable plaintext id trusted as proof of
-identity. That was removed on 2026-08-16.
-
-It was never authentication. Do not add a reader. The cookie is named by
-`Session::hintCookieName()` (see "Core names no site" above), and removing the `setcookie()`
-call in `Session::establish()` (`core/Session.php`) is an open cleanup.
 
 ### `$_SESSION['framePath']` — REMOVED, replaced by `Response::adoptFrameFrom()`
 

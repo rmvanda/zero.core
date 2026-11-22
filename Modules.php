@@ -16,7 +16,7 @@ namespace Zero\Core;
  * from those defaults:
  *
  *   [enabled]
- *   Sitemap = off
+ *   Push = off
  *   HelloWorld = on
  *
  *   [order]
@@ -25,7 +25,7 @@ namespace Zero\Core;
 class Modules
 {
     private const REQUIRED = ['Auth', 'User', 'Admin', 'AccessRequest'];
-    private const OPTIONAL = ['Sitemap', 'Push', 'Entity'];
+    private const OPTIONAL = ['Push', 'Entity'];
     private const EXAMPLE = ['Module', 'HelloWorld', 'Test'];
 
     /** @var string[] Existing roots in priority order, each with a trailing slash */

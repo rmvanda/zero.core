@@ -33,7 +33,3 @@ older than an hour) are removed at the start of the next run. `BareSiteLockTest`
 
 ## Known gaps on a bare site
 
-- `Sitemap` is `#[RequireAuthLevel(1)]` and a new account has auth level 0, so `/sitemap` answers
-  401 for a signed-in user until the site raises that account's `auth.level`. The test raises it.
-  Its page list also names pages a bare site does not have (`/about`, `/help`, `/zero-framework`,
-  `/ruin-the-web`).

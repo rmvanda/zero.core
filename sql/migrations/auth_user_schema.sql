@@ -35,11 +35,9 @@
 --
 -- NOTE: there is not a single FOREIGN KEY among these tables. Every user_id is
 -- an unenforced reference, and the two int types do not even agree (see below).
--- Deleting an account is a hand-written cascade in Admin::deleteUser()
--- (core/modules/Admin/Admin.php): user_settings, user_group_member, api_tokens,
--- oauth_token, then the users row. It does NOT clear user_profile or auth_token
--- — both were added after that method was written. Orphans are possible and are
--- not the DB's problem.
+-- No page deletes an account: Admin disables it (users.disabled) and its rows
+-- stay. Zero\Core\Access\User::delete() clears core's own tables for a test or
+-- a manual clean-up. Orphans are possible and are not the DB's problem.
 
 
 -- ---------------------------------------------------------------------------

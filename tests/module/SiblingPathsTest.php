@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
  */
 class SiblingPathsTest extends TestCase
 {
-    private const BUNDLED = 'Auth|User|Admin|AccessRequest|Sitemap|Push|Entity|Module|HelloWorld|Test';
+    private const BUNDLED = 'Auth|User|Admin|AccessRequest|Push|Entity|Module|HelloWorld|Test';
 
     public function testNoSiteModuleFileNamesABundledModuleAsASibling(): void
     {

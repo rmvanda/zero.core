@@ -133,7 +133,7 @@ un-shelving condition are in `core/docs/attributes/RequireAuthLevel.md`.
   Both also open with a hand-written `if (!isset($_SESSION['user_id']))` check that the
   attribute already covers; delete it in the same change.
 - The other uses are example or test modules: `core/modules/Test` (class and one method),
-  `core/modules/Sitemap` (class), `HelloWorld::secureHello()`, and the site's
+  `HelloWorld::secureHello()`, and the site's
   `modules/Sandbox` (class). Once all of these move, the attribute has no callers.
 - `RequireAuthLevel::handler()` does not delegate to `RequireLogin`, so it does not require a
   verified email. No module pairs it with `#[AllowWithToken]`, so this is latent. If the

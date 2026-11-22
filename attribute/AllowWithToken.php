@@ -98,6 +98,11 @@ class AllowWithToken {
                 throw new HTTPError(401, "Token owner not found");
             }
 
+            if ($user->isDisabled()) {
+                Console::warn("AllowWithToken: token owner is disabled");
+                throw new HTTPError(401, "Token owner is disabled");
+            }
+
             \Zero\Core\Session::establish($user);
 
             // Flag so downstream code can distinguish token-based auth

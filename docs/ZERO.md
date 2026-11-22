@@ -155,7 +155,7 @@ Mail::sendEmailToAdmin($subject, $message);                  // to NOTIFY_EMAIL
 - **Paths.** Core never builds a module path from `MODULE_PATH`: it asks `Modules::path()`, which accepts any spelling of a name (`ApiConfig`, `apiconfig`, `api-config`), and `Modules::name()` for the real directory name.
 - **Clashes.** Two roots holding the same name (compared ignoring case and hyphens) is a configuration error: `Application::run()` logs it and the request fails with a 500.
 
-The ten modules every site gets (`Auth`, `User`, `Admin`, `AccessRequest`, `Sitemap`, `Push`, `Entity`, `Module`, `HelloWorld`, `Test`) live in `core/modules/`; every other module lives in the site's `modules/`. Their namespaces (`Zero\Module\Auth`) and URLs are the same wherever the folder is.
+The nine modules every site gets (`Auth`, `User`, `Admin`, `AccessRequest`, `Push`, `Entity`, `Module`, `HelloWorld`, `Test`) live in `core/modules/`; every other module lives in the site's `modules/`. Their namespaces (`Zero\Module\Auth`) and URLs are the same wherever the folder is.
 
 `core/modules/Module/mkmod` writes a new module into the site's `modules/`, never into `core/` (`--dest <dir>` overrides), and refuses a name a bundled module has. Tests that check every module live in `core/tests/module/` and walk `Modules::all()`.
 
@@ -164,7 +164,7 @@ The ten modules every site gets (`Auth`, `User`, `Admin`, `AccessRequest`, `Site
 | Tier | Modules | Default |
 |---|---|---|
 | required | `Auth`, `User`, `Admin`, `AccessRequest` | always on |
-| optional | `Sitemap`, `Push`, `Entity` | on |
+| optional | `Push`, `Entity` | on |
 | site | every module not named here | on |
 | example | `Module`, `HelloWorld`, `Test` | off |
 
@@ -173,7 +173,7 @@ The ten modules every site gets (`Auth`, `User`, `Admin`, `AccessRequest`, `Site
 ```ini
 ; Only departures from the defaults.
 [enabled]
-Sitemap = off
+Push = off
 HelloWorld = on
 
 [order]
@@ -241,6 +241,8 @@ Wording is constants too, from `.ini` files read by `Zero\Core\Strings` with `IN
 - **When a module's strings load.** `defineConstants()` loads the request's module and `Module::__construct()` loads the module being built (a submodule loads its parent's). Code that needs another module's wording calls `Strings::loadModule('Name')`. A module that is off loads nothing.
 
 Write each value wrapped in double quotes: `KEY="We'll email you a link; it says "hi" = done."`. Inside the quotes a single quote, `=`, `;` and double quotes are literal, and a backslash is a backslash. Without the quotes `;` starts a comment and surrounding spaces are dropped.
+
+A string that takes a value holds `%s` where the value goes (`USER_LOGIN_HEADING="Sign in to %s"`). Fill it with `Strings::fill(USER_LOGIN_HEADING, SITE_SHORT_NAME)`, never with `sprintf()`: `fill()` replaces `%s` and leaves every other percent sign as written, so a site's wording cannot make a page fail.
 
 ### Key Constants
 

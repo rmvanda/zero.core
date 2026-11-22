@@ -148,10 +148,6 @@ mid-session denies on the very next request. Ask `Session::can($key)` /
 `$user->can($key)` for a grant, `Session::user()?->authLevel()` for the level, and
 `$user->settings()` for the whole map.
 
-Also sets a non-expiring hint cookie named by `Session::hintCookieName()` (`SESSION_HINT_COOKIE`, default `zero_user_id`; Secure+HttpOnly) holding the **plaintext** user
-id — a "probably returning user" hint only. It is not authentication and must never be trusted as
-such.
-
 `$_SESSION['return_url']` is set by `#[RequireLogin]` and consumed once — by `complete()` on the
 OAuth path and by `token()` on the magic-link path. Both consumers emit it as a `Location`, so both
 re-check it with `Request::isSiteRelative()` and fall back to `/`, even though the attribute already
