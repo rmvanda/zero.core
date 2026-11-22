@@ -414,6 +414,7 @@ final class BareSiteTest extends TestCase
             '/admin/groups' => 'Groups',
             '/admin/groups/form' => 'New group',
             '/admin/modules' => 'Modules',
+            '/admin/audit' => 'Audit Log',
             '/admin/permissions' => 'allow.admin',
             '/admin/permissions/holders/allow/admin' => self::$email,
             '/admin/firewall' => 'Firewall',
@@ -513,6 +514,17 @@ final class BareSiteTest extends TestCase
         $own = $this->page('/admin/permissions/revoke', 'POST', ['key' => 'allow.admin', 'user_ids' => [$id]], $sid);
         $this->assertSame(409, $own['status']);
         $this->assertSame(200, $this->page('/admin', 'GET', [], $sid)['status']);
+
+        // what was just done is in the audit log, and the log filters by event and by user
+        $audit = $this->page('/admin/audit', 'GET', [], $sid);
+        foreach (['group_save', 'permission_bulk_grant', 'admin_permission_change', 'user_setting_change'] as $event) {
+            $this->assertStringContainsString($event, $audit['body'], "$event was recorded");
+        }
+        $this->assertStringContainsString('href="/admin/users/edit/' . $id . '"', $audit['body'], 'an event links to its user');
+        $one = $this->page('/admin/audit?event=group_delete&user=' . $id, 'GET', [], $sid);
+        $this->assertStringContainsString('of 1 events', $one['body']);
+        $this->assertStringContainsString('of 0 events', $this->page('/admin/audit?event=group_delete&user=999999', 'GET', [], $sid)['body']);
+        $this->assertSame(404, $this->page('/admin/entity/events', 'GET', [], $sid)['status'], 'the log is not under Entities');
 
         // an admin cannot disable the account they are signed in with
         $self = $this->page('/admin/users/disable', 'POST', ['user_id' => $id], $sid);

@@ -67,6 +67,9 @@ attribute. Leave `includeParams` off on high-traffic endpoints.
 
 ## Reading the log
 
+The Admin module's Audit Log screen, `/admin/audit`, lists the events with filters for the
+event, the user, the IP address, the dates and the detail text.
+
 Events are entities; query the pivoted `event_view`:
 
 ```sql

@@ -17,13 +17,3 @@
     width: 30px;
 }
 
-/* Manage Users - a previous / next link with nowhere to go */
-.pagination-btn.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.pagination-btn.disabled:hover {
-    background: rgba(var(--surface-bg-rgb), 0.3);
-    border-color: var(--border-color);
-}

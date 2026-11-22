@@ -202,9 +202,16 @@
     border-color: var(--accent-primary);
 }
 
-.pagination-btn:disabled {
+.pagination-btn:disabled,
+.pagination-btn.disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+/* A previous / next link with nowhere to go */
+.pagination-btn.disabled:hover {
+    background: rgba(var(--surface-bg-rgb), 0.3);
+    border-color: var(--border-color);
 }
 
 .pagination-current {

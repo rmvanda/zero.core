@@ -33,6 +33,12 @@ submodules of Admin (`core/modules/Admin/submodule/`), as Firewall is, each with
 assets and dashboard card. `POST /admin/update-permission` took a `kind` and an `action` and
 guessed between a capability and a setting; the two have separate endpoints.
 
+### `/admin/entity/events` (`EntityAdmin::events()`) — MOVED to `/admin/audit`
+
+The event log is Admin's own Audit Log screen (`core/modules/Admin/submodule/Audit/`), with the
+same filters and one more, the user. The Entity module's admin holds entity types and records
+only.
+
 ### A failed admin action redirecting with no message — REPLACED by `HTTPError`
 
 ```php

@@ -5,9 +5,8 @@ screens to the Admin module through `Admin/`.
 
 | URL | Method | |
 |-----|--------|--|
-| `/admin/entity` | `EntityAdmin::index()` | Entity types as cards, Create entity, Event logs |
+| `/admin/entity` | `EntityAdmin::index()` | Entity types as cards, Create entity |
 | `/admin/entity/manage/{label}` | `manage()` | Records of one entity type; POST creates a record |
-| `/admin/entity/events` | `events()` | Filterable event log over `event_view` |
 | `/admin/entity/create` | `create()` | GET form, POST defines a new entity type |
 | `/admin/entity/update` | `update()` | POST, inline edit of one attribute value |
 | `/admin/entity/delete` | `delete()` | POST, deletes records of one type |
@@ -15,6 +14,7 @@ screens to the Admin module through `Admin/`.
 - `model/EntityStore.php` (`Zero\Module\Entity\Model\EntityStore`) reads the EAV tables
   (`entity_type`, `entity`) through the PDO it is given. Its namespace is `Zero\Module\Entity`,
   distinct from the entity framework's `Zero\Entity` in `entity/`.
+- The event log is not here: it is the Admin module's own Audit Log screen, `/admin/audit`.
 - `index()` shows "The entity tables are not installed on this site." when `entity_type` does
   not exist.
 - `update` and `delete` accept POST only and require their parameters; every offering route

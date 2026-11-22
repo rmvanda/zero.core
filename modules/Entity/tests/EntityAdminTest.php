@@ -18,7 +18,7 @@ class EntityAdminTest extends TestCase
         $this->assertTrue(class_exists(EntityAdmin::class));
         $this->assertTrue(is_subclass_of(EntityAdmin::class, AdminResponse::class));
 
-        foreach (['index', 'manage', 'events', 'create', 'update', 'delete'] as $method) {
+        foreach (['index', 'manage', 'create', 'update', 'delete'] as $method) {
             $this->assertTrue(method_exists(EntityAdmin::class, $method), "EntityAdmin::{$method}() exists");
         }
 
@@ -88,31 +88,5 @@ class EntityAdminTest extends TestCase
     {
         $args = $method->getAttributes(AllowedMethods::class)[0]->getArguments();
         return array_map('strtoupper', (array) $args[0]);
-    }
-
-    public function testEventsWithoutEntityTablesShowsTheMessage(): void
-    {
-        $missing = new \PDOException("Table 'entity_type' doesn't exist");
-        $missing->errorInfo = ['42S02', 1146, "Table 'entity_type' doesn't exist"];
-        $pdo = $this->createStub(\PDO::class);
-        $pdo->method('query')->willThrowException($missing);
-
-        $admin = new class($pdo) extends EntityAdmin {
-            public $builtView;
-            public function __construct(private \PDO $pdo) {}
-            protected function store(): EntityStore { return new EntityStore($this->pdo); }
-            protected function build($view = "") { $this->builtView = $view; }
-        };
-
-        $admin->events();
-
-        $this->assertFalse($admin->tablesInstalled);
-        $this->assertStringEndsWith('/view/events.php', $admin->builtView);
-
-        ob_start();
-        \Closure::bind(function ($view) { include $view; }, $admin, get_class($admin))($admin->builtView);
-        $html = ob_get_clean();
-        $this->assertStringContainsString('The entity tables are not installed on this site.', $html);
-        $this->assertStringNotContainsString('Filter Events', $html);
     }
 }

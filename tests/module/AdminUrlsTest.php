@@ -22,6 +22,7 @@ class AdminUrlsTest extends TestCase
         // screens (see DEPRECATING_CHANGES.md).
         $oldUrls = [
             '/admin/manage/',
+            '/admin/entity/events',
             '/admin/set-module',
             '/admin/update-permission',
             '/admin/disable-user',

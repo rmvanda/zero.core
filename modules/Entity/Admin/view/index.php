@@ -11,12 +11,6 @@
             <span class="admin-card-title">Create Entity</span>
         </a>
 
-        <!-- Event Logs Card -->
-        <a href="/admin/entity/events" class="btn-primary admin-card">
-            <span class="material-symbols-outlined icon-lg">list_alt</span>
-            <span class="admin-card-title">Event Logs</span>
-        </a>
-
         <?php foreach ($this->entityTypes as $type): ?>
         <a href="/admin/entity/manage/<?= htmlspecialchars($type['label']) ?>" class="btn-primary admin-card">
             <span class="material-symbols-outlined icon-lg">

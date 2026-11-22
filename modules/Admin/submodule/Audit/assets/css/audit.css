@@ -1,0 +1,20 @@
+/* Admin Audit Log */
+
+.audit-table .audit-detail {
+    word-break: break-word;
+}
+
+.audit-filter-link {
+    margin-left: 0.25rem;
+    vertical-align: middle;
+    opacity: 0.6;
+    text-decoration: none;
+}
+
+.audit-filter-link:hover {
+    opacity: 1;
+}
+
+.audit-filter-link .material-symbols-outlined {
+    font-size: 1rem;
+}

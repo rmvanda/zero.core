@@ -121,16 +121,6 @@ class EntityAdmin extends AdminResponse {
     }
 
     /**
-     * Event log with filters and pagination
-     * URL: /admin/entity/events
-     */
-    public function events() {
-        $this->tablesInstalled = $this->store()->tablesInstalled();
-
-        $this->build(__DIR__ . '/view/events.php');
-    }
-
-    /**
      * The store over the site database
      */
     protected function store(): EntityStore {
