@@ -1,20 +1,38 @@
 /* Admin Audit Log */
-
-.audit-table .audit-detail {
-    word-break: break-word;
+.admin .content-wrapper .audit-summary {
+    margin-bottom: 0.5rem;
 }
 
-.audit-filter-link {
+.admin .audit-table .audit-when,
+.admin .audit-table .audit-ip {
+    font-family: var(--admin-mono);
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.admin .audit-table .audit-ip {
+    color: var(--admin-text-dim);
+}
+
+.admin .audit-table .audit-detail {
+    word-break: break-word;
+    font-size: 0.875rem;
+    color: var(--admin-text-dim);
+}
+
+.admin .audit-filter-link {
     margin-left: 0.25rem;
     vertical-align: middle;
-    opacity: 0.6;
+    color: var(--admin-text-dim);
     text-decoration: none;
 }
 
-.audit-filter-link:hover {
-    opacity: 1;
+.admin .audit-filter-link:hover {
+    color: var(--admin-accent-text);
 }
 
-.audit-filter-link .material-symbols-outlined {
+.admin .audit-filter-link .material-symbols-outlined {
     font-size: 1rem;
+    line-height: 1;
+    vertical-align: middle;
 }

@@ -1,120 +1,14 @@
 /* Manage Group Members */
-.group-info-box {
-    background: rgba(var(--surface-bg-rgb), 0.5);
-    backdrop-filter: blur(var(--surface-blur));
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin: 1.5rem 0;
+
+/* The role is a short list: it does not need half the row */
+.admin .admin-form-row .add-member-role {
+    flex: 0 1 10rem;
 }
 
-.group-info-box h3 {
-    margin-top: 0;
-    margin-bottom: 1rem;
-    color: var(--text-primary);
-}
-
-.group-info-box p {
-    margin: 0.5rem 0;
-    color: var(--text-secondary);
-}
-
-.add-member-section {
-    background: rgba(var(--surface-bg-rgb), 0.5);
-    backdrop-filter: blur(var(--surface-blur));
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin: 1.5rem 0;
-}
-
-.add-member-section h2 {
-    margin-top: 0;
-    margin-bottom: 1rem;
-    color: var(--text-primary);
-}
-
-.add-member-form .form-row {
-    display: grid;
-    grid-template-columns: 1fr 150px 150px;
-    gap: 1rem;
-    align-items: end;
-}
-
-.form-field {
-    display: flex;
-    flex-direction: column;
-}
-
-.form-field label {
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 0.5rem;
-}
-
-.form-field select,
-.form-field input {
-    padding: 0.75rem;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(var(--border-color-rgb, 255, 255, 255), 0.3);
-    border-radius: 4px;
-    color: var(--text-primary);
-    font-size: 1rem;
-    font-family: inherit;
-}
-
-.form-field select:focus,
-.form-field input:focus {
-    outline: none;
-    border-color: var(--accent-primary);
-}
-
-.role-select {
-    padding: 0.25rem 0.5rem;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(var(--border-color-rgb, 255, 255, 255), 0.3);
-    border-radius: 4px;
-    color: var(--text-primary);
+/* The role of a member, changed in place */
+.admin .admin-table .role-select {
+    min-height: 1.875rem;
+    padding-top: 0.15rem;
+    padding-bottom: 0.15rem;
     font-size: 0.875rem;
-    cursor: pointer;
-}
-
-.role-select:focus {
-    outline: none;
-    border-color: var(--accent-primary);
-}
-
-.event-badge.active {
-    background-color: rgba(76, 175, 80, 0.2);
-    color: #4caf50;
-}
-
-.event-badge.inactive {
-    background-color: rgba(158, 158, 158, 0.2);
-    color: #9e9e9e;
-}
-
-.badge {
-    display: inline-block;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    margin-left: 0.5rem;
-}
-
-.badge.system {
-    background-color: rgba(33, 150, 243, 0.2);
-    color: #2196f3;
-}
-
-.mt-2 {
-    margin-top: 2rem;
-}
-
-@media (max-width: 768px) {
-    .add-member-form .form-row {
-        grid-template-columns: 1fr;
-    }
 }

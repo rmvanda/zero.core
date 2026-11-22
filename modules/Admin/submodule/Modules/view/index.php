@@ -1,16 +1,21 @@
 <div class="content-wrapper">
-    <h1>Modules</h1>
-    <p><?= htmlspecialchars(ADMIN_MODULES_INTRO) ?></p>
+    <header class="admin-head">
+        <div>
+            <h1>Modules</h1>
+            <p class="admin-lede"><?= htmlspecialchars(ADMIN_MODULES_INTRO) ?></p>
+        </div>
+    </header>
 
     <?php if (!empty($this->saveError)): ?>
-        <div class="admin-info-box modules-error" role="alert"><?= htmlspecialchars($this->saveError) ?></div>
+        <div class="admin-info-box is-error modules-error" role="alert"><?= htmlspecialchars($this->saveError) ?></div>
     <?php endif; ?>
     <?php if (!empty($this->saved)): ?>
-        <div class="admin-info-box modules-saved" role="status"><?= htmlspecialchars(ADMIN_MODULES_SAVED) ?></div>
+        <div class="admin-info-box is-success modules-saved" role="status"><?= htmlspecialchars(ADMIN_MODULES_SAVED) ?></div>
     <?php endif; ?>
     <div class="admin-info-box modules-status" role="status" hidden></div>
 
     <?php $editable = $this->modulesHash !== null; ?>
+    <div class="admin-table-wrap">
     <table class="admin-table modules-table">
         <thead>
             <tr>
@@ -19,7 +24,7 @@
                 <th>Lives in</th>
                 <th>State</th>
                 <th>Order</th>
-                <th>Actions</th>
+                <th class="text-right">Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -27,8 +32,8 @@
                 <?php $formId = 'module-form-' . htmlspecialchars($row['name']); ?>
                 <tr class="module-row" data-module="<?= htmlspecialchars($row['name']) ?>">
                     <td><strong><?= htmlspecialchars($row['name']) ?></strong></td>
-                    <td><?= htmlspecialchars($row['tier']) ?></td>
-                    <td><?= htmlspecialchars($row['where']) ?></td>
+                    <td class="dim"><?= htmlspecialchars($row['tier']) ?></td>
+                    <td class="dim"><?= htmlspecialchars($row['where']) ?></td>
                     <td>
                         <span class="status-badge status-<?= $row['enabled'] ? 'active' : 'inactive' ?>"><?= $row['enabled'] ? 'On' : 'Off' ?></span>
                         <span class="module-state"><?= $row['departure'] ? 'changed from default' : 'default' ?></span>
@@ -65,4 +70,5 @@
             <?php endforeach; ?>
         </tbody>
     </table>
+    </div>
 </div>

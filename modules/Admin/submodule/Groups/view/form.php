@@ -1,10 +1,15 @@
 <div class="content-wrapper">
-    <h1><?= $this->group ? 'Edit Group' : 'Create New Group' ?></h1>
+    <header class="admin-head">
+        <div>
+            <h1><?= $this->group ? 'Edit group' : 'New group' ?></h1>
+            <p class="admin-lede">A group holds capabilities for everyone in it.</p>
+        </div>
+    </header>
 
-    <div class="form-container">
+    <div class="admin-panel form-container">
         <form method="post" action="<?= $this->group ? '/admin/groups/save/' . (int) $this->group->group_id : '/admin/groups/save' ?>">
             <div class="admin-form-field">
-                <label for="group_name">Group Name *</label>
+                <label for="group_name">Group name</label>
                 <input type="text"
                        name="group_name"
                        id="group_name"
@@ -21,7 +26,7 @@
                           id="description"
                           rows="4"
                           placeholder="Describe the purpose of this group..."><?= htmlspecialchars($this->group?->description ?? '') ?></textarea>
-                <small>Optional description of the group's purpose</small>
+                <small>Optional. Shown beside the group wherever it is listed.</small>
             </div>
 
             <div class="admin-form-field">
@@ -38,20 +43,20 @@
             <div class="form-actions">
                 <a href="/admin/groups" class="btn-secondary">Cancel</a>
                 <button type="submit" class="btn-primary">
-                    <?= $this->group ? 'Update Group' : 'Create Group' ?>
+                    <?= $this->group ? 'Save group' : 'Create group' ?>
                 </button>
             </div>
         </form>
 
         <?php if ($this->group): ?>
             <div class="danger-zone">
-                <h3>Danger Zone</h3>
-                <p>Permanently delete this group and all member associations.</p>
+                <h3>Delete this group</h3>
+                <p>Removes the group and takes everyone out of it. This cannot be undone.</p>
                 <form method="post" action="/admin/groups/delete/<?= (int) $this->group->group_id ?>">
                     <input type="hidden" name="hard_delete" value="1">
                     <button type="submit"
                             class="btn-danger btn-confirm-hard-delete">
-                        Permanently Delete Group
+                        Delete group
                     </button>
                 </form>
             </div>

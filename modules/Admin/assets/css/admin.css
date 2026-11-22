@@ -1,678 +1,1157 @@
+/* Admin - shared styles of every admin screen.
+ *
+ * Every rule is scoped to .admin, the element AdminResponse opens around the breadcrumbs
+ * and the view, so it outranks a site's main.css whichever of the two the frame loads first.
+ *
+ * Colours come from the site's theme through the --admin-* tokens below. Each token reads
+ * the theme's own variable and falls back to the skeleton's name for it, then to a neutral
+ * value, so a screen is legible under any main.css. Tints are mixed from those tokens;
+ * nothing below names a colour of its own.
+ */
+
+:root {
+    --admin-accent: var(--accent-primary, var(--accent, #1b5fc1));
+    --admin-text: var(--text-primary, var(--text, CanvasText));
+    --admin-text-strong: var(--text-bright, var(--text, CanvasText));
+    --admin-line: var(--border-color, var(--border, rgba(128, 128, 128, 0.35)));
+    --admin-surface: var(--surface, rgba(var(--surface-bg-rgb, 128, 128, 128), 0.28));
+    --admin-blur: var(--surface-blur, 0px);
+    --admin-radius: var(--radius, 6px);
+    --admin-mono: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+
+    --admin-success: var(--color-success, #2c974b);
+    --admin-danger: var(--color-error, #d1383f);
+    --admin-warning: var(--color-warning, #b7791f);
+
+    /* Mixed from the tokens above. Secondary text is the theme's text, thinned: legible
+       on whatever the theme puts behind it. A field is the page's own background where the
+       theme names one. */
+    --admin-text-dim: color-mix(in srgb, var(--admin-text) 68%, transparent);
+    --admin-field: var(--bg, var(--admin-lift));
+    --admin-line-soft: color-mix(in srgb, var(--admin-line) 55%, transparent);
+    --admin-lift: color-mix(in srgb, var(--admin-text) 6%, transparent);
+    --admin-accent-soft: color-mix(in srgb, var(--admin-accent) 12%, transparent);
+    --admin-accent-mid: color-mix(in srgb, var(--admin-accent) 24%, transparent);
+    --admin-accent-line: color-mix(in srgb, var(--admin-accent) 50%, transparent);
+    --admin-accent-text: color-mix(in srgb, var(--admin-accent) 80%, var(--admin-text));
+    --admin-success-text: color-mix(in srgb, var(--admin-success) 72%, var(--admin-text));
+    --admin-danger-text: color-mix(in srgb, var(--admin-danger) 78%, var(--admin-text));
+    --admin-warning-text: color-mix(in srgb, var(--admin-warning) 72%, var(--admin-text));
+}
+
+/* The page */
+
+.admin {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding-bottom: 3rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--admin-text);
+}
+
+.admin .content-wrapper {
+    max-width: none;
+}
+
+.admin .content-wrapper h1 {
+    margin: 0 0 0.25rem;
+    font-size: 1.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--admin-text-strong);
+}
+
+.admin .content-wrapper h2 {
+    margin: 0 0 0.75rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--admin-text-strong);
+}
+
+.admin .content-wrapper h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--admin-text-strong);
+}
+
+.admin .content-wrapper p {
+    margin: 0 0 0.75rem;
+    line-height: 1.5;
+}
+
+.admin a {
+    color: var(--admin-accent-text);
+}
+
+.admin :is(a, button, input, select, textarea, summary):focus-visible {
+    outline: 2px solid var(--admin-accent);
+    outline-offset: 2px;
+}
+
+/* Page head: the title and what the screen is for on the left, its actions on the right */
+
+.admin-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.75rem 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin .content-wrapper .admin-lede {
+    max-width: 44rem;
+    margin: 0;
+    color: var(--admin-text-dim);
+}
+
+.admin-head-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+/* A part of a screen under its own heading */
+
+.admin-section {
+    margin-top: 2.25rem;
+}
+
+.admin-section-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.admin .content-wrapper .admin-section-head h2 {
+    margin: 0;
+}
+
+.admin .content-wrapper .admin-note {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--admin-text-dim);
+}
+
+/* A count beside a heading */
+.admin-count {
+    margin-left: 0.35rem;
+    font-weight: 400;
+    color: var(--admin-text-dim);
+    font-variant-numeric: tabular-nums;
+}
+
+/* A capability or setting key, an IP address, an id: anything typed exactly */
+.admin .admin-key,
+.admin .content-wrapper code {
+    padding: 0;
+    background: none;
+    font-family: var(--admin-mono);
+    font-size: 0.9em;
+    color: var(--admin-text-strong);
+}
+
+/* A surface that holds a form or a block of facts */
+.admin-panel {
+    padding: 1.25rem;
+    background: var(--admin-surface);
+    backdrop-filter: blur(var(--admin-blur));
+    border: 1px solid var(--admin-line);
+    border-radius: var(--admin-radius);
+}
+
+/* Facts about the thing a screen is for: a term above its value, side by side */
+.admin-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 2.5rem;
+    margin: 0;
+}
+
+.admin-facts div {
+    min-width: 0;
+}
+
+.admin-facts dt {
+    font-size: 0.8125rem;
+    color: var(--admin-text-dim);
+}
+
+.admin-facts dd {
+    margin: 0;
+    color: var(--admin-text-strong);
+}
+
 /* Admin Module Table Styling */
 
-.admin-table {
+/* A table wider than the screen scrolls inside this, not the page */
+.admin-table-wrap {
+    overflow-x: auto;
+}
+
+.admin .admin-table {
     width: 100%;
-    border-collapse: collapse;
-    background: rgba(var(--surface-bg-rgb), 0.1);
-    backdrop-filter: blur(var(--surface-blur));
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--admin-surface);
+    backdrop-filter: blur(var(--admin-blur));
+    border: 1px solid var(--admin-line);
+    border-radius: var(--admin-radius);
     overflow: hidden;
+    font-size: 0.9375rem;
 }
 
-.admin-table thead {
-    background: rgba(var(--surface-bg-rgb), 0.3);
+.admin .admin-table thead {
+    background: var(--admin-lift);
 }
 
-.admin-table th,
-.admin-table td {
-    padding: 1rem;
+.admin .admin-table th,
+.admin .admin-table td {
+    padding: 0.65rem 1rem;
     text-align: left;
-    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+    border-bottom: 1px solid var(--admin-line-soft);
 }
 
-.admin-table th {
+.admin .admin-table th {
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+    font-size: 0.8125rem;
     font-weight: 600;
-    text-transform: uppercase;
-    font-size: 0.9rem;
-    letter-spacing: 0.05em;
+    text-transform: none;
+    letter-spacing: 0;
+    white-space: nowrap;
+    color: var(--admin-text-dim);
+    border-bottom-color: var(--admin-line);
 }
 
-.admin-table tbody tr {
-    transition: background 0.2s ease;
+.admin .admin-table tbody tr {
+    transition: background-color 0.15s ease;
 }
 
-.admin-table tbody tr:hover {
-    background: rgba(var(--accent-primary-rgb), 0.1);
+.admin .admin-table tbody tr:hover {
+    background: var(--admin-lift);
 }
 
-.admin-table tbody tr:last-child td {
+.admin .admin-table tbody tr:last-child td {
     border-bottom: none;
 }
 
-/* Permission Item Styling */
-.permission-item {
-    background: rgba(var(--surface-bg-rgb), 0.1);
-    padding: 1rem;
+.admin .admin-table td strong {
+    font-weight: 600;
+    color: var(--admin-text-strong);
+}
+
+/* Table cell alignment helpers */
+.admin .admin-table .text-center {
+    text-align: center;
+}
+
+.admin .admin-table .text-right {
+    text-align: right;
+}
+
+.admin .admin-table .nowrap {
+    white-space: nowrap;
+}
+
+/* A column of numbers: right-aligned, digits of one width */
+.admin .admin-table .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* A cell of secondary detail */
+.admin .admin-table .dim {
+    color: var(--admin-text-dim);
+}
+
+/* Empty state cell */
+.admin .admin-table .empty-state-cell {
+    text-align: center;
+    padding: 2rem;
+    color: var(--admin-text-dim);
+}
+
+/* Actions cell with multiple buttons */
+.admin .admin-table .actions-cell {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.admin .admin-table .actions-cell > * {
+    vertical-align: middle;
+}
+
+.admin .admin-table .actions-cell > * + * {
+    margin-left: 0.5rem;
+}
+
+/* Nothing to show: an icon, what is missing and what to do about it */
+.admin-empty {
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: var(--admin-text-dim);
+    border: 1px dashed var(--admin-line);
+    border-radius: var(--admin-radius);
+}
+
+.admin .admin-empty .material-symbols-outlined {
+    display: block;
     margin-bottom: 0.5rem;
-    border-radius: 4px;
-    border: 1px solid var(--border-color);
+    font-size: 2rem;
+    font-weight: 300;
+    opacity: 0.7;
+}
+
+.admin .content-wrapper .admin-empty p {
+    margin: 0;
+}
+
+/* Permission Item Styling */
+.admin .permission-list {
+    background: var(--admin-surface);
+    backdrop-filter: blur(var(--admin-blur));
+    border: 1px solid var(--admin-line);
+    border-radius: var(--admin-radius);
+    overflow: hidden;
+}
+
+.admin .permission-item {
     display: flex;
     align-items: center;
     gap: 1rem;
-    transition: all 0.2s ease;
+    margin: 0;
+    padding: 0.6rem 1rem;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--admin-line-soft);
+    border-radius: 0;
+    transition: background-color 0.15s ease;
 }
 
-.permission-item:hover {
-    background: rgba(var(--surface-bg-rgb), 0.15);
-    border-color: rgba(var(--accent-primary-rgb), 0.3);
+.admin .permission-item:last-child {
+    border-bottom: none;
 }
 
-.permission-item-info {
+.admin .permission-item:hover {
+    background: var(--admin-lift);
+}
+
+.admin .permission-item-info {
     flex: 1;
+    min-width: 0;
 }
 
-.permission-item-controls {
+.admin .permission-item-info strong {
+    font-family: var(--admin-mono);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--admin-text-strong);
+    overflow-wrap: anywhere;
+}
+
+.admin .permission-item-controls {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.5rem;
+}
+
+/* Permission meta info */
+.admin .permission-meta {
+    display: block;
+    font-size: 0.8125rem;
+    color: var(--admin-text-dim);
+    opacity: 1;
+}
+
+/* Unset permission styling */
+.admin .permission-item-unset {
+    opacity: 1;
+    background: none;
+}
+
+.admin .permission-item-unset .permission-item-info strong {
+    font-weight: 400;
+    color: var(--admin-text-dim);
+}
+
+.admin .permission-item-unset:hover {
+    opacity: 1;
+    background: var(--admin-lift);
 }
 
 /* Form Styling */
-.admin-form-grid {
+.admin .admin-form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr auto;
     gap: 1rem;
     align-items: start;
 }
 
-.admin-form-field {
+/* A one-line form: its fields, then its button level with the inputs */
+.admin .admin-form-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.75rem 1rem;
+}
+
+.admin .admin-form-row .admin-form-field {
+    flex: 1 1 14rem;
+    margin: 0;
+}
+
+.admin .admin-form-row .admin-form-submit {
+    /* the height of a label and its gap, so the button sits level with the inputs */
+    margin-top: 1.625rem;
+}
+
+.admin .admin-form-field {
     display: flex;
     flex-direction: column;
+    min-width: 0;
 }
 
-.admin-form-field label {
+.admin :is(.admin-form-field, .form-group, .form-field) label {
     display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
+    margin-bottom: 0.3rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--admin-text-strong);
 }
 
-.admin-form-field input,
-.admin-form-field select {
+/* Form inputs with consistent styling */
+.admin :is(.admin-form-field, .form-group, .form-field) :is(input:not([type="checkbox"], [type="radio"], [type="hidden"]), select, textarea),
+.admin :is(.admin-input, .admin-select, .role-select) {
     width: 100%;
-    padding: 0.5rem;
-    background: rgba(var(--surface-bg-rgb), 0.3);
-    border: 1px solid var(--border-color);
-    color: inherit;
-    border-radius: 4px;
+    min-height: 2.25rem;
+    padding: 0.4rem 0.65rem;
+    background-color: var(--admin-field);
+    border: 1px solid var(--admin-line);
+    border-radius: var(--admin-radius);
+    color: var(--admin-text-strong);
     font-family: inherit;
-    font-size: inherit;
+    font-size: 0.9375rem;
+    line-height: 1.3;
+    transition: border-color 0.15s ease;
 }
 
-.admin-form-field input:focus,
-.admin-form-field select:focus {
+.admin :is(.admin-form-field, .form-group, .form-field) :is(input, select, textarea):hover,
+.admin :is(.admin-input, .admin-select, .role-select):hover {
+    border-color: var(--admin-accent-line);
+}
+
+.admin :is(.admin-form-field, .form-group, .form-field) :is(input, select, textarea):focus,
+.admin :is(.admin-input, .admin-select, .role-select):focus {
     outline: none;
-    border-color: var(--accent-primary);
+    border-color: var(--admin-accent);
+    box-shadow: 0 0 0 3px var(--admin-accent-soft);
 }
 
-.admin-form-field small {
-    opacity: 0.7;
-    font-size: 0.85rem;
-    margin-top: 0.25rem;
+.admin :is(.admin-form-field, .form-group, .form-field) ::placeholder,
+.admin .admin-input::placeholder {
+    color: var(--admin-text-dim);
+    opacity: 0.8;
 }
 
-/* Button Overrides for Admin */
-.admin-action-btn {
-    padding: 8px 16px;
-    display: inline-block;
+.admin :is(.admin-form-field, .form-group, .form-field) textarea {
+    min-height: 5rem;
+    resize: vertical;
 }
 
-.admin-btn-delete {
-    padding: 8px 16px;
-    background: rgba(255, 0, 0, 0.2);
-    border: 1px solid rgba(255, 0, 0, 0.5);
-    color: inherit;
+/* A list to choose several from */
+.admin :is(.admin-form-field, .form-group, .form-field) select[multiple] {
+    padding: 0.25rem;
+    background-image: none;
+}
+
+.admin select[multiple] option {
+    padding: 0.3rem 0.5rem;
+    border-radius: calc(var(--admin-radius) - 2px);
+}
+
+.admin :is(.admin-form-field, .form-group) small {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.8125rem;
+    color: var(--admin-text-dim);
+    opacity: 1;
+}
+
+.admin .admin-input.admin-input-narrow {
+    width: 6rem;
+}
+
+.admin .admin-input.admin-input-medium {
+    width: 13rem;
+}
+
+/* Select dropdown */
+.admin .admin-select,
+.admin .role-select {
+    width: auto;
+    min-width: 7rem;
     cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.2s ease;
 }
 
-.admin-btn-delete:hover {
-    background: rgba(255, 0, 0, 0.4);
-    border-color: rgba(255, 0, 0, 0.8);
+.admin select.admin-select,
+.admin select.role-select {
+    padding-right: 2rem;
+}
+
+/* Form Styles */
+.admin .form-group {
+    margin-bottom: 1.25rem;
+}
+
+.admin .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.admin .form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--admin-line-soft);
+}
+
+/* Checkboxes: a small box in the theme's accent, drawn the same under any main.css */
+.admin input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    position: relative;
+    flex-shrink: 0;
+    width: 1.125rem;
+    height: 1.125rem;
+    margin: 0;
+    vertical-align: middle;
+    background: var(--admin-field);
+    backdrop-filter: none;
+    border: 1px solid var(--admin-text-dim);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.admin input[type="checkbox"]:hover {
+    border-color: var(--admin-accent);
+    box-shadow: none;
+}
+
+.admin input[type="checkbox"]:checked {
+    background: var(--admin-accent-mid);
+    border-color: var(--admin-accent);
+}
+
+.admin input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    left: 0.34rem;
+    top: 0.1rem;
+    width: 0.3rem;
+    height: 0.6rem;
+    border: solid var(--admin-accent-text);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+/* Checkbox label */
+.admin .admin-checkbox-label,
+.admin .checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+/* A checkbox that takes effect the moment it changes, drawn as a switch */
+.admin input[type="checkbox"].admin-switch {
+    width: 2.25rem;
+    height: 1.25rem;
+    border-radius: 1rem;
+}
+
+.admin input[type="checkbox"].admin-switch::after,
+.admin input[type="checkbox"].admin-switch:checked::after {
+    content: '';
+    position: absolute;
+    left: 0.15rem;
+    top: 0.15rem;
+    width: 0.8rem;
+    height: 0.8rem;
+    border: none;
+    border-radius: 50%;
+    background: var(--admin-text-dim);
+    transform: none;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.admin input[type="checkbox"].admin-switch:checked::after {
+    background: var(--admin-accent);
+    transform: translateX(1rem);
+}
+
+.admin .admin-switch-state {
+    min-width: 5.5rem;
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: var(--admin-text-dim);
+}
+
+/* Buttons: one shape, in three sizes of emphasis */
+.admin :is(.btn-primary, .btn-secondary, .btn-small, .btn-danger, .pagination-btn, .admin-btn-delete, .admin-action-btn) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 2.25rem;
+    padding: 0.4rem 0.9rem;
+    background: var(--admin-lift);
+    backdrop-filter: none;
+    border: 1px solid var(--admin-line);
+    border-radius: var(--admin-radius);
+    color: var(--admin-text-strong);
+    font-family: inherit;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    line-height: 1.2;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.admin :is(.btn-primary, .btn-secondary, .btn-small, .btn-danger, .pagination-btn, .admin-btn-delete, .admin-action-btn):hover {
+    background: var(--admin-accent-soft);
+    border-color: var(--admin-accent-line);
+    transform: none;
+}
+
+/* Button with Icon Alignment */
+.admin :is(.btn-primary, .btn-secondary, .btn-small, .btn-danger, .pagination-btn) .material-symbols-outlined {
+    font-size: 1.2rem;
+    font-weight: 300;
+    line-height: 1;
+}
+
+/* The action a screen is for */
+.admin .btn-primary {
+    background: var(--admin-accent-mid);
+    border-color: var(--admin-accent-line);
+}
+
+.admin .btn-primary:hover {
+    background: color-mix(in srgb, var(--admin-accent) 36%, transparent);
+    border-color: var(--admin-accent);
+}
+
+/* Small button styling */
+.admin .btn-small {
+    min-height: 1.875rem;
+    padding: 0.2rem 0.7rem;
+    font-size: 0.875rem;
+}
+
+.admin .btn-small + .btn-small {
+    margin-left: 0.5rem;
+}
+
+/* An action that takes something away */
+.admin :is(.btn-danger, .admin-btn-delete) {
+    background: color-mix(in srgb, var(--admin-danger) 10%, transparent);
+    border-color: color-mix(in srgb, var(--admin-danger) 40%, transparent);
+    color: var(--admin-danger-text);
+}
+
+.admin :is(.btn-danger, .admin-btn-delete):hover {
+    background: color-mix(in srgb, var(--admin-danger) 20%, transparent);
+    border-color: var(--admin-danger);
+}
+
+.admin :is(.btn-primary, .btn-secondary, .btn-small, .btn-danger, .pagination-btn):disabled,
+.admin .pagination-btn.disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* Icon-only buttons */
+.admin .btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+    padding: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--admin-radius);
+    color: var(--admin-text-dim);
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.admin .btn-icon:hover {
+    background: var(--admin-lift);
+    border-color: var(--admin-line);
+    color: var(--admin-text-strong);
+}
+
+.admin .btn-icon .material-symbols-outlined {
+    font-size: 1.25rem;
+    font-weight: 300;
+    line-height: 1;
 }
 
 /* Info Box */
-.admin-info-box {
-    background: rgba(var(--surface-bg-rgb), 0.2);
-    padding: 1rem;
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
-    margin: 2rem 0;
+.admin .admin-info-box {
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+    background: var(--admin-surface);
+    border: 1px solid var(--admin-line);
+    border-left: 3px solid var(--admin-accent-line);
+    border-radius: var(--admin-radius);
+    font-size: 0.9375rem;
+}
+
+/* What went wrong, and what was done */
+.admin .admin-info-box.is-error {
+    border-left-color: var(--admin-danger);
+}
+
+.admin .admin-info-box.is-success {
+    border-left-color: var(--admin-success);
 }
 
 /* Filter Controls */
-.filter-container {
-    background: rgba(var(--surface-bg-rgb), 0.2);
-    padding: 1.5rem;
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
-    margin-bottom: 2rem;
+.admin .filter-container {
+    margin-bottom: 1.25rem;
+    padding: 1rem 1.25rem;
+    background: var(--admin-surface);
+    backdrop-filter: blur(var(--admin-blur));
+    border: 1px solid var(--admin-line);
+    border-radius: var(--admin-radius);
 }
 
-.filter-grid {
+.admin .filter-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+    gap: 0.75rem 1rem;
     margin-bottom: 1rem;
 }
 
-.filter-actions {
+.admin .filter-actions {
     display: flex;
     gap: 0.5rem;
     justify-content: flex-end;
 }
 
 /* Pagination */
-.pagination {
+.admin .pagination {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    margin-top: 2rem;
-    padding: 1rem;
-    background: rgba(var(--surface-bg-rgb), 0.1);
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
+    gap: 0.75rem 1rem;
+    margin-top: 1rem;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 0;
+    font-size: 0.875rem;
 }
 
-.pagination-info {
-    opacity: 0.8;
+.admin .pagination-info {
+    color: var(--admin-text-dim);
+    opacity: 1;
+    font-variant-numeric: tabular-nums;
 }
 
-.pagination-controls {
+.admin .pagination-controls {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.4rem;
     align-items: center;
 }
 
-.pagination-btn {
-    padding: 8px 16px;
-    background: rgba(var(--surface-bg-rgb), 0.3);
-    border: 1px solid var(--border-color);
-    color: inherit;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-    text-decoration: none;
-    display: inline-block;
-}
-
-.pagination-btn:hover:not(:disabled) {
-    background: rgba(var(--accent-primary-rgb), 0.2);
-    border-color: var(--accent-primary);
-}
-
-.pagination-btn:disabled,
-.pagination-btn.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+.admin .pagination-btn {
+    min-height: 1.875rem;
+    padding: 0.2rem 0.7rem;
+    font-size: 0.875rem;
 }
 
 /* A previous / next link with nowhere to go */
-.pagination-btn.disabled:hover {
-    background: rgba(var(--surface-bg-rgb), 0.3);
-    border-color: var(--border-color);
+.admin .pagination-btn.disabled:hover {
+    background: var(--admin-lift);
+    border-color: var(--admin-line);
 }
 
-.pagination-current {
-    padding: 8px 16px;
-}
-
-/* Table cell alignment helpers */
-.admin-table .text-center {
-    text-align: center;
-}
-
-.admin-table .text-right {
-    text-align: right;
-}
-
-.admin-table .nowrap {
-    white-space: nowrap;
-}
-
-/* Empty state cell */
-.admin-table .empty-state-cell {
-    text-align: center;
-    padding: 2rem;
+.admin .pagination-current {
+    padding: 0 0.5rem;
+    color: var(--admin-text-dim);
+    font-variant-numeric: tabular-nums;
 }
 
 /* Inline form wrapper */
-.form-inline {
+.admin .form-inline {
     display: inline;
 }
 
 /* Badge styling */
-.event-badge,
-.status-badge {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 0.85rem;
+.admin :is(.event-badge, .status-badge, .badge, .permission-badge-unset, .member-role) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0;
+    padding: 0.1rem 0.55rem;
+    background: var(--admin-lift);
+    border: 1px solid var(--admin-line-soft);
+    border-radius: 1rem;
+    color: var(--admin-text);
+    font-size: 0.8125rem;
     font-weight: 500;
-    background: rgba(var(--accent-primary-rgb), 0.2);
-    border: 1px solid rgba(var(--accent-primary-rgb), 0.4);
+    line-height: 1.4;
+    text-transform: none;
+    letter-spacing: 0;
+    text-decoration: none;
+    white-space: nowrap;
 }
 
-.status-badge.status-active {
-    background: rgba(0, 200, 0, 0.2);
-    color: #00ff00;
-    border-color: rgba(0, 200, 0, 0.4);
+/* The name of a recorded event: typed exactly, so set as a key */
+.admin .event-badge {
+    font-family: var(--admin-mono);
+    border-radius: calc(var(--admin-radius) - 1px);
 }
 
-.status-badge.status-inactive {
-    background: rgba(150, 150, 150, 0.2);
-    color: #aaa;
-    border-color: rgba(150, 150, 150, 0.4);
+.admin a.event-badge:hover {
+    background: var(--admin-accent-soft);
+    border-color: var(--admin-accent-line);
+}
+
+/* A state: a dot in the state's colour, then its name */
+.admin .status-badge::before {
+    content: '';
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.admin .status-badge.status-active {
+    background: color-mix(in srgb, var(--admin-success) 12%, transparent);
+    border-color: color-mix(in srgb, var(--admin-success) 35%, transparent);
+    color: var(--admin-success-text);
+}
+
+.admin .status-badge.status-inactive {
+    background: var(--admin-lift);
+    border-color: var(--admin-line-soft);
+    color: var(--admin-text-dim);
+}
+
+/* Badges */
+.admin .badge-primary {
+    background: var(--admin-accent-soft);
+    border-color: color-mix(in srgb, var(--admin-accent) 35%, transparent);
+    color: var(--admin-accent-text);
+}
+
+.admin .badge-secondary {
+    color: var(--admin-text-dim);
+}
+
+.admin .permission-badge-unset {
+    margin-left: 0.5rem;
+    background: color-mix(in srgb, var(--admin-warning) 12%, transparent);
+    border-color: color-mix(in srgb, var(--admin-warning) 35%, transparent);
+    color: var(--admin-warning-text);
 }
 
 /* Admin Dashboard Cards */
-.admin-card-grid {
+.admin .admin-card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-top: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+    gap: 0.75rem;
+    margin: 0;
 }
 
-/* Override btn-primary styles to create card layout */
-.btn-primary.admin-card {
-    padding: 32px;
-    text-align: center;
+/* The dashboard: each group of screens has its name in a column beside its cards */
+.admin-dashboard .admin-section {
+    display: grid;
+    grid-template-columns: 11rem 1fr;
+    gap: 0.75rem 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--admin-line-soft);
+}
+
+.admin .admin-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    padding: 0.9rem 1rem;
+    background: var(--admin-surface);
+    backdrop-filter: blur(var(--admin-blur));
+    border: 1px solid var(--admin-line);
+    border-radius: var(--admin-radius);
+    color: inherit;
+    text-align: left;
     text-decoration: none;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.admin .admin-card:hover {
+    background: var(--admin-accent-soft);
+    border-color: var(--admin-accent-line);
+    transform: none;
+}
+
+.admin .admin-card-icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 2.5rem;
+    height: 2.5rem;
+    background: var(--admin-accent-soft);
+    border-radius: var(--admin-radius);
+    color: var(--admin-accent-text);
+    font-size: 1.5rem;
+    font-weight: 300;
+    line-height: 1;
+}
+
+.admin-card-text {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
+    gap: 0.15rem;
+    min-width: 0;
 }
 
-.admin-card-title {
-    font-size: 1.2rem;
+.admin .admin-card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--admin-text-strong);
 }
 
-.admin-card-desc {
-    font-size: 0.9rem;
-    opacity: 0.8;
-    text-align: center;
+.admin .admin-card-desc {
+    font-size: 0.875rem;
     line-height: 1.4;
+    text-align: left;
+    color: var(--admin-text-dim);
+    opacity: 1;
 }
 
 /* User Avatar */
-.user-info {
+.admin .user-info {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.6rem;
 }
 
-/* Form inputs with consistent styling */
-.admin-input {
-    width: 100%;
-    padding: 0.5rem;
-    background: rgba(var(--surface-bg-rgb), 0.3);
-    border: 1px solid var(--border-color);
-    color: inherit;
-    border-radius: 4px;
-    font-family: inherit;
-    font-size: inherit;
-}
-
-.admin-input:focus {
-    outline: none;
-    border-color: var(--accent-primary);
-}
-
-.admin-input-narrow {
-    width: 100px;
-}
-
-.admin-input-medium {
-    width: 200px;
-}
-
-/* Checkbox label */
-.admin-checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-/* Select dropdown */
-.admin-select {
-    width: 100px;
-    padding: 0.5rem;
-    background: rgba(var(--surface-bg-rgb), 0.3);
-    border: 1px solid var(--border-color);
-    color: inherit;
-    border-radius: 4px;
-}
-
-/* Permission meta info */
-.permission-meta {
-    opacity: 0.7;
-}
-
-/* Unset permission styling */
-.permission-item-unset {
-    opacity: 0.7;
-    background: rgba(var(--surface-bg-rgb), 0.05);
-}
-
-.permission-item-unset:hover {
-    opacity: 0.85;
-    background: rgba(var(--surface-bg-rgb), 0.1);
-}
-
-.permission-badge-unset {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    background: rgba(255, 165, 0, 0.2);
-    border: 1px solid rgba(255, 165, 0, 0.4);
-    margin-left: 0.5rem;
-}
-
-/* Small button styling */
-.btn-small {
-    padding: 8px 16px;
-    font-size: 0.875rem;
-    text-decoration: none;
-    background: rgba(var(--accent-primary-rgb), 0.1);
-    color: var(--accent-primary);
-    border: 1px solid rgba(var(--accent-primary-rgb), 0.3);
-    border-radius: 4px;
-    cursor: pointer;
-    display: inline-block;
-    font-family: inherit;
-    transition: all 0.2s ease;
-}
-
-.btn-small:hover {
-    background: rgba(var(--accent-primary-rgb), 0.2);
-}
-
-.btn-small.btn-danger {
-    background: rgba(244, 67, 54, 0.1);
-    color: #f44336;
-    border-color: rgba(244, 67, 54, 0.3);
-}
-
-.btn-small.btn-danger:hover {
-    background: rgba(244, 67, 54, 0.2);
-}
-
-.btn-small + .btn-small {
-    margin-left: 0.5rem;
+.admin .user-info :is(img, .material-symbols-outlined) {
+    flex-shrink: 0;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    font-size: 1.75rem;
+    font-weight: 300;
+    line-height: 1;
+    color: var(--admin-text-dim);
+    object-fit: cover;
 }
 
 /* Expandable table styles */
-.expandable-table .expand-icon {
+.admin .expandable-table .expand-icon {
     font-family: "Material Symbols Outlined";
     font-size: 1.25rem;
+    font-weight: 300;
+    line-height: 1;
+    vertical-align: middle;
+    color: var(--admin-text-dim);
     transition: transform 0.2s ease;
     user-select: none;
 }
 
-.expandable-table .main-row {
+.admin .expandable-table .main-row {
     cursor: pointer;
 }
 
-.expandable-table .main-row:hover {
-    background: rgba(var(--accent-primary-rgb), 0.05);
-}
-
-.expandable-table .details-row {
+.admin .expandable-table .details-row {
     display: none;
 }
 
-.expandable-table .details-row.expanded {
+.admin .expandable-table .details-row.expanded {
     display: table-row;
 }
 
-.expandable-table td.details-cell {
+.admin .expandable-table .details-row:hover {
+    background: none;
+}
+
+.admin .expandable-table td.details-cell {
     padding: 0;
 }
 
-.expandable-table .details-content {
-    padding: 1.5rem 2rem;
-    background: rgba(var(--surface-bg-rgb), 0.15);
-    border-top: 1px solid rgba(var(--border-color), 0.5);
+.admin .expandable-table .details-content {
+    padding: 1rem 1rem 1.1rem 3.4rem;
+    background: var(--admin-lift);
 }
 
-.expandable-table .details-grid {
+.admin .expandable-table .details-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 1rem 2rem;
+    margin: 0;
 }
 
-.expandable-table .detail-item {
+.admin .expandable-table .detail-item {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.1rem;
 }
 
-.expandable-table .detail-label {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    opacity: 0.6;
-    font-weight: 600;
+.admin :is(.expandable-table, .group-members-list) .detail-label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--admin-text-dim);
+    opacity: 1;
 }
 
-.expandable-table .detail-value {
-    font-size: 0.95rem;
+.admin .expandable-table .detail-value {
+    font-size: 0.9375rem;
+    color: var(--admin-text-strong);
 }
 
-.expandable-table .actions-row {
+.admin .expandable-table .actions-row {
     padding-top: 1rem;
-    border-top: 1px solid rgba(var(--border-color), 0.5);
+    border-top: 1px solid var(--admin-line-soft);
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
 }
 
 /* Force 3-column layout for group details */
-.expandable-table .details-grid-3col {
+.admin .expandable-table .details-grid-3col {
     grid-template-columns: repeat(3, 1fr);
 }
 
-/* Actions cell with multiple buttons */
-.admin-table .actions-cell {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
-
 /* Group members list in expandable details */
-.group-members-list {
+.admin .group-members-list {
     margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid rgba(var(--border-color), 0.3);
+    padding-top: 0;
+    border-top: none;
 }
 
-.group-members-list .detail-label {
-    display: block;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    opacity: 0.6;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
+.admin .group-members-list .detail-label {
+    margin-bottom: 0.35rem;
 }
 
-.members-chips {
+.admin .members-chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.4rem;
 }
 
-.member-chip {
+.admin .member-chip {
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0.25rem 0.6rem;
+    gap: 0.3rem;
+    padding: 0.15rem 0.6rem 0.15rem 0.4rem;
+    background: var(--admin-surface);
+    border: 1px solid var(--admin-line-soft);
     border-radius: 1rem;
-    font-size: 0.85rem;
-    background: rgba(var(--accent-primary-rgb), 0.1);
-    border: 1px solid rgba(var(--accent-primary-rgb), 0.2);
-}
-
-.member-chip .material-symbols-outlined {
-    font-size: 1rem;
-    opacity: 0.7;
-}
-
-.member-role {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    padding: 0.1rem 0.4rem;
-    border-radius: 0.5rem;
-    background: rgba(var(--accent-primary-rgb), 0.2);
-    font-weight: 600;
-    letter-spacing: 0.03em;
-}
-
-/* Push Notifications Page */
-.stats-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-    margin: 2rem 0;
-}
-
-.stat-card {
-    background: rgba(var(--surface-bg-rgb), 0.2);
-    backdrop-filter: blur(var(--surface-blur));
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    transition: all 0.2s ease;
-}
-
-.stat-card:hover {
-    background: rgba(var(--surface-bg-rgb), 0.3);
-    border-color: rgba(var(--accent-primary-rgb), 0.5);
-    transform: translateY(-2px);
-}
-
-.stat-card .material-symbols-outlined {
-    font-size: 48px;
-    color: var(--accent-primary);
-    opacity: 0.8;
-}
-
-.stat-value {
-    font-size: 2rem;
-    font-weight: 600;
-    color: var(--text-bright);
-    line-height: 1;
-}
-
-.stat-label {
-    font-size: 0.9rem;
-    opacity: 0.8;
-    margin-top: 0.25rem;
-}
-
-/* Form Styles */
-.form-group {
-    margin-bottom: 1.5rem;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-    color: var(--text-bright);
-}
-
-.form-group input[type="text"],
-.form-group textarea,
-.form-group select {
-    width: 100%;
-    padding: 0.75rem;
-    background: rgba(var(--surface-bg-rgb), 0.3);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    color: inherit;
-    font-family: inherit;
-    font-size: inherit;
-    transition: all 0.2s ease;
-}
-
-.form-group input:focus,
-.form-group textarea:focus,
-.form-group select:focus {
-    outline: none;
-    border-color: var(--accent-primary);
-    background: rgba(var(--surface-bg-rgb), 0.4);
-}
-
-.form-group small {
-    display: block;
-    margin-top: 0.5rem;
-    opacity: 0.7;
     font-size: 0.875rem;
 }
 
-.form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-}
-
-/* Button with Icon Alignment */
-.btn-primary,
-.btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    border: 1px solid var(--border-color);
-    transition: all 0.2s ease;
-}
-
-.btn-primary .material-symbols-outlined,
-.btn-secondary .material-symbols-outlined {
-    font-size: 20px;
+.admin .member-chip .material-symbols-outlined {
+    font-size: 1rem;
+    font-weight: 300;
     line-height: 1;
+    color: var(--admin-text-dim);
+    opacity: 1;
 }
 
-/* Badges */
-.badge {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    border: 1px solid;
+.admin .member-role {
+    padding: 0 0.4rem;
+    font-size: 0.75rem;
+    background: var(--admin-accent-soft);
+    border-color: transparent;
+    color: var(--admin-accent-text);
 }
 
-.badge-primary {
-    background: rgba(var(--accent-primary-rgb), 0.2);
-    color: var(--accent-primary);
-    border-color: rgba(var(--accent-primary-rgb), 0.4);
+/* Push Notifications Page */
+.admin .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: 0.75rem;
+    margin: 1.25rem 0;
 }
 
-.badge-secondary {
-    background: rgba(150, 150, 150, 0.2);
-    color: #aaa;
-    border-color: rgba(150, 150, 150, 0.4);
+.admin .stat-card {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.9rem 1rem;
+    background: var(--admin-surface);
+    backdrop-filter: blur(var(--admin-blur));
+    border: 1px solid var(--admin-line);
+    border-radius: var(--admin-radius);
+    transition: none;
+}
+
+.admin .stat-card:hover {
+    background: var(--admin-surface);
+    border-color: var(--admin-line);
+    transform: none;
+}
+
+.admin .stat-card .material-symbols-outlined {
+    font-size: 1.75rem;
+    font-weight: 300;
+    line-height: 1;
+    color: var(--admin-accent-text);
+    opacity: 1;
+}
+
+.admin .stat-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--admin-text-strong);
+    font-variant-numeric: tabular-nums;
+}
+
+.admin .stat-label {
+    margin-top: 0.1rem;
+    font-size: 0.8125rem;
+    color: var(--admin-text-dim);
+    opacity: 1;
 }
 
 /* Utility Classes */
-.text-truncate {
+.admin .text-truncate {
     max-width: 300px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.mt-2 {
+.admin .mt-2 {
     margin-top: 2rem;
 }
 
@@ -681,11 +1160,11 @@
     position: fixed;
     top: 20px;
     right: 20px;
-    background: #4CAF50;
+    background: var(--admin-success);
     color: white;
-    padding: 1rem 2rem;
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--admin-radius);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     z-index: 1000;
     transition: opacity 0.3s;
 }
@@ -694,123 +1173,177 @@
     opacity: 0;
 }
 
+/* The toast the admin scripts raise. It is appended to the body, outside .admin, so a
+   site whose main.css styles .toast-notification keeps its own. */
+.toast-notification {
+    position: fixed;
+    top: 5rem;
+    right: 1.25rem;
+    z-index: 10000;
+    display: flex;
+    min-width: 16rem;
+    max-width: 24rem;
+    overflow: hidden;
+    background: var(--bg, var(--admin-surface));
+    backdrop-filter: blur(var(--admin-blur));
+    border: 1px solid var(--admin-line);
+    border-radius: var(--admin-radius);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    transform: translateX(2rem);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.toast-notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.toast-indicator {
+    flex-shrink: 0;
+    width: 4px;
+    background: var(--admin-accent);
+}
+
+.toast-success .toast-indicator {
+    background: var(--admin-success);
+}
+
+.toast-error .toast-indicator {
+    background: var(--admin-danger);
+}
+
+.toast-warning .toast-indicator {
+    background: var(--admin-warning);
+}
+
+.toast-content {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.75rem 1rem;
+}
+
 /* Editable cells (from admin-tables) */
-.editable-cell {
+.admin .editable-cell {
     cursor: pointer;
     position: relative;
     transition: background-color 0.2s;
 }
 
-.editable-cell:hover {
-    background: rgba(var(--accent-primary-rgb), var(--highlight-opacity));
+.admin .editable-cell:hover {
+    background: var(--admin-accent-soft);
 }
 
-.editable-cell:hover::after {
+.admin .editable-cell:hover::after {
     content: '✎';
     position: absolute;
     right: 0.5rem;
     opacity: 0.5;
     font-size: 0.875rem;
-    color: var(--text-secondary);
+    color: var(--admin-text-dim);
 }
 
 /* Inline edit input - inherits from main.css input[type="text"] styles */
-.inline-edit-input {
+.admin .inline-edit-input {
     width: 100%;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-    .admin-form-grid {
+    .admin .admin-form-grid {
         grid-template-columns: 1fr;
     }
 
-    .admin-table th,
-    .admin-table td {
-        padding: 0.5rem;
-        font-size: 0.9rem;
+    .admin .admin-form-row .admin-form-submit {
+        margin-top: 0;
     }
 
-    .permission-item {
+    .admin .admin-table th,
+    .admin .admin-table td {
+        padding: 0.5rem 0.65rem;
+    }
+
+    .admin .permission-item {
         flex-direction: column;
         align-items: stretch;
+        gap: 0.5rem;
     }
 
-    .permission-item-controls {
+    .admin .permission-item-controls {
         justify-content: space-between;
     }
 
-    .filter-grid {
-        grid-template-columns: 1fr;
+    .admin .filter-grid {
+        grid-template-columns: 1fr 1fr;
     }
 
-    .pagination {
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .pagination-controls {
-        width: 100%;
+    .admin .pagination {
         justify-content: center;
     }
 
-    .admin-card-grid {
+    .admin-dashboard .admin-section {
         grid-template-columns: 1fr;
     }
 
-    .expandable-table .details-grid {
+    .admin .expandable-table .details-grid,
+    .admin .expandable-table .details-grid-3col {
         grid-template-columns: 1fr;
     }
 
-    .expandable-table .details-content {
-        padding: 1rem;
+    .admin .expandable-table .details-content {
+        padding: 0.85rem;
     }
 
-    .stats-row {
+    .admin .form-row {
         grid-template-columns: 1fr;
     }
 
-    .form-row {
-        grid-template-columns: 1fr;
-    }
-
-    .text-truncate {
+    .admin .text-truncate {
         max-width: 150px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .admin *,
+    .toast-notification {
+        transition: none;
     }
 }
 
 /* Breadcrumbs: printed above every admin view by AdminResponse::beforeView() */
 
 .admin-breadcrumbs {
-    max-width: 1200px;
-    margin: 0 auto 1rem;
-    font-size: 0.9rem;
+    margin: 0 0 1rem;
+    font-size: 0.875rem;
 }
 
 .admin-breadcrumbs ol {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.4rem;
     margin: 0;
     padding: 0;
     list-style: none;
 }
 
 .admin-breadcrumbs li + li::before {
-    content: "\203A";
-    margin-right: 0.5rem;
+    content: "/";
+    margin-right: 0.4rem;
+    color: var(--admin-text-dim);
     opacity: 0.6;
 }
 
-.admin-breadcrumbs a {
-    color: var(--accent-primary);
+.admin .admin-breadcrumbs a {
+    color: var(--admin-text-dim);
     text-decoration: none;
 }
 
-.admin-breadcrumbs a:hover {
+.admin .admin-breadcrumbs a:hover {
+    color: var(--admin-accent-text);
     text-decoration: underline;
 }
 
 .admin-breadcrumbs [aria-current="page"] {
-    opacity: 0.8;
+    color: var(--admin-text-strong);
 }

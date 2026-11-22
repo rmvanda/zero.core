@@ -1,138 +1,62 @@
 /* Firewall Admin — CloudFlare IP Block List */
 
-.firewall-container {
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 2rem 1rem;
-}
-
-/* Header */
-.firewall-header {
-    margin-bottom: 2rem;
-}
-
-.firewall-header h1 {
-    margin: 0 0 0.15rem;
-    font-size: 1.5rem;
-    color: var(--text-bright);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.firewall-header h1 .material-symbols-outlined {
-    font-size: 1.6rem;
-    color: var(--accent-primary);
-}
-
-.firewall-subtitle {
-    color: var(--text-dimmed);
-    margin: 0;
-    font-size: 0.85rem;
-    letter-spacing: 0.03em;
-}
-
 /* Stats row */
 .firewall-stats {
     display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
 }
 
 .firewall-stat {
-    padding: 0.75rem 1.25rem;
-    background: rgba(var(--surface-bg-rgb), var(--surface-opacity-light));
-    backdrop-filter: blur(var(--surface-blur));
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    flex: 1;
+    gap: 0.75rem;
+    flex: 0 1 14rem;
+    padding: 0.7rem 1rem;
+    background: var(--admin-surface);
+    backdrop-filter: blur(var(--admin-blur));
+    border: 1px solid var(--admin-line);
+    border-radius: var(--admin-radius);
 }
 
-.firewall-stat .material-symbols-outlined {
-    font-size: 1.3rem;
-    color: var(--accent-primary);
-    opacity: 0.7;
+.admin .firewall-stat .material-symbols-outlined {
+    font-size: 1.5rem;
+    font-weight: 300;
+    line-height: 1;
+    color: var(--admin-accent-text);
 }
 
 .firewall-stat-value {
-    font-family: var(--font-mono);
-    font-size: 1.3rem;
-    color: var(--text-bright);
+    font-size: 1.25rem;
     font-weight: 600;
+    line-height: 1.2;
+    color: var(--admin-text-strong);
+    font-variant-numeric: tabular-nums;
 }
 
 .firewall-stat-label {
-    font-size: 0.75rem;
-    color: var(--text-dimmed);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    font-size: 0.8125rem;
+    color: var(--admin-text-dim);
 }
 
 /* Search bar */
 .firewall-search {
     display: flex;
     gap: 0.5rem;
-    margin-bottom: 1.5rem;
+    max-width: 32rem;
+    margin-bottom: 1rem;
 }
 
-/* Input inherits global styles from main.css */
-.firewall-search input[type="text"] {
+.admin .firewall-search input[type="text"] {
     flex: 1;
-    font-family: var(--font-mono);
-}
-
-.firewall-search .btn-icon {
-    border: 1px solid var(--border-color);
-    background: rgba(var(--surface-bg-rgb), var(--surface-opacity-light));
-}
-
-/* Table */
-.firewall-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.firewall-table thead {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-}
-
-.firewall-table th {
-    text-align: left;
-    padding: 0.55rem 0.75rem;
-    color: var(--text-dimmed);
-    border-bottom: 1px solid rgba(var(--accent-primary-rgb), 0.15);
-    font-weight: 500;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    background: rgba(var(--surface-bg-rgb), var(--surface-opacity-light));
-}
-
-.firewall-table td {
-    padding: 0.55rem 0.75rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-    color: var(--text-secondary);
-    vertical-align: middle;
-}
-
-.firewall-table tbody tr {
-    transition: background 0.15s ease;
-}
-
-.firewall-table tbody tr:hover td {
-    background: rgba(var(--accent-primary-rgb), 0.04);
+    font-family: var(--admin-mono);
 }
 
 /* IP cell */
 .firewall-ip {
-    font-family: var(--font-mono);
-    color: var(--accent-primary);
-    font-size: 0.9rem;
+    font-family: var(--admin-mono);
+    color: var(--admin-text-strong);
     white-space: nowrap;
 }
 
@@ -142,19 +66,22 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 0.85rem;
+    font-size: 0.875rem;
+    color: var(--admin-text-dim);
 }
 
 /* Date cell */
 .firewall-date {
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    color: var(--text-dimmed);
+    font-family: var(--admin-mono);
+    font-size: 0.875rem;
+    color: var(--admin-text-dim);
     white-space: nowrap;
 }
 
 /* Actions cell */
-.firewall-actions {
+.admin .admin-table .firewall-actions {
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
     text-align: right;
     white-space: nowrap;
 }
@@ -163,60 +90,33 @@
 .firewall-pagination {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    margin-top: 1.25rem;
-    padding-top: 1rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.04);
-    color: var(--text-dimmed);
-    font-size: 0.8rem;
-}
-
-.firewall-pagination button {
-    padding: 0.35rem 0.85rem;
-    background: rgba(var(--surface-bg-rgb), var(--surface-opacity-light));
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 0.8rem;
-}
-
-.firewall-pagination button:hover:not(:disabled) {
-    background: rgba(var(--accent-primary-rgb), 0.15);
-    border-color: rgba(var(--accent-primary-rgb), 0.3);
-    color: var(--accent-primary);
-}
-
-.firewall-pagination button:disabled {
-    opacity: 0.25;
-    cursor: not-allowed;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    color: var(--admin-text-dim);
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
 }
 
 /* Pagination button icons */
-.fw-pagination-icon {
-    font-size: 14px;
+.admin .pagination-btn .fw-pagination-icon {
+    font-size: 1rem;
     vertical-align: middle;
 }
 
 /* States */
-.firewall-loading,
-.firewall-empty {
+.firewall-loading {
     text-align: center;
-    padding: 4rem 1rem;
-    color: var(--text-dimmed);
+    padding: 3rem 1rem;
+    color: var(--admin-text-dim);
 }
 
-.firewall-loading .material-symbols-outlined,
-.firewall-empty .material-symbols-outlined {
-    font-size: 2.5rem;
+.admin .firewall-loading .material-symbols-outlined {
+    font-size: 2rem;
+    font-weight: 300;
     display: block;
-    margin: 0 auto 0.75rem;
-    opacity: 0.5;
-}
-
-.firewall-loading .material-symbols-outlined {
+    margin: 0 auto 0.5rem;
+    opacity: 0.6;
     animation: fw-spin 1.5s linear infinite;
 }
 
@@ -224,23 +124,21 @@
     to { transform: rotate(360deg); }
 }
 
-.firewall-empty p,
-.firewall-loading p {
+.admin .content-wrapper .firewall-loading p {
     margin: 0;
-    font-size: 0.9rem;
 }
 
 .firewall-error {
-    text-align: center;
-    padding: 2rem 1rem;
-    color: var(--color-error);
-    font-size: 0.9rem;
-    background: rgba(255, 50, 50, 0.06);
-    border: 1px solid rgba(255, 50, 50, 0.15);
-    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    color: var(--admin-danger-text);
+    background: color-mix(in srgb, var(--admin-danger) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--admin-danger) 35%, transparent);
+    border-left: 3px solid var(--admin-danger);
+    border-radius: var(--admin-radius);
 }
 
-.firewall-hidden {
+.firewall-hidden,
+.admin .admin-empty.firewall-hidden {
     display: none;
 }
 
@@ -252,11 +150,13 @@
 
 /* Responsive */
 @media (max-width: 640px) {
-    .firewall-stats {
-        flex-direction: column;
-    }
-
     .firewall-notes {
         max-width: 160px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .admin .firewall-loading .material-symbols-outlined {
+        animation: none;
     }
 }

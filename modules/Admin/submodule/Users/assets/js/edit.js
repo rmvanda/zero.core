@@ -70,7 +70,7 @@ async function setCapability(userId, checkbox) {
         // Update checkbox label
         var label = checkbox.parentElement.querySelector('span');
         if (label) {
-            label.textContent = grant ? 'Enabled' : 'Disabled';
+            label.textContent = grant ? 'Granted' : 'Not granted';
         }
         var item = checkbox.closest('.permission-item');
         if (item) {

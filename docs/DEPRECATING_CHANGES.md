@@ -10,6 +10,25 @@ that text belongs in this file.
 
 Newest first.
 
+## 2026-11 — The admin screens' look
+
+### Admin CSS classes — REMOVED or REPLACED
+
+`admin.css` is scoped to `.admin` and takes its colours from `--admin-*` tokens (see "Look" in
+`ADMIN_ASSETS.md`). These classes of Admin's own screens are gone:
+
+| Gone | Use |
+|------|-----|
+| `btn-primary admin-card` on a dashboard card | `admin-card` alone, with `admin-card-icon` and `admin-card-text` inside |
+| `action-bar` | `admin-head-actions` in the page's `admin-head` |
+| `group-info-box`, `add-member-section`, `form-container` as surfaces | `admin-panel` (`admin-facts` for facts) |
+| `form-field` | `admin-form-field` |
+| `firewall-header`, `firewall-subtitle`, `firewall-table` styles | `admin-head`, `admin-lede`, `admin-table` |
+| `warning-box`, `text-muted`, `badge system`, `event-badge active|inactive` | `admin-info-box`, `admin-note`, `status-badge status-active|status-inactive` |
+
+A capability switch on a user's screen reads "Granted" / "Not granted" (it read "Enabled" /
+"Disabled").
+
 ## 2026-11 — Index is a core module
 
 ### `core/skeleton/modules/Index/`, copied into each site by `zero-init.sh` — MOVED to `core/modules/Index/`

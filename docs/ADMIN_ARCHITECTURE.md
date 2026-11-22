@@ -285,7 +285,8 @@ An endpoint that changes something is POST only and carries `#[AuditLog]`.
 ## Breadcrumbs
 
 Every admin page prints its breadcrumbs above the view (`AdminResponse::beforeView()`); a view
-prints none. A screen that sets nothing gets "Admin", then its own card's label. The dashboard
+prints none. `beforeView()` also opens the `<div class="admin">` every admin screen sits in, and
+`afterView()` closes it (see "Look" in `ADMIN_ASSETS.md`). A screen that sets nothing gets "Admin", then its own card's label. The dashboard
 has none.
 
 ```php

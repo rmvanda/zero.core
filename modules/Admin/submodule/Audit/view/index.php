@@ -18,7 +18,12 @@ $link = function (array $change) use ($filters): string {
 ?>
 
 <div class="content-wrapper">
-    <h1>Audit Log</h1>
+    <header class="admin-head">
+        <div>
+            <h1>Audit Log</h1>
+            <p class="admin-lede">What was done, by whom and from where. Select an event or a user in a row to narrow the list to it.</p>
+        </div>
+    </header>
 
     <?php if (!$this->installed): ?>
         <div class="admin-info-box">The entity tables are not installed on this site, so no event is recorded.</div>
@@ -27,8 +32,7 @@ $link = function (array $change) use ($filters): string {
 
     <!-- Filter Form -->
     <div class="filter-container">
-        <h3>Filter Events</h3>
-        <form method="get" action="/admin/audit">
+        <form method="get" action="/admin/audit" aria-label="Filter the events">
             <div class="filter-grid">
                 <div class="admin-form-field">
                     <label for="event">Event</label>
@@ -46,27 +50,27 @@ $link = function (array $change) use ($filters): string {
                 </div>
 
                 <div class="admin-form-field">
-                    <label for="ip">IP Address</label>
+                    <label for="ip">IP address</label>
                     <input type="text" name="ip" id="ip" placeholder="e.g., 192.168" value="<?= htmlspecialchars($filters['ip']) ?>">
                 </div>
 
                 <div class="admin-form-field">
-                    <label for="date_from">Date From</label>
+                    <label for="date_from">From</label>
                     <input type="date" name="date_from" id="date_from" value="<?= htmlspecialchars($filters['date_from']) ?>">
                 </div>
 
                 <div class="admin-form-field">
-                    <label for="date_to">Date To</label>
+                    <label for="date_to">To</label>
                     <input type="date" name="date_to" id="date_to" value="<?= htmlspecialchars($filters['date_to']) ?>">
                 </div>
 
                 <div class="admin-form-field">
-                    <label for="detail">Detail (search)</label>
-                    <input type="text" name="detail" id="detail" placeholder="Search details..." value="<?= htmlspecialchars($filters['detail']) ?>">
+                    <label for="detail">Detail contains</label>
+                    <input type="text" name="detail" id="detail" placeholder="e.g., allow.admin" value="<?= htmlspecialchars($filters['detail']) ?>">
                 </div>
 
                 <div class="admin-form-field">
-                    <label for="per_page">Per Page</label>
+                    <label for="per_page">Rows per page</label>
                     <select name="per_page" id="per_page">
                         <?php foreach (EventLog::PER_PAGE as $size): ?>
                             <option value="<?= $size ?>"<?= $perPage === $size ? ' selected' : '' ?>><?= $size ?></option>
@@ -76,39 +80,36 @@ $link = function (array $change) use ($filters): string {
             </div>
 
             <div class="filter-actions">
-                <a href="/admin/audit" class="pagination-btn">Clear Filters</a>
-                <button type="submit" class="pagination-btn">Apply Filters</button>
+                <a href="/admin/audit" class="btn-secondary">Clear filters</a>
+                <button type="submit" class="btn-primary">Apply filters</button>
             </div>
         </form>
     </div>
 
-    <!-- Results Summary -->
-    <div class="admin-info-box">
-        Showing <?= number_format($first) ?> to <?= number_format($last) ?> of <?= number_format((int) $events['total']) ?> events
-        <?php if ($pages > 1): ?>
-            (Page <?= $page ?> of <?= $pages ?>)
-        <?php endif; ?>
-    </div>
-
     <!-- Events Table -->
     <?php if (!empty($events['rows'])): ?>
+        <!-- Results Summary -->
+        <p class="admin-note audit-summary">
+            Showing <?= number_format($first) ?> to <?= number_format($last) ?> of <?= number_format((int) $events['total']) ?> events
+        </p>
+
+        <div class="admin-table-wrap">
         <table class="admin-table audit-table">
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Date &amp; Time</th>
+                    <th>When</th>
                     <th>Event</th>
                     <th>User</th>
                     <th>Detail</th>
-                    <th>IP Address</th>
+                    <th>IP address</th>
+                    <th class="num">ID</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($events['rows'] as $event): ?>
                 <?php $userId = EventLog::userId($event['detail']); ?>
                 <tr>
-                    <td class="nowrap"><?= (int) $event['id'] ?></td>
-                    <td class="nowrap"><?= htmlspecialchars((string) $event['datetime']) ?></td>
+                    <td class="nowrap audit-when"><?= htmlspecialchars((string) $event['datetime']) ?></td>
                     <td>
                         <a class="event-badge" href="<?= htmlspecialchars($link(['event' => (string) $event['event'], 'page' => 1])) ?>"><?= htmlspecialchars((string) $event['event']) ?></a>
                     </td>
@@ -116,16 +117,18 @@ $link = function (array $change) use ($filters): string {
                         <?php if ($userId !== null): ?>
                             <a href="/admin/users/edit/<?= $userId ?>" title="This user's screen"><?= $userId ?></a>
                             <a class="audit-filter-link" href="<?= htmlspecialchars($link(['user' => (string) $userId, 'page' => 1])) ?>" title="Only this user's events">
-                                <span class="material-symbols-outlined">filter_alt</span>
+                                <span class="material-symbols-outlined" aria-hidden="true">filter_alt</span>
                             </a>
                         <?php endif; ?>
                     </td>
                     <td class="audit-detail"><?= htmlspecialchars((string) $event['detail']) ?></td>
-                    <td class="nowrap"><?= htmlspecialchars((string) $event['ip']) ?></td>
+                    <td class="nowrap audit-ip"><?= htmlspecialchars((string) $event['ip']) ?></td>
+                    <td class="num dim"><?= (int) $event['id'] ?></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
+        </div>
 
         <!-- Pagination Controls -->
         <?php if ($pages > 1): ?>
@@ -153,6 +156,9 @@ $link = function (array $change) use ($filters): string {
         </nav>
         <?php endif; ?>
     <?php else: ?>
-        <div class="admin-info-box">No events found matching the current filters.</div>
+        <div class="admin-empty">
+            <span class="material-symbols-outlined" aria-hidden="true">search_off</span>
+            <p>No event matches these filters. <a href="/admin/audit">Clear the filters</a> to see every event.</p>
+        </div>
     <?php endif; ?>
 </div>

@@ -509,7 +509,7 @@ final class BareSiteTest extends TestCase
         foreach (['Crew', 'second@example.test', self::$email] as $holder) {
             $this->assertStringContainsString($holder, $held['body']);
         }
-        $this->assertMatchesRegularExpression('~allow\.zerotest\.bulk.*?<td>2</td>\s*<td>1</td>~s', $this->page('/admin/permissions', 'GET', [], $sid)['body'], 'the list counts two users and one group');
+        $this->assertMatchesRegularExpression('~allow\.zerotest\.bulk.*?<td class="num">2</td>\s*<td class="num">1</td>~s', $this->page('/admin/permissions', 'GET', [], $sid)['body'], 'the list counts two users and one group');
 
         // one bad id changes nothing
         $this->assertSame(404, $this->page('/admin/permissions/revoke', 'POST', ['key' => 'allow.zerotest.bulk', 'user_ids' => [$second, 999999]], $sid)['status']);
@@ -534,7 +534,7 @@ final class BareSiteTest extends TestCase
         $this->assertStringContainsString('href="/admin/users/edit/' . $id . '"', $audit['body'], 'an event links to its user');
         $one = $this->page('/admin/audit?event=group_delete&user=' . $id, 'GET', [], $sid);
         $this->assertStringContainsString('of 1 events', $one['body']);
-        $this->assertStringContainsString('of 0 events', $this->page('/admin/audit?event=group_delete&user=999999', 'GET', [], $sid)['body']);
+        $this->assertStringContainsString('No event matches these filters', $this->page('/admin/audit?event=group_delete&user=999999', 'GET', [], $sid)['body']);
         $this->assertSame(404, $this->page('/admin/entity/events', 'GET', [], $sid)['status'], 'the log is not under Entities');
 
         // an admin cannot disable the account they are signed in with

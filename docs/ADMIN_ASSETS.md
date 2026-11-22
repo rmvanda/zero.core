@@ -117,3 +117,47 @@ inside the `<template>`, so the view `require`s it and nothing is served by URL:
 ```php
 <?php require_once __DIR__ . '/../assets/aws-billing-dashboard.html'; ?>
 ```
+
+---
+
+## Look
+
+Every admin screen, Admin's own and a module's offering alike, is printed inside
+`<div class="admin">` (`AdminResponse::beforeView()` / `afterView()`), and `admin.css` scopes its
+rules to `.admin`. A frame may load the admin styles before or after the site's `main.css`; the
+scope makes them win either way.
+
+**Colours come from the site's theme.** `admin.css` declares `--admin-*` tokens on `:root`. Each
+reads the theme's variable, falls back to the skeleton's name for the same thing, then to a
+neutral value, so a screen is legible under any `main.css`:
+
+| Token | Reads |
+|-------|-------|
+| `--admin-accent` | `--accent-primary`, `--accent` |
+| `--admin-text`, `--admin-text-strong` | `--text-primary` / `--text-bright`, `--text` |
+| `--admin-line` | `--border-color`, `--border` |
+| `--admin-surface` | `--surface`, `--surface-bg-rgb` |
+| `--admin-success`, `--admin-danger`, `--admin-warning` | `--color-success`, `--color-error`, `--color-warning` |
+| `--admin-radius`, `--admin-mono`, `--admin-blur` | `--radius`, `--font-mono`, `--surface-blur` |
+
+Tints (`--admin-accent-soft`, `--admin-lift`, `--admin-text-dim`, `--admin-danger-text`, ...) are
+mixed from those with `color-mix()`. A stylesheet of an admin screen uses the tokens and names no
+colour of its own.
+
+**Shared pieces** a view builds from:
+
+| Class | Is |
+|-------|----|
+| `content-wrapper` | The root of a view |
+| `admin-head`, `admin-lede`, `admin-head-actions` | The title and what the screen is for, with its actions on the right |
+| `admin-section`, `admin-section-head`, `admin-note`, `admin-count` | A part of a screen under its own `h2` |
+| `admin-panel`, `admin-facts` | A surface for a form or a `dl` of facts |
+| `admin-table-wrap` > `admin-table` | A table; cells take `num`, `dim`, `nowrap`, `text-right`, `actions-cell` |
+| `btn-primary`, `btn-secondary`, `btn-small`, `btn-danger`, `btn-icon` | Buttons |
+| `admin-form-field`, `admin-form-row`, `admin-input`, `admin-select`, `admin-switch` | Fields; a switch is a checkbox that takes effect when it changes |
+| `status-badge status-active|status-inactive`, `event-badge`, `badge` | States and keys |
+| `admin-info-box` (`is-error`, `is-success`), `admin-empty` | A note, and nothing-to-show |
+| `pagination`, `pagination-btn` | Paging |
+
+**Icons** are Material Symbols Outlined. `AdminResponse::getStylesheets()` links the font
+(`AdminResponse::ICON_FONT`), so a frame does not have to.

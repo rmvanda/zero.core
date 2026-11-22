@@ -417,6 +417,7 @@ class Response
             ); 
             */ 
         }
+        $this -> afterView();
         $this -> add("sideNav");  // not necessary in all contexts. 
         $this -> add("footer");
     }
@@ -426,6 +427,12 @@ class Response
      * prints its breadcrumbs.
      */
     protected function beforeView(): void {}
+
+    /**
+     * Printed between the view and the footer. Nothing here; AdminResponse
+     * closes the element it opened around the view.
+     */
+    protected function afterView(): void {}
 
     private function add(string $piece){
         if(($this->included[$piece] ?? false) || Request::$madeWithAJAX){

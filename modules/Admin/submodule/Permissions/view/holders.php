@@ -17,14 +17,24 @@ $userLabel = fn(array $user) => trim((string) ($user['name'] ?? '')) !== ''
 ?>
 
 <div class="content-wrapper">
-    <h1><code><?= htmlspecialchars($key) ?></code></h1>
+    <header class="admin-head">
+        <div>
+            <h1><code><?= htmlspecialchars($key) ?></code></h1>
+            <p class="admin-lede">Who holds this capability, and who could be granted it.</p>
+        </div>
+    </header>
 
-    <h2>Holders</h2>
+    <section class="admin-section permission-first-section">
+    <h2>Holders <span class="admin-count"><?= count($holdingGroups) + count($directUsers) ?></span></h2>
     <?php if (empty($holdingGroups) && empty($directUsers)): ?>
-        <div class="admin-info-box">Nobody has been granted this capability.</div>
+        <div class="admin-empty">
+            <span class="material-symbols-outlined" aria-hidden="true">key_off</span>
+            <p>Nobody has been granted this capability. Grant it below.</p>
+        </div>
     <?php else: ?>
         <form method="post" action="/admin/permissions/revoke" class="permission-holders-form">
             <input type="hidden" name="key" value="<?= htmlspecialchars($key) ?>">
+            <div class="admin-table-wrap">
             <table class="admin-table permissions-table">
                 <thead>
                     <tr>
@@ -39,7 +49,7 @@ $userLabel = fn(array $user) => trim((string) ($user['name'] ?? '')) !== ''
                         <tr>
                             <td><input type="checkbox" name="group_ids[]" value="<?= (int) $group['group_id'] ?>" id="<?= $id ?>"></td>
                             <td><label for="<?= $id ?>"><?= htmlspecialchars((string) $group['group_name']) ?></label></td>
-                            <td>Group, <?= (int) $group['member_count'] ?> <?= (int) $group['member_count'] === 1 ? 'member' : 'members' ?></td>
+                            <td class="dim">Group, <?= (int) $group['member_count'] ?> <?= (int) $group['member_count'] === 1 ? 'member' : 'members' ?></td>
                         </tr>
                     <?php endforeach; ?>
                     <?php foreach ($directUsers as $user): ?>
@@ -47,20 +57,26 @@ $userLabel = fn(array $user) => trim((string) ($user['name'] ?? '')) !== ''
                         <tr>
                             <td><input type="checkbox" name="user_ids[]" value="<?= (int) $user['id'] ?>" id="<?= $id ?>"></td>
                             <td><label for="<?= $id ?>"><?= htmlspecialchars($userLabel($user)) ?></label><?= (int) $user['id'] === $this->selfId ? ' <span class="permission-self">you</span>' : '' ?></td>
-                            <td>User</td>
+                            <td class="dim">User</td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            </div>
             <div class="permission-actions">
-                <button type="submit" class="btn-small btn-danger">Revoke from the selected</button>
+                <button type="submit" class="btn-danger">Revoke from the selected</button>
             </div>
         </form>
     <?php endif; ?>
+    </section>
 
     <?php if (!empty($groupUsers)): ?>
-        <h2 class="mt-2">Users who have it through a group</h2>
-        <p>These keep it until their group loses it, or they leave the group.</p>
+    <section class="admin-section">
+        <div class="admin-section-head">
+            <h2>Users who have it through a group <span class="admin-count"><?= count($groupUsers) ?></span></h2>
+            <p class="admin-note">These keep it until their group loses it, or they leave the group.</p>
+        </div>
+        <div class="admin-table-wrap">
         <table class="admin-table permissions-table">
             <thead>
                 <tr>
@@ -72,20 +88,23 @@ $userLabel = fn(array $user) => trim((string) ($user['name'] ?? '')) !== ''
                 <?php foreach ($groupUsers as $user): ?>
                     <tr>
                         <td><?= htmlspecialchars($userLabel($user)) ?></td>
-                        <td><?= htmlspecialchars(implode(', ', $user['groups'])) ?></td>
+                        <td class="dim"><?= htmlspecialchars(implode(', ', $user['groups'])) ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
+        </div>
+    </section>
     <?php endif; ?>
 
-    <h2 class="mt-2">Grant</h2>
+    <section class="admin-section">
+    <h2>Grant</h2>
     <?php if (empty($otherGroups) && empty($otherUsers)): ?>
         <div class="admin-info-box">Every user and every active group has been granted this capability.</div>
     <?php else: ?>
-        <form method="post" action="/admin/permissions/grant" class="admin-info-box permission-grant-form">
+        <form method="post" action="/admin/permissions/grant" class="admin-panel permission-grant-form">
             <input type="hidden" name="key" value="<?= htmlspecialchars($key) ?>">
-            <div class="admin-form-grid">
+            <div class="permission-grant-grid">
                 <div class="admin-form-field">
                     <label for="grant-groups">Groups</label>
                     <select name="group_ids[]" id="grant-groups" multiple size="6" class="permission-picker">
@@ -109,4 +128,5 @@ $userLabel = fn(array $user) => trim((string) ($user['name'] ?? '')) !== ''
             </div>
         </form>
     <?php endif; ?>
+    </section>
 </div>

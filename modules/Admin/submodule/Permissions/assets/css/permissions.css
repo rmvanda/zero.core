@@ -1,27 +1,59 @@
 /* Admin Permissions: the capability list and one capability's holders */
 
-.permissions-table code {
-    font-size: 0.95rem;
+.admin .permissions-table code {
+    font-size: 0.9375rem;
+}
+
+/* The key is the row: its link reads as the key, underlined on hover */
+.admin .permission-key-link {
+    text-decoration: none;
+}
+
+.admin .permission-key-link:hover code {
+    color: var(--admin-accent-text);
+    text-decoration: underline;
+}
+
+.admin .content-wrapper h1 code {
+    font-size: 1em;
+}
+
+/* The first section follows the page head directly */
+.admin .permission-first-section {
+    margin-top: 0;
 }
 
 .permission-check-col {
     width: 2.5rem;
 }
 
-.permission-actions {
-    margin-top: 1rem;
+.admin .permissions-table label {
+    cursor: pointer;
 }
 
-.permission-picker {
+.permission-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.75rem;
+}
+
+/* Groups beside users, each a list to choose several from */
+.permission-grant-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 1rem;
+}
+
+.admin .permission-picker {
     width: 100%;
     min-height: 9rem;
 }
 
-.permission-self {
+.admin .permission-self {
     margin-left: 0.5rem;
-    padding: 0.1rem 0.4rem;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
+    padding: 0 0.4rem;
+    border: 1px solid var(--admin-line);
+    border-radius: 1rem;
     font-size: 0.75rem;
-    opacity: 0.8;
+    color: var(--admin-text-dim);
 }

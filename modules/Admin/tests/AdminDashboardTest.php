@@ -103,9 +103,10 @@ class AdminDashboardTest extends TestCase
     {
         $source = file_get_contents($this->adminDir() . '/view/index.php');
 
-        $this->assertSame(2, preg_match_all('#<h2\b#', $source), 'two sections');
-        $this->assertStringContainsString('Users and access', $source);
-        $this->assertStringContainsString('Modules', $source);
+        // one section per group of cards, each under the group's name
+        $this->assertSame(1, preg_match_all('#<h2\b#', $source), 'the heading is printed once per group');
+        $this->assertStringContainsString("'Users and access' => \$this->ownScreens", $source);
+        $this->assertStringContainsString("'Modules' => \$this->adminModules", $source);
         $this->assertStringNotContainsString('style=', $source);
     }
 

@@ -20,6 +20,9 @@ use Zero\Core\Request;
  *   - Module-specific admin controllers extend this (e.g., LinksAdmin)
  */
 abstract class AdminResponse extends Module {
+    /** The icon font of the admin screens (Material Symbols Outlined), linked by getStylesheets(). */
+    protected const ICON_FONT = 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200';
+
 
     /**
      * Current admin module name
@@ -98,6 +101,9 @@ abstract class AdminResponse extends Module {
      * Mirrors the filename-matching logic of Response::loadAssetTypeFromDir.
      */
     protected function getStylesheets() {
+        // The admin screens draw their icons with this font. A frame that already
+        // links the same URL costs nothing: the browser fetches it once.
+        echo '<link rel="stylesheet" href="' . self::ICON_FONT . '">' . "\n";
         $this->inlineAdminAssets('css');
     }
 
@@ -403,9 +409,13 @@ abstract class AdminResponse extends Module {
     }
 
     /**
-     * Print the breadcrumbs above the view.
+     * Open the element every admin screen sits in, and print the breadcrumbs above the view.
+     *
+     * admin.css scopes its rules to `.admin`, so they outrank a site's main.css
+     * whichever of the two the frame loads first.
      */
     protected function beforeView(): void {
+        echo '<div class="admin">' . "\n";
         $crumbs = $this->breadcrumbs ?: $this->defaultBreadcrumbs();
         if (!$crumbs) {
             return;
@@ -419,6 +429,13 @@ abstract class AdminResponse extends Module {
                 : '<li><a href="' . htmlspecialchars((string) $crumb['url']) . '">' . $label . '</a></li>';
         }
         echo "</ol></nav>\n";
+    }
+
+    /**
+     * Close the element beforeView() opened.
+     */
+    protected function afterView(): void {
+        echo "</div>\n";
     }
 
     /**

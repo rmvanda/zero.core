@@ -1,13 +1,3 @@
-/* Manage Groups - Action Bar */
-.action-bar {
-    margin: 1.5rem 0;
-}
-
-.action-bar .btn-primary {
-    width: 100%;
-    text-align: center;
-}
-
 /* The column that holds the expand chevron */
 .expandable-table .expand-col {
     width: 30px;

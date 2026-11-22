@@ -7,25 +7,34 @@ $groupMembers = $this->groupMembers;
 ?>
 
 <div class="content-wrapper">
-    <h1>Group Management</h1>
-
-    <div class="action-bar">
-        <a href="/admin/groups/form" class="btn-primary">Create New Group</a>
-    </div>
+    <header class="admin-head">
+        <div>
+            <h1>Groups</h1>
+            <p class="admin-lede">A group holds capabilities for everyone in it. Open a row to see who that is.</p>
+        </div>
+        <div class="admin-head-actions">
+            <a href="/admin/groups/form" class="btn-primary">
+                <span class="material-symbols-outlined" aria-hidden="true">add</span>
+                New group
+            </a>
+        </div>
+    </header>
 
     <?php if (empty($groups)): ?>
-        <div class="admin-info-box text-center">
-            No groups found. <a href="/admin/groups/form">Create your first group</a>
+        <div class="admin-empty">
+            <span class="material-symbols-outlined" aria-hidden="true">groups</span>
+            <p>There are no groups yet. <a href="/admin/groups/form">Create the first one</a>.</p>
         </div>
     <?php else: ?>
+        <div class="admin-table-wrap">
         <table class="admin-table expandable-table">
             <thead>
                 <tr>
                     <th class="expand-col"></th>
+                    <th>Group</th>
                     <th>Status</th>
-                    <th>Group Name</th>
-                    <th>Members</th>
-                    <th>Actions</th>
+                    <th class="num">Members</th>
+                    <th class="text-right">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -35,14 +44,14 @@ $groupMembers = $this->groupMembers;
                             <span class="material-symbols-outlined expand-icon">chevron_right</span>
                         </td>
                         <td>
+                            <strong><?= htmlspecialchars($group->group_name) ?></strong>
+                        </td>
+                        <td>
                             <span class="status-badge status-<?= $group->is_active ? 'active' : 'inactive' ?>">
                                 <?= $group->is_active ? 'Active' : 'Inactive' ?>
                             </span>
                         </td>
-                        <td>
-                            <strong><?= htmlspecialchars($group->group_name) ?></strong>
-                        </td>
-                        <td><?= number_format((int) $group->member_count) ?></td>
+                        <td class="num"><?= number_format((int) $group->member_count) ?></td>
                         <td class="actions-cell">
                             <a href="/admin/groups/members/<?= (int) $group->group_id ?>" class="btn-small">Manage</a>
                             <?php if ($group->is_active): ?>
@@ -76,7 +85,7 @@ $groupMembers = $this->groupMembers;
                                         <div class="members-chips">
                                             <?php foreach ($members as $member): ?>
                                                 <span class="member-chip">
-                                                    <span class="material-symbols-outlined">person</span>
+                                                    <span class="material-symbols-outlined" aria-hidden="true">person</span>
                                                     <?= htmlspecialchars($member['username']) ?>
                                                     <?php if ($member['role'] === 'admin'): ?>
                                                         <span class="member-role">admin</span>
@@ -97,5 +106,6 @@ $groupMembers = $this->groupMembers;
                 <?php endforeach; ?>
             </tbody>
         </table>
+        </div>
     <?php endif; ?>
 </div>

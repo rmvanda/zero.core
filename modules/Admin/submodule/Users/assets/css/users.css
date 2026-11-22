@@ -1,11 +1,10 @@
 /* Manage Users - a disabled account: dimmed row, badge shown */
-.user-disabled-badge {
+.admin .status-badge.user-disabled-badge {
     display: none;
-    margin-left: 0.5rem;
 }
 
-.main-row.user-disabled .user-disabled-badge {
-    display: inline-block;
+.admin .main-row.user-disabled .status-badge.user-disabled-badge {
+    display: inline-flex;
 }
 
 .main-row.user-disabled .user-info {
@@ -17,3 +16,12 @@
     width: 30px;
 }
 
+/* One user's screen - the form that adds a row sits under the list it adds to */
+.user-add-form {
+    margin-top: 0.75rem;
+}
+
+/* Keeps the value fields in one column when a row has no Delete button */
+.setting-no-delete {
+    width: 2.25rem;
+}

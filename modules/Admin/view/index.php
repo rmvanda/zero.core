@@ -1,32 +1,35 @@
-<div class="content-wrapper">
-    <h1>Admin Panel</h1>
-    <p>Manage users and the modules that offer an admin screen</p>
+<?php
+// Admin::index() loads Admin's own screens and the modules that offer one.
+$groups = [
+    'Users and access' => $this->ownScreens ?? [],
+    'Modules' => $this->adminModules ?? [],
+];
+?>
+<div class="content-wrapper admin-dashboard">
+    <header class="admin-head">
+        <div>
+            <h1>Admin</h1>
+            <p class="admin-lede">Manage users and the modules that offer an admin screen</p>
+        </div>
+    </header>
 
-    <h2 class="mt-2">Users and access</h2>
-    <div class="admin-card-grid">
-        <?php foreach ($this->ownScreens ?? [] as $screen): ?>
-        <a href="<?= htmlspecialchars($screen['url']) ?>" class="btn-primary admin-card">
-            <span class="material-symbols-outlined icon-lg"><?= htmlspecialchars($screen['icon']) ?></span>
-            <span class="admin-card-title"><?= htmlspecialchars($screen['label']) ?></span>
-            <?php if (!empty($screen['description'])): ?>
-            <span class="admin-card-desc"><?= htmlspecialchars($screen['description']) ?></span>
-            <?php endif; ?>
-        </a>
-        <?php endforeach; ?>
-    </div>
-
-    <h2 class="mt-2">Modules</h2>
-    <div class="admin-card-grid">
-        <?php if (!empty($this->adminModules)): ?>
-        <?php foreach ($this->adminModules as $module): ?>
-        <a href="<?= htmlspecialchars($module['url']) ?>" class="btn-primary admin-card">
-            <span class="material-symbols-outlined icon-lg"><?= htmlspecialchars($module['icon']) ?></span>
-            <span class="admin-card-title"><?= htmlspecialchars($module['label']) ?></span>
-            <?php if (!empty($module['description'])): ?>
-            <span class="admin-card-desc"><?= htmlspecialchars($module['description']) ?></span>
-            <?php endif; ?>
-        </a>
-        <?php endforeach; ?>
-        <?php endif; ?>
-    </div>
+    <?php foreach ($groups as $heading => $cards): ?>
+    <?php if (empty($cards)) { continue; } ?>
+    <section class="admin-section">
+        <h2><?= htmlspecialchars($heading) ?></h2>
+        <div class="admin-card-grid">
+            <?php foreach ($cards as $card): ?>
+            <a href="<?= htmlspecialchars($card['url']) ?>" class="admin-card">
+                <span class="material-symbols-outlined admin-card-icon" aria-hidden="true"><?= htmlspecialchars($card['icon']) ?></span>
+                <span class="admin-card-text">
+                    <span class="admin-card-title"><?= htmlspecialchars($card['label']) ?></span>
+                    <?php if (!empty($card['description'])): ?>
+                    <span class="admin-card-desc"><?= htmlspecialchars($card['description']) ?></span>
+                    <?php endif; ?>
+                </span>
+            </a>
+            <?php endforeach; ?>
+        </div>
+    </section>
+    <?php endforeach; ?>
 </div>

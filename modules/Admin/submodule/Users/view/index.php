@@ -1,14 +1,19 @@
 <div class="content-wrapper">
-    <h1>User Management</h1>
+    <header class="admin-head">
+        <div>
+            <h1>Users</h1>
+            <p class="admin-lede">Open a row for an account's details. Permissions holds its capabilities and settings.</p>
+        </div>
+    </header>
 
-    <div class="mt-2">
+    <div class="admin-table-wrap">
         <table class="admin-table expandable-table users-table">
             <thead>
                 <tr>
                     <th class="col-expand"></th>
                     <th>User</th>
                     <th>Email</th>
-                    <th class="text-center">Actions</th>
+                    <th class="text-right">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -25,16 +30,16 @@
                                      alt="Profile"
                                      class="avatar-md">
                             <?php else: ?>
-                                <span class="material-symbols-outlined icon-md">account_circle</span>
+                                <span class="material-symbols-outlined icon-md" aria-hidden="true">account_circle</span>
                             <?php endif; ?>
-                            <span><?= $name ?></span>
+                            <strong><?= $name ?></strong>
                             <span class="status-badge status-inactive user-disabled-badge">Disabled</span>
                         </div>
                     </td>
                     <td>
                         <?= htmlspecialchars((string) $user['email']) ?>
                     </td>
-                    <td class="text-center actions-cell">
+                    <td class="actions-cell">
                         <a href="/admin/users/edit/<?= (int) $user['id'] ?>"
                            class="btn-small">
                             Permissions
@@ -72,7 +77,7 @@
                                 <div class="members-chips">
                                     <?php foreach ($user['groups'] as $groupName): ?>
                                         <span class="member-chip">
-                                            <span class="material-symbols-outlined">group</span>
+                                            <span class="material-symbols-outlined" aria-hidden="true">group</span>
                                             <?= htmlspecialchars((string) $groupName) ?>
                                         </span>
                                     <?php endforeach; ?>
@@ -91,6 +96,7 @@
         <span class="pagination-info">
             <?= (int) $this->userTotal ?> <?= (int) $this->userTotal === 1 ? 'user' : 'users' ?>
         </span>
+        <?php if ($this->listPages > 1): ?>
         <div class="pagination-controls">
             <?php if ($this->listPage > 1): ?>
                 <a class="pagination-btn" rel="prev" href="/admin/users?page=<?= (int) $this->listPage - 1 ?>">Previous</a>
@@ -104,5 +110,6 @@
                 <span class="pagination-btn disabled" aria-disabled="true">Next</span>
             <?php endif; ?>
         </div>
+        <?php endif; ?>
     </nav>
 </div>
