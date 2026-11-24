@@ -173,7 +173,7 @@ trait BareSite
         // database's name. Read here, written only into the temp site's config.
         $real = parse_ini_file(dirname(self::$core) . '/app/config/database.ini', false, INI_SCANNER_RAW);
         $ini = '';
-        foreach (['HOST' => $real['HOST'] ?? 'localhost', 'USER' => $real['USER'] ?? '', 'PASS' => $real['PASS'] ?? '', 'NAME' => self::DATABASE] as $key => $value) {
+        foreach (['HOST' => $real['HOST'] ?? 'localhost', 'USER' => $real['USER'] ?? '', 'PASS' => $real['PASS'] ?? '', 'NAME' => self::DATABASE, 'DB_DRIVER' => 'mysql'] as $key => $value) {
             // the framework reads its config raw: no quoting
             $ini .= $key . '=' . $value . "\n";
         }
