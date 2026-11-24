@@ -136,12 +136,18 @@ final class Session
         // previous user.
         self::$user = null;
 
-        // Rotate at the privilege boundary. Application::__construct() only
-        // rotates on a timer, which leaves a session-fixation window at exactly
-        // the moment it matters. Guarded because CLI/test contexts have no session.
+        // Rotate at the privilege boundary. Application only rotates on a
+        // timer (regenerateAgedSession()), which leaves a session-fixation
+        // window at exactly the moment it matters. Guarded because CLI/test
+        // contexts have no session.
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_regenerate_id(true);
         }
+
+        // A sign-in that arrived on a session in its grace period (its id was
+        // just replaced by the timer) gets a session of its own here, and that
+        // one is not obsolete.
+        unset($_SESSION['obsolete_at']);
 
         $_SESSION['user'] = $identity ?? [
             'full_name' => $user->name,
