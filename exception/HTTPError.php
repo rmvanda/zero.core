@@ -9,7 +9,7 @@ namespace Zero\Core\Exception;
  * Application::run() catches it and renders via the existing Response instance,
  * preserving framePath and all other resolved paths.
  *
- * The legacy Error class remains available for direct instantiation.
+ * The legacy Error class is in core/deprecated/ and nothing loads it.
  *
  * Usage:
  *   throw new HTTPError(404);

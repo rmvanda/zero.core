@@ -76,6 +76,11 @@ every request.
 
 ## Plugins in the plugin folder
 
+Core ships no plugin and no `plugin/` folder: `PluginLoader` and the hook points are core's, the
+plugins are the site's. The two below are the ones the sites built on core carry in their own
+`plugin/`; a site without that folder runs with no plugins. `DEVMODE` is not defined at present
+(see `ZERO.md`, Development Mode), so the DevToolbar stays off.
+
 | Plugin | Purpose | Priority | Hooks | Documentation |
 |--------|---------|----------|-------|---------------|
 | `DevToolbar` | Debug toolbar (performance, request, session), `DEVMODE` only | 10 | `afterAutoloaders`, `afterConstants`, `beforeRun`, `afterRun` | [plugin/DevToolbar/README.md](../../plugin/DevToolbar/README.md) |

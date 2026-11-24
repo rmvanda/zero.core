@@ -10,7 +10,7 @@ use Zero\Core\Module\Entity\Model\EntityStore;
 /**
  * Entity Admin Controller
  *
- * Admin interface for entity types, their records, and the event log
+ * Admin interface for entity types and their records (the event log is Admin's /admin/audit)
  * URL: /admin/entity
  */
 #[RequirePermission('allow.admin')]

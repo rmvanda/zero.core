@@ -10,6 +10,38 @@ that text belongs in this file.
 
 Newest first.
 
+## 2026-11 — No connection without a configured database; DEVMODE off
+
+### A default `DB_DRIVER` — REMOVED
+
+`Database::getConnection()` built a mysql DSN when `database.ini` had no `DB_DRIVER` key, and
+tried to connect with blank credentials on a site that had no database, logging
+`Database connection failed` at critical level on each attempt.
+
+| Was | Now |
+|-----|-----|
+| `DB_DRIVER` absent meant mysql | `DB_DRIVER` is required. Add `DB_DRIVER=mysql` to a `database.ini` written before the key existed, or nothing connects |
+| Blank `NAME`/`USER` still attempted a connection | `Database::isConfigured()` is false and `getConnection()` throws `Database is not configured` without connecting or logging |
+
+`Database::connect()` and `Database::init()` with an array are unchanged: with no `driver` key
+they still build a mysql DSN.
+
+### `DEVMODE` from `DEV_SUBNET` — SHELVED
+
+`Application::defineConstants()` defined `DEVMODE` when `REMOTE_ADDR` contained `DEV_SUBNET`. The
+block is commented out: `DEV_SUBNET` is not in use, and the block read it with no `defined()`
+check, so a site whose own `constants.ini` left the key out failed on every request. `DEVMODE`
+is never defined; every reader asks `defined('DEVMODE')` first. Uncomment the block to bring it
+back.
+
+### Small corrections to docs and comments
+
+- `core/archive/` does not exist; `README.md` and `ADMIN_ASSETS.md` no longer point there.
+- `PLUGINS.md` says the DevToolbar and SideNav plugins are a site's, not core's.
+- `Sanitize`'s docblock called a regex method "extraction"; the matches are removed.
+- The `user.ini` and `auth.ini` headers named `sprintf()`; the views use `Strings::fill()`.
+- The Entity admin offering no longer describes itself as holding the event log (`/admin/audit`).
+
 ## 2026-11 — Core's modules are `Zero\Core\Module\`; none is required; AccessRequest is part of Auth
 
 ### `Zero\Module\{Auth,User,Admin,Index,Push,Entity,Module,HelloWorld,Test}` — RENAMED to `Zero\Core\Module\...`

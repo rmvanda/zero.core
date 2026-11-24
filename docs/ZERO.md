@@ -25,7 +25,7 @@ How the Zero Framework works under the hood. For what is in the repository and h
 1. `new Application()` starts output buffering and the PHP session. A session older than `SESSION_REGENERATE_INTERVAL` seconds (when that constant is defined) gets a new session id.
 2. `registerAutoloaders()` configures `Modules`, registers the class loading described below and loads the plugins.
 3. `parseRequest()` builds `Request` from the URL: `/module/endpoint/arg1/arg2` → module, endpoint, args array. Module and endpoint are lowercased, and kebab-case becomes camelCase (`/user-profile/edit` → `UserProfile::edit()`). An empty path is `index/index`; a path of one segment gets the endpoint `index`.
-4. `defineConstants()` reads the strings and config files (see Configuration System) and sets `DEVMODE`.
+4. `defineConstants()` reads the strings and config files (see Configuration System).
 5. `run()` begins with `banNefariousRequest()` and the check on the module folders (see How a module is found).
 6. `run()` loads the controller of the module `Modules` names, when it exists and is on. With no such module the request is served by a plain `Response`, with `Index` loaded for step 10.
 7. The module is instantiated and its attributes are checked via `Application::checkAttributes()`.
@@ -233,7 +233,17 @@ Config is PHP constants from `.ini` files. `Application::defineConstants()` read
 
 A config file does not redefine a constant that already exists (a strings file or an earlier config file defined it): the repeat is logged with the key and file, and the first value stays. A key that is not a valid constant name is skipped with a log line.
 
-After the files: when `TIMEZONE` is defined and not empty it becomes PHP's default timezone, and `DEVMODE` is defined (see Development Mode).
+After the files: when `TIMEZONE` is defined and not empty it becomes PHP's default timezone.
+
+### The database: `database.ini`
+
+`app/config/database.ini` holds `DB_DRIVER` (`mysql`, `pgsql` or `sqlite`), `HOST`, `NAME`, `USER` and `PASS`, with `DB_PORT` and `DB_CHARSET` optional.
+
+- `DB_DRIVER` is required and has no default.
+- Nothing connects until code calls `Database::getConnection()`.
+- With `DB_DRIVER`, `NAME` or `USER` blank (`NAME` alone decides for sqlite), `Database::isConfigured()` is false and no connection is attempted at all: `getConnection()` throws `Database is not configured` and logs nothing. A site with no database leaves the file blank and serves every page that runs no query.
+- A configured database that cannot be reached logs `Database connection failed` at critical level and throws.
+- `Database::connect($conn_info)` and `Database::init($conn_info)` take their settings as an array and do not read these constants.
 
 ### Wording: `strings/`
 
@@ -256,7 +266,7 @@ A string that takes a value holds `%s` where the value goes (`USER_LOGIN_HEADING
 - `MODULE_PATH` — The site's modules directory (the first root handed to `Modules`)
 - `VIEW_PATH` — The site's frame folder, `app/frontend/frame/`
 - `WEB_ROOT` — Public web root (`app/config/config.ini`)
-- `DEVMODE` — Defined as true when the client's address contains `DEV_SUBNET`
+- `DEVMODE` — Not defined at present (see Development Mode)
 
 ## Banned requests and `allowed-ips.lst`
 
@@ -326,8 +336,10 @@ See `/zeromodule` skill for the full submodule convention.
 
 ## Development Mode
 
-`DEVMODE` is defined as true when `REMOTE_ADDR` contains the string `DEV_SUBNET` (`app/config/constants.ini`). The skeleton's default `DEV_SUBNET` is `-`, which no address contains.
+`DEVMODE` is not defined at present: the check in `Application::defineConstants()` that defines it when `REMOTE_ADDR` contains the string `DEV_SUBNET` is commented out, and nothing reads `DEV_SUBNET` (`[dev]` in `app/config/config.ini`; core's default in `core/skeleton/config/constants.ini`).
+
+Code asks `defined('DEVMODE') && DEVMODE`, so it runs its production branch. With `DEVMODE` true:
 
 - JSON is pretty-printed
 - Xdebug's `var_display_max_*` limits are lifted
-- The DevToolbar plugin shows the request's queries, log messages and attributes
+- A site's DevToolbar plugin shows the request's queries, log messages and attributes

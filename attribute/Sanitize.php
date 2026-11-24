@@ -10,13 +10,13 @@ use \Zero\Core\Console;
  * Usage examples:
  *   #[Sanitize(['title', 'content'])]                    // Default: strip special chars
  *   #[Sanitize(['email' => FILTER_SANITIZE_EMAIL])]      // Use filter_var filter
- *   #[Sanitize(['slug' => '/^[a-z0-9-]+$/'])]            // Use regex extraction
+ *   #[Sanitize(['slug' => '/[^a-z0-9-]/'])]              // Remove whatever the regex matches
  *   #[Sanitize(['user_id'])]                             // Auto-detected as numeric (ends in 'id')
  *
  * Behavior:
  * - Numeric array keys: apply default sanitization (strip special symbols)
  * - String keys with integer values: treat as filter_var filter constant
- * - String keys with string values: treat as regex pattern for extraction
+ * - String keys with string values: a preset name, or a regex whose matches are removed (preg_replace)
  * - Keys ending in 'id' (case-insensitive): auto-sanitize as integer
  */
 #[Attribute]
@@ -43,7 +43,7 @@ class Sanitize {
      * @param array $params Parameters to sanitize
      *   - Simple array: ['title', 'content'] - default sanitization
      *   - Associative: ['email' => FILTER_SANITIZE_EMAIL] - specific filter
-     *   - Regex: ['slug' => '/^[a-z0-9-]+$/'] - regex extraction
+     *   - Regex: ['slug' => '/[^a-z0-9-]/'] - whatever the regex matches is removed
      */
     public function __construct(array $params) {
         $this->params = $params;

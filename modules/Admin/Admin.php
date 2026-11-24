@@ -11,7 +11,7 @@ use \Zero\Core\Modules;
 /**
  * The /admin hub: the dashboard and the router.
  *
- * Admin's own screens (Users, Groups, Modules, Firewall) are its submodules,
+ * Admin's own screens (Users, Groups, Permissions, Audit, Firewall, Modules) are its submodules,
  * in submodule/. Every other admin screen belongs to the module it
  * administers, offered from that module's Admin/ folder.
  */

@@ -4,8 +4,7 @@ Admin CSS and JS are always written into the page inline. There is no admin asse
 under a module's `Admin/assets/` (or the Admin module's own `assets/`) is reachable from the web
 root. The price is no browser caching between admin pages.
 
-> A URL-served design that would allow caching is kept, not implemented, in
-> `core/archive/ADMIN_ASSETS_PROPOSAL.md`.
+> A URL-served design that would allow caching was considered and not implemented.
 
 ## How it is enforced
 

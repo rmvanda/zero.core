@@ -1,8 +1,8 @@
 Module — the Zero Framework skeleton module
 ===========================================
 
-A live, routable reference module at /module/ (it ships in core/modules/ and is
-switched on in app/modules.ini).
+A routable reference module at /module/. It ships in core/modules/ in the example
+tier, off by default: `Module = on` under `[enabled]` in app/modules.ini turns it on.
 
 Every directory below is a worked example. `mkmod` (in this directory) copies
 from here to scaffold new modules, so this is also the template source. Edit a

@@ -99,7 +99,7 @@ core's `composer.json` at runtime; it documents what to install.
 
 | File | What it is |
 |---|---|
-| `Database.php` | PDO connection management. Its `TrackedStatement` times and records every query when query tracking is switched on, so the DevToolbar can show what a page actually ran. |
+| `Database.php` | PDO connection management. Opens nothing until asked, and nothing at all when `database.ini` has no `DB_DRIVER` or credentials. Its `TrackedStatement` times and records every query when query tracking is switched on, so the DevToolbar can show what a page actually ran. |
 | `Model.php` | A thin typed row gateway over a real table. Deliberately not an ORM and deliberately not `Zero\Entity`: for models that want a real schema with real constraints. |
 | `entity/` | The entity framework (`Zero\Entity`), a git submodule. See [entity/README.md](entity/README.md). |
 | `Session.php` | Who is making this request: `userId()`, `user()`, `isLoggedIn()`, `can()`. `establish()` is the single writer of the login session and `end()` the single teardown. See `modules/Auth/CLAUDE.md` for the session contract. |
@@ -117,9 +117,8 @@ core's `composer.json` at runtime; it documents what to install.
 | `skeleton/` | The template for a new site, and the defaults core falls back to. See [skeleton/README.md](skeleton/README.md). |
 | `tests/` | PHPUnit suite for core. See [tests/README.md](tests/README.md). |
 | `docs/` | Framework documentation. |
-| `bin/` | Maintenance scripts (`refresh-cloudflare-ips.php`, `log_monitor.sh`). |
+| `bin/` | Maintenance scripts: `refresh-cloudflare-ips.php`, and `log_monitor.sh`, which predates `Console` and is likely deprecated (it mails and rotates one file per log level, `{LOG_FILE}_{LEVEL}.log`; `Console` writes every level to one file). |
 | `deprecated/` | `Error.php` and `SQLAdapter.php`. Nothing loads them. `SQLAdapter` extends an `Adapter` class that does not exist in this repo. |
-| `archive/` | Superseded design notes. History, not documentation. |
 
 # Where to read next
 

@@ -7,6 +7,6 @@
 return [
     'label' => 'Entities',
     'icon' => 'database',
-    'description' => 'Entity types, their records, and the event log',
+    'description' => 'Entity types and their records',
     'permissions' => ['allow.admin']
 ];
