@@ -22,7 +22,7 @@ How the Zero Framework works under the hood. For what is in the repository and h
 
 `index.php` defines `ZERO_ROOT`, `ROOT_PATH`, `VIEW_PATH` and `MODULE_PATH` and calls the four `Application` methods (`core/README.md` shows the file).
 
-1. `new Application()` starts output buffering and the PHP session. A session older than `SESSION_REGENERATE_INTERVAL` seconds (when that constant is defined) gets a new session id.
+1. `new Application()` starts output buffering and the PHP session, and stamps a new session with the time it was created.
 2. `registerAutoloaders()` configures `Modules`, registers the class loading described below and loads the plugins.
 3. `parseRequest()` builds `Request` from the URL: `/module/endpoint/arg1/arg2` → module, endpoint, args array. Module and endpoint are lowercased, and kebab-case becomes camelCase (`/user-profile/edit` → `UserProfile::edit()`). An empty path is `index/index`; a path of one segment gets the endpoint `index`.
 4. `defineConstants()` reads the strings and config files (see Configuration System).
@@ -233,7 +233,7 @@ Config is PHP constants from `.ini` files. `Application::defineConstants()` read
 
 A config file does not redefine a constant that already exists (a strings file or an earlier config file defined it): the repeat is logged with the key and file, and the first value stays. A key that is not a valid constant name is skipped with a log line.
 
-After the files: when `TIMEZONE` is defined and not empty it becomes PHP's default timezone.
+After the files: when `TIMEZONE` is defined and not empty it becomes PHP's default timezone, and a session older than `SESSION_REGENERATE_INTERVAL` seconds gets a new session id (see Session regeneration).
 
 ### The database: `database.ini`
 
@@ -258,6 +258,15 @@ Wording is constants too, from `.ini` files read by `Zero\Core\Strings` with `IN
 Write each value wrapped in double quotes: `KEY="We'll email you a link; it says "hi" = done."`. Inside the quotes a single quote, `=`, `;` and double quotes are literal, and a backslash is a backslash. Without the quotes `;` starts a comment and surrounding spaces are dropped.
 
 A string that takes a value holds `%s` where the value goes (`USER_LOGIN_HEADING="Sign in to %s"`). Fill it with `Strings::fill(USER_LOGIN_HEADING, SITE_SHORT_NAME)`, never with `sprintf()`: `fill()` replaces `%s` and leaves every other percent sign as written, so a site's wording cannot make a page fail.
+
+### Session regeneration
+
+A session older than `SESSION_REGENERATE_INTERVAL` seconds gets a new session id on its next request, and its clock starts again.
+
+- The key is in `app/config/constants.ini`, and in `core/skeleton/config/constants.ini` for a site with no file of that name. Left out or blank, the interval is 1800 seconds (`Application::SESSION_REGENERATE_DEFAULT`). `0` means never.
+- The check runs at the end of `defineConstants()`, the first point at which the interval is known.
+- The old session is left for PHP's garbage collection, not deleted, so a request already in flight with the old id still finds its session.
+- Signing in is separate: `Session::establish()` rotates the id and deletes the old session.
 
 ### Key Constants
 
