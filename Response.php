@@ -22,6 +22,10 @@ class Response
     public $title;  // TODO - this isn't quite hooked in correctly. 
 
     protected $status; 
+    // The "code" field of a JSON response. Declared so export() can read it
+    // when an endpoint never set one: undeclared, every JSON response raised
+    // "Undefined property: $code", which display_errors writes into the body.
+    protected $code;
     protected $data; 
 
     protected $included = array(); 
