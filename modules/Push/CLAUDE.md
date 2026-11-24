@@ -13,7 +13,7 @@ Any module can send push notifications using the `PushHelper` library class.
 ### Basic Usage
 
 ```php
-use \Zero\Module\Push\Lib\PushHelper;
+use \Zero\Core\Module\Push\Lib\PushHelper;
 
 // 1. Create a notification
 $notificationId = PushHelper::createNotification([
@@ -49,14 +49,14 @@ public function addComment($postId) {
     // Notify post author
     $post = $this->getPost($postId);
 
-    $notificationId = \Zero\Module\Push\Lib\PushHelper::createNotification([
+    $notificationId = \Zero\Core\Module\Push\Lib\PushHelper::createNotification([
         'title' => 'New Comment',
         'body' => 'Someone commented on your post',
         'url' => "/blog/post/{$postId}",
         'created_by' => $userId
     ]);
 
-    \Zero\Module\Push\Lib\PushHelper::sendPush($notificationId, [$post['author_id']]);
+    \Zero\Core\Module\Push\Lib\PushHelper::sendPush($notificationId, [$post['author_id']]);
 }
 ```
 
@@ -67,7 +67,7 @@ public function addComment($postId) {
 public function sendSystemAlert() {
     $message = $_POST['message'];
 
-    $notificationId = \Zero\Module\Push\Lib\PushHelper::createNotification([
+    $notificationId = \Zero\Core\Module\Push\Lib\PushHelper::createNotification([
         'title' => 'System Alert',
         'body' => $message,
         'icon' => '/assets/img/alert-icon.png',
@@ -76,7 +76,7 @@ public function sendSystemAlert() {
     ]);
 
     // Send to all subscribed users
-    \Zero\Module\Push\Lib\PushHelper::sendPushToAll($notificationId);
+    \Zero\Core\Module\Push\Lib\PushHelper::sendPushToAll($notificationId);
 }
 ```
 
@@ -95,14 +95,14 @@ public function updateOrderStatus($orderId, $status) {
         'cancelled' => 'Your order has been cancelled'
     ];
 
-    $notificationId = \Zero\Module\Push\Lib\PushHelper::createNotification([
+    $notificationId = \Zero\Core\Module\Push\Lib\PushHelper::createNotification([
         'title' => 'Order Update',
         'body' => $statusMessages[$status] ?? 'Order status updated',
         'url' => "/shop/order/{$orderId}",
         'created_by' => 1 // System user
     ]);
 
-    \Zero\Module\Push\Lib\PushHelper::sendPush($notificationId, [$order['customer_id']]);
+    \Zero\Core\Module\Push\Lib\PushHelper::sendPush($notificationId, [$order['customer_id']]);
 }
 ```
 

@@ -1,5 +1,5 @@
 <?php
-namespace Zero\Module\Admin\Model;
+namespace Zero\Core\Module\Admin\Model;
 
 use Zero\Core\Database;
 

@@ -1,5 +1,5 @@
 <?php
-namespace Zero\Module\Auth\Tests;
+namespace Zero\Core\Module\Auth\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Zero\Core\Strings;
@@ -17,7 +17,6 @@ class StringsTest extends TestCase
         'Auth'          => 'AUTH_',
         'User'          => 'USER_',
         'Admin'         => 'ADMIN_',
-        'AccessRequest' => 'ACCESS_REQUEST_',
         'Push'          => 'PUSH_',
     ];
 

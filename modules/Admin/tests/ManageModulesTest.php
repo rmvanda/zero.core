@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Zero\Module\Admin\Tests;
+namespace Zero\Core\Module\Admin\Tests;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -35,7 +35,7 @@ class ManageModulesTest extends TestCase
                 mkdir("{$this->base}/{$root}/{$name}", 0777, true);
             }
         }
-        Modules::configure(["{$this->base}/site/", "{$this->base}/bundled/"], $this->ini);
+        Modules::configure(["{$this->base}/site/", "{$this->base}/bundled/"], $this->ini, "{$this->base}/bundled/");
         $this->json = Request::$acceptsJSON;
         $this->post = $_POST;
         http_response_code(200);
@@ -56,7 +56,7 @@ class ManageModulesTest extends TestCase
     private function admin(): object
     {
         $core = "{$this->base}/bundled";
-        return new class($core) extends \Zero\Module\Admin\Modules {
+        return new class($core) extends \Zero\Core\Module\Admin\Modules {
             public array $exported = [];
             public ?string $builtView = null;
             public ?string $redirected = null;
@@ -90,7 +90,7 @@ class ManageModulesTest extends TestCase
 
     public function testThePostEndpointCarriesItsAttributes(): void
     {
-        $method = new \ReflectionMethod(\Zero\Module\Admin\Modules::class, 'set');
+        $method = new \ReflectionMethod(\Zero\Core\Module\Admin\Modules::class, 'set');
         $attrs = [];
         foreach ($method->getAttributes() as $attr) {
             $attrs[$attr->getName()] = $attr->getArguments();
@@ -104,7 +104,7 @@ class ManageModulesTest extends TestCase
 
     public function testTheWholeAdminModuleSitsBehindTheAdminCapability(): void
     {
-        foreach ([\Zero\Module\Admin::class, \Zero\Module\Admin\Modules::class] as $class) {
+        foreach ([\Zero\Core\Module\Admin::class, \Zero\Core\Module\Admin\Modules::class] as $class) {
             $attrs = (new \ReflectionClass($class))->getAttributes(\Zero\Core\Attribute\RequirePermission::class);
             $this->assertCount(1, $attrs, $class);
             $this->assertSame(['allow.admin'], $attrs[0]->getArguments(), $class);
@@ -175,8 +175,6 @@ class ManageModulesTest extends TestCase
             'module missing' => [[], 400],
             'unknown module' => [['module' => 'Nope', 'enabled' => 'off'], 404],
             'traversal' => [['module' => '../x', 'enabled' => 'off'], 404],
-            'required off' => [['module' => 'Admin', 'enabled' => 'off'], 400],
-            'required default' => [['module' => 'Auth', 'enabled' => 'default'], 400],
             'keyword name' => [['module' => 'Null', 'enabled' => 'off'], 400],
             'enabled array' => [['module' => 'Sitemap', 'enabled' => ['off']], 400],
             'enabled word' => [['module' => 'Sitemap', 'enabled' => 'maybe'], 400],
@@ -190,7 +188,7 @@ class ManageModulesTest extends TestCase
 
     private function configureAgain(): void
     {
-        Modules::configure(["{$this->base}/site/", "{$this->base}/bundled/"], $this->ini);
+        Modules::configure(["{$this->base}/site/", "{$this->base}/bundled/"], $this->ini, "{$this->base}/bundled/");
     }
 
     // ---- the rows ----------------------------------------------------------
@@ -205,16 +203,42 @@ class ManageModulesTest extends TestCase
             array_column($rows, 'name')
         );
         $by = array_column($rows, null, 'name');
-        $this->assertSame(['required', 'core', true, false], [$by['Admin']['tier'], $by['Admin']['where'], $by['Admin']['enabled'], $by['Admin']['canSwitch']]);
-        $this->assertSame(['optional', false, true, true], [$by['Push']['tier'], $by['Push']['enabled'], $by['Push']['departure'], $by['Push']['canSwitch']]);
+        $this->assertSame(['core', 'core', true, false], [$by['Admin']['tier'], $by['Admin']['where'], $by['Admin']['enabled'], $by['Admin']['overridden']]);
+        $this->assertSame(['core', false, true], [$by['Push']['tier'], $by['Push']['enabled'], $by['Push']['departure']]);
         $this->assertFalse($by['Sitemap']['departure']);
         $this->assertTrue($by['Test']['enabled']);
         $this->assertTrue($by['Test']['departure']);
         $this->assertSame(['site', 'site', 5], [$by['Blog']['tier'], $by['Blog']['where'], $by['Blog']['order']]);
         $this->assertNull($by['Push']['order']);
         $this->assertFalse($by['Null']['settable']);
-        $this->assertFalse($by['Null']['canSwitch']);
         $this->assertTrue($by['Blog']['settable']);
+        $this->assertFalse($by['Blog']['overridden']);
+    }
+
+    public function testARowSaysWhenTheSiteOverridesAModuleOfCore(): void
+    {
+        mkdir("{$this->base}/site/Auth", 0777, true);
+        Modules::configure(["{$this->base}/site/", "{$this->base}/bundled/"], $this->ini, "{$this->base}/bundled/");
+
+        $by = array_column($this->admin()->rows(), null, 'name');
+        $this->assertSame(['core', 'site', true], [$by['Auth']['tier'], $by['Auth']['where'], $by['Auth']['overridden']]);
+        $this->assertFalse($by['Admin']['overridden']);
+
+        $html = $this->render($this->admin()->rows());
+        $this->assertSame(1, substr_count($html, 'class="badge module-overridden"'));
+        $this->assertMatchesRegularExpression('#data-module="Auth".*?module-overridden#s', $html);
+    }
+
+    public function testAnyModuleCanBeTurnedOffAndAdminSaysHowToComeBack(): void
+    {
+        $ini = new ModulesIni($this->ini);
+        $this->admin()->apply($ini, ['module' => 'Admin', 'enabled' => 'off']);
+        $this->admin()->apply($ini, ['module' => 'Auth', 'enabled' => 'off']);
+        $ini->save();
+        $this->assertStringContainsString("Admin = off\n", $this->iniText());
+        $this->assertStringContainsString("Auth = off\n", $this->iniText());
+        Modules::configure(["{$this->base}/site/", "{$this->base}/bundled/"], $this->ini, "{$this->base}/bundled/");
+        $this->assertFalse(Modules::enabled('Admin'));
     }
 
     // ---- the view ----------------------------------------------------------
@@ -238,20 +262,22 @@ class ManageModulesTest extends TestCase
     {
         return $over + [
             'name' => $name, 'tier' => 'site', 'where' => 'site', 'enabled' => true, 'default' => true,
-            'departure' => false, 'order' => null, 'canSwitch' => true, 'settable' => true,
+            'departure' => false, 'order' => null, 'overridden' => false, 'settable' => true,
         ];
     }
 
-    public function testViewShowsARequiredModuleWithoutASwitch(): void
+    public function testViewGivesEveryModuleASwitchAndAdminItsWarning(): void
     {
         $html = $this->render($this->admin()->rows());
 
-        // the rows of the required modules hold no enabled field (and so do the rows of a module whose name is an INI keyword)
+        // every row holds an enabled field, except a module whose name is an INI keyword
         preg_match_all('#<tr[^>]*data-module="([^"]*)"[^>]*>(.*?)</tr>#s', $html, $rows, PREG_SET_ORDER);
         $this->assertNotEmpty($rows);
         foreach ($rows as [, $name, $body]) {
-            $required = in_array($name, ["Admin", "Auth", "Null"], true);
-            $this->assertSame(!$required, str_contains($body, 'name="enabled"'), "{$name} switch");
+            $this->assertSame($name !== 'Null', str_contains($body, 'name="enabled"'), "{$name} switch");
+            // Only Admin's row says how to turn it back on, and asks before it goes
+            $this->assertSame($name === 'Admin', str_contains($body, 'module-warning'), "{$name} warning");
+            $this->assertSame($name === 'Admin', str_contains($body, 'data-confirm-off='), "{$name} confirmation");
         }
         $this->assertStringNotContainsString('style=', $html);
     }

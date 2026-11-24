@@ -10,6 +10,44 @@ that text belongs in this file.
 
 Newest first.
 
+## 2026-11 — Core's modules are `Zero\Core\Module\`; none is required; AccessRequest is part of Auth
+
+### `Zero\Module\{Auth,User,Admin,Index,Push,Entity,Module,HelloWorld,Test}` — RENAMED to `Zero\Core\Module\...`
+
+Every class of a module in `core/modules/` is in `Zero\Core\Module\` (`Zero\Core\Module\Auth\OAuth\Broker`,
+`Zero\Core\Module\Push\Lib\PushHelper`, `Zero\Core\Module\Admin`). `Zero\Module\` holds a site's modules only.
+A site that names one of these classes changes the prefix:
+
+| Was | Is |
+|-----|----|
+| `\Zero\Module\Push\Lib\PushHelper` | `\Zero\Core\Module\Push\Lib\PushHelper` |
+| `\Zero\Module\Auth\OAuth\Broker`, `Provider`, `Token` | `\Zero\Core\Module\Auth\OAuth\...` |
+| `extends \Zero\Module\Admin` (in a test) | `extends \Zero\Core\Module\Admin` |
+
+A site's frame partials that list sign-in providers (`_oauth-buttons.php`, `_google-signin.php`) name
+`Provider` and need the same change. Code that built a module class name from the string
+`'Zero\\Module\\'` calls `Modules::controllerClass()`; code that cut that prefix off calls
+`Modules::classRest()`.
+
+### "Only Index may be replaced by a site" — REPLACED: a site overrides any module of core
+
+A site module with the exact name of a module of core is an override, not a clash (see "Where a
+module lives" in `ZERO.md`). `Modules::configure()` takes the core root as an optional third argument.
+
+### The `required` and `optional` tiers — REPLACED by `core`
+
+`Modules::tier()` answers `core`, `example` or `site`. No module is always on: `Index`, `Auth`, `User`
+and `Admin` can be turned off in `app/modules.ini` and on the Admin modules screen, and an entry for
+one of them is no longer ignored. `ModulesIni::setEnabled()` no longer refuses them. The string
+`ADMIN_MODULES_ALWAYS_ON` and the row field `canSwitch` are gone.
+
+### The `AccessRequest` module, `/access-request/...` — MOVED to `/auth/access-request/...`
+
+`core/modules/AccessRequest/` is `core/modules/Auth/submodule/AccessRequest/`, class
+`Zero\Core\Module\Auth\AccessRequest`. Its three endpoints are `/auth/access-request/permission`,
+`/submit` and `/approve`, and `#[RequirePermission]` redirects to the first. The old URLs answer 404,
+including approval links in mail sent before the move. It is on when Auth is on.
+
 ## 2026-11 — The admin screens' look
 
 ### Admin CSS classes — REMOVED or REPLACED
@@ -135,14 +173,14 @@ an admin screen saw its module's constants only when a file in `app/config/` hel
 
 ## 2026-11 — `PushHelper` belongs to the Push module
 
-### `Zero\Lib\Push\PushHelper` (`core/lib/Push/`) — MOVED to `Zero\Module\Push\Lib\PushHelper`
+### `Zero\Lib\Push\PushHelper` (`core/lib/Push/`) — MOVED to `Zero\Core\Module\Push\Lib\PushHelper`
 
 ```php
 // gone
 use Zero\Lib\Push\PushHelper;
 
 // use
-use Zero\Module\Push\Lib\PushHelper;
+use Zero\Core\Module\Push\Lib\PushHelper;
 ```
 
 The file is `core/modules/Push/lib/PushHelper.php`; the methods are the same. A module's
@@ -159,10 +197,10 @@ the response. It writes a `Console` warning naming the entity class and returns 
 
 ## 2026-11 — Auth adapters have a namespace; Keycloak is gone
 
-### Global adapter classes (`\GitHubAdapter`) — REPLACED by `Zero\Module\Auth\Adapters\`
+### Global adapter classes (`\GitHubAdapter`) — REPLACED by `Zero\Core\Module\Auth\Adapters\`
 
 `GoogleAdapter`, `GitHubAdapter`, `DiscordAdapter`, `GitLabAdapter` and `OAuth2Adapter` are
-classes of `Zero\Module\Auth\Adapters` in `core/modules/Auth/adapters/`. The autoloader
+classes of `Zero\Core\Module\Auth\Adapters` in `core/modules/Auth/adapters/`. The autoloader
 finds them; nothing loads an adapter file by path.
 
 ```php
@@ -171,7 +209,7 @@ require_once __DIR__ . '/../adapters/GitHubAdapter.php';
 new \GitHubAdapter($config);
 
 // use
-use Zero\Module\Auth\Adapters\GitHubAdapter;
+use Zero\Core\Module\Auth\Adapters\GitHubAdapter;
 new GitHubAdapter($config);
 ```
 
@@ -345,7 +383,7 @@ adds it to an older site). `$user->disable()` and `$user->enable()` set it, and 
 calls `/admin/disable-user` and `/admin/enable-user`. A disabled account cannot sign in, its open session
 ends at the next request, and its data stays.
 
-`/admin/delete-user` and `Zero\Module\Admin\Model\UserAdmin` are gone. `UserAdmin` deleted the user's rows
+`/admin/delete-user` and `Zero\Core\Module\Admin\Model\UserAdmin` are gone. `UserAdmin` deleted the user's rows
 from `auth_token`, `api_tokens`, `oauth_token`, `ws_tokens` and `push_subscriptions` by table name, and two
 of those tables belong to other modules. Admin names no table it does not own. To remove an account for
 good, delete its rows in the database by hand; `$user->delete()` clears core's own tables.
@@ -406,7 +444,7 @@ Lists the Composer packages core uses (`minishlink/web-push`; suggested `google/
 
 ### `modules/{Auth,User,Admin,AccessRequest,Sitemap,Push,Entity,Module,HelloWorld,Test}/` — MOVED to `core/modules/`
 
-The ten modules every site gets live in `core/modules/`. Namespaces (`Zero\Module\Auth`, ...) and URLs
+The ten modules every site gets live in `core/modules/`. Namespaces (`Zero\Core\Module\Auth`, ...) and URLs
 are unchanged; `Modules::path()` and the namespace map find them there. A site's `modules/` folder
 holds only the site's own modules, and a site module may not reuse a bundled name.
 
@@ -621,8 +659,8 @@ cache (calling AWS only when no cache exists) and ignores `?refresh=1`.
 
 The WebSocket monitor stopped being an Admin submodule and the push notification screen
 stopped being part of Admin. They are `Zero\Module\Ws\Admin\WsAdmin`
-(`Zero\Module\Admin\WebSocket` before) and `Zero\Module\Push\Admin\PushAdmin`
-(`Zero\Module\Admin::pushNotifications()` and `deletePushNotifications()` before), which Admin
+(`Zero\Core\Module\Admin\WebSocket` before) and `Zero\Core\Module\Push\Admin\PushAdmin`
+(`Zero\Core\Module\Admin::pushNotifications()` and `deletePushNotifications()` before), which Admin
 discovers and routes to. The "System Monitoring" section of the Admin dashboard is gone;
 both screens are listed with the other module offerings.
 
@@ -643,7 +681,7 @@ views (`websocket.css`, `websocket.js`, `push.js`). The WebSocket monitor's note
 
 Billing and Plugins stopped being Admin submodules. They are
 `Zero\Module\Billing\Admin\BillingAdmin` and `Zero\Module\Plugins\Admin\PluginsAdmin`
-(`Zero\Module\Admin\Billing` and `Zero\Module\Admin\Plugins` before), which Admin
+(`Zero\Core\Module\Admin\Billing` and `Zero\Core\Module\Admin\Plugins` before), which Admin
 discovers and routes to.
 
 | Was | Now |
@@ -677,7 +715,7 @@ to, and so is the API transaction log that lived in `Admin` itself.
 
 `Admin::viewApiResponse()` and `Admin::expireApiCache()` are gone, and `Admin::manage()`
 no longer has an `api-transactions` case. The models are `Zero\Module\ApiConfig\Model\ApiService`,
-`ApiProvider`, `ApiProviderService` and `ApiProviderServiceConfig` (`Zero\Module\Admin\ApiConfig\Model\*`
+`ApiProvider`, `ApiProviderService` and `ApiProviderServiceConfig` (`Zero\Core\Module\Admin\ApiConfig\Model\*`
 before). Views and assets sit in `modules/ApiConfig/Admin/`; the `manage-api-transactions`
 and `view-api-response` assets are now `transactions` and `view-response`. `api_schema.sql`
 and `CLAUDE.md` moved to `modules/ApiConfig/`.
@@ -687,7 +725,7 @@ and `CLAUDE.md` moved to `modules/ApiConfig/`.
 ### `/admin/manage/{entity}`, `/admin/manage/event`, `/admin/create-entity`, `/admin/update-entity`, `/admin/delete-entity` — MOVED into the Entity module's admin offering
 
 The entity-management screens and the event log left `modules/Admin`. They are
-`Zero\Module\Entity\Admin\EntityAdmin`, which Admin discovers and routes to.
+`Zero\Core\Module\Entity\Admin\EntityAdmin`, which Admin discovers and routes to.
 
 | Was | Now |
 |-----|-----|
@@ -701,7 +739,7 @@ The entity-management screens and the event log left `modules/Admin`. They are
 `Admin::manageEntity()`, `Admin::toStudlyCase()`, `Admin::createEntity()`,
 `Admin::updateEntity()` and `Admin::deleteEntity()` are gone. `Admin::manage()` answers 404
 for a type it has no screen for (`users` and `groups` remain).
-`Zero\Module\Admin\Model\Entity` is now `Zero\Module\Entity\Model\EntityStore`. The views
+`Zero\Core\Module\Admin\Model\Entity` is now `Zero\Core\Module\Entity\Model\EntityStore`. The views
 and the `create` and `manage` assets moved with it (`core/modules/Entity/Admin/`); the
 `create-entity` and `manage-entity` asset names are now `create` and `manage`.
 
@@ -718,9 +756,9 @@ The OAuth token store, provider registry and token broker are Auth's own, so the
 
 | Was | Now |
 |---|---|
-| `Zero\Entity\OAuthToken` | `Zero\Module\Auth\OAuth\Token` |
-| `Zero\Entity\OAuthProvider` | `Zero\Module\Auth\OAuth\Provider` |
-| `Zero\Core\TokenBroker` | `Zero\Module\Auth\OAuth\Broker` |
+| `Zero\Entity\OAuthToken` | `Zero\Core\Module\Auth\OAuth\Token` |
+| `Zero\Entity\OAuthProvider` | `Zero\Core\Module\Auth\OAuth\Provider` |
+| `Zero\Core\TokenBroker` | `Zero\Core\Module\Auth\OAuth\Broker` |
 | `entity/oauth_token.sql`, `entity/oauth_provider.sql` | `core/sql/migrations/auth_oauth_token.sql`, `auth_oauth_provider.sql` |
 | `core/tests/TokenBrokerTest.php` | `core/modules/Auth/tests/OAuthBrokerTest.php` |
 
@@ -809,7 +847,7 @@ every capability key starts with `allow.`; `grant()` refuses one that does not.
 Rows for user 0 listed the keys the Admin user screen should offer.
 `modules/Admin/USER_SETTINGS_POLISH.md` described them and is deleted. The screen reads the
 keys from the modules' `#[RequirePermission]` attributes and from the grants that exist
-(`Zero\Module\Admin\Model\CapabilityKeys`). In `permission`, `user_id` 0 means "this row is a
+(`Zero\Core\Module\Admin\Model\CapabilityKeys`). In `permission`, `user_id` 0 means "this row is a
 group's", which is why `User` still refuses to work on id 0.
 
 ### `POST /admin/update-permission` — TAKES `kind`
@@ -906,7 +944,7 @@ Use `entity_id` and `granted_on`.
 
 No module depends on the Admin module. Groups were the one place that rule broke.
 
-### `Zero\Module\Admin\Model\Group` and `GroupMember` — REPLACED by `Zero\Core\Group`
+### `Zero\Core\Module\Admin\Model\Group` and `GroupMember` — REPLACED by `Zero\Core\Group`
 
 Lists, Notebook, Kanban, Notes and Comfy built the Admin module's `Group` model to read a user's
 groups, so none of them could be installed without Admin. One core class now covers both models:
@@ -1354,7 +1392,7 @@ $user->profile();
 `user_profile` has a composite primary key `(user_id, field_key)`, and `Model` assumes a single
 auto-increment pk with `lastInsertId()` semantics — which is why these methods talk to the table
 with hand-written SQL rather than through the inherited column-whitelist machinery. Sensitive
-fields are encrypted per-row on write and decrypted on read, shaped after `Zero\Module\Auth\OAuth\Token`.
+fields are encrypted per-row on write and decrypted on read, shaped after `Zero\Core\Module\Auth\OAuth\Token`.
 
 Some test files still carry `UserProfile` in their names and comments.
 

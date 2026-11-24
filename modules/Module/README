@@ -13,7 +13,8 @@ Framework-aware — core/ reads these
 -----------------------------------
 
   Module.php            Controller. Class name must match the directory name.
-                        namespace Zero\Module; extends \Zero\Core\Module.
+                        namespace Zero\Module (this skeleton, a module of core, is
+                        Zero\Core\Module; mkmod writes Zero\Module); extends \Zero\Core\Module.
 
   view/                 $this->viewPath. Endpoint templates; $this is in scope.
                         view/errorNNN.php is used by Response::renderError().

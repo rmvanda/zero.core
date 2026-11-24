@@ -503,8 +503,6 @@ final class AdminEndpointsTest extends TestCase
                 [['module' => 'Push', 'hash' => $hash(), 'order' => 'first'], 400, 'whole number'],
                 [['module' => 'Push', 'hash' => $hash(), 'order' => '10000'], 400, '0 to 9999'],
                 [['module' => 'Push', 'hash' => ['x'], 'enabled' => 'off'], 400, 'string'],
-                // a required module is always on
-                [['module' => 'Admin', 'hash' => $hash(), 'enabled' => 'off'], 400, ''],
                 [['module' => 'Push', 'enabled' => 'off'], 400, 'hash'],
             ] as [$post, $status, $says]) {
                 [$got, $detail] = $this->refusal('/admin/modules/set', $post);
@@ -514,7 +512,19 @@ final class AdminEndpointsTest extends TestCase
             $this->assertSame($saved, file_get_contents($ini), 'a refused change left the file as it was');
             $this->assertSame(200, $this->page('/admin', 'GET', [], self::$sid)['status']);
 
-            $this->assertGreaterThanOrEqual(2, $this->events('module_setting_change'));
+            // No module is always on. Admin's row says how to bring it back,
+            // and that is the only way back: the screen goes with it.
+            $screen = $this->page('/admin/modules', 'GET', [], self::$sid)['body'];
+            $this->assertStringContainsString('delete the Admin = off line from app/modules.ini', $screen);
+            $this->assertStringNotContainsString('class="badge module-overridden"', $screen, 'this site overrides no module of core');
+            $this->accepted('/admin/modules/set', ['module' => 'Admin', 'hash' => $hash(), 'enabled' => 'off']);
+            $this->assertStringContainsString('Admin = off', file_get_contents($ini));
+            $this->assertSame(404, $this->page('/admin', 'GET', [], self::$sid)['status']);
+            $this->assertSame(404, $this->page('/admin/modules', 'GET', [], self::$sid)['status']);
+            file_put_contents($ini, str_replace("Admin = off\n", '', file_get_contents($ini)));
+            $this->assertSame(200, $this->page('/admin/modules', 'GET', [], self::$sid)['status']);
+
+            $this->assertGreaterThanOrEqual(3, $this->events('module_setting_change'));
         } finally {
             file_put_contents($ini, $before);
         }

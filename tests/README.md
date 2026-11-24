@@ -47,7 +47,7 @@ Tests live inside the repo they exercise, so each repo carries its own suite:
 Placement follows the **subject under test**, not the collaborators. `SessionEstablishTest`
 lives in core because it tests `Zero\Core\Session::establish()`, even though it builds its
 fixture row via `Zero\Core\Access\User::create()`; `OAuthBrokerTest` likewise tests
-`Zero\Module\Auth\OAuth\Broker` through `Zero\Module\Auth\OAuth\Token`, and lives in the Auth module.
+`Zero\Core\Module\Auth\OAuth\Broker` through `Zero\Core\Module\Auth\OAuth\Token`, and lives in the Auth module.
 
 ## How classes load
 

@@ -1,5 +1,5 @@
 <?php
-namespace Zero\Module\Auth\OAuth;
+namespace Zero\Core\Module\Auth\OAuth;
 
 /**
  * Provider-token access for consumers (e.g. the Dashboard). Returns an
@@ -41,12 +41,12 @@ class Broker
             if (self::$adapterResolver) {
                 $adapter = (self::$adapterResolver)($provider);
             } else {
-                // Auth is a single-segment module class (namespace Zero\Module; class
+                // Auth is a single-segment module class (namespace Zero\Core\Module; class
                 // Auth, at Auth.php in the Auth module's folder). The router loads it via isModule(),
                 // NOT the class autoloader — so from core we require it explicitly
-                // before the static call. FQCN is \Zero\Module\Auth (not ...\Auth\Auth).
+                // before the static call. FQCN is \Zero\Core\Module\Auth (not ...\Auth\Auth).
                 require_once __DIR__ . '/../Auth.php';
-                $adapter = \Zero\Module\Auth::adapterForProvider($provider);
+                $adapter = \Zero\Core\Module\Auth::adapterForProvider($provider);
             }
 
             if ($adapter === null || !method_exists($adapter, 'refresh')) {

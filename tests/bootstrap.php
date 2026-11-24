@@ -4,7 +4,7 @@
  *
  * core/autoload.php registers the rule a request uses to find a class
  * (Application::classFile()), so a test loads a class of core or of a module
- * exactly as the site does: Zero\Module\Auth, Zero\Module\Auth\Model\*,
+ * exactly as the site does: Zero\Core\Module\Auth, Zero\Core\Module\Auth\Model\*,
  * Zero\Module\Lists\Lib\*, a module's Tests\ classes in its tests/ folder.
  * No module needs an entry in composer.json, and a test needs no require_once
  * for a class that follows the convention.
@@ -15,8 +15,9 @@
  *     other shared test classes).
  *   - A test that points Modules at throwaway folders still finds the classes
  *     of the real modules: when the request rule finds nothing for a
- *     Zero\Module\ class, the real modules/ and core/modules/ are looked in
- *     directly, with the same folder rule (the exact name, then lower case).
+ *     Zero\Module\ class the real modules/ is looked in directly, and for a
+ *     Zero\Core\Module\ class the real core/modules/, with the same folder
+ *     rule (the exact name, then lower case).
  */
 // dirname(__DIR__, 2) is the assembly root: this file is core/tests/bootstrap.php,
 // and vendor/ + modules/ are siblings of core/, not of this directory.
@@ -33,8 +34,14 @@ spl_autoload_register(static function (string $class): void {
         return;
     }
 
-    $prefix = 'Zero\\Module\\';
-    if (!str_starts_with($class, $prefix) || !\Zero\Core\Application::isQualifiedName($class)) {
+    $prefix = null;
+    foreach (['Zero\\Core\\Module\\' => '/core/modules/', 'Zero\\Module\\' => '/modules/'] as $candidate => $candidateFolder) {
+        if (str_starts_with($class, $candidate)) {
+            [$prefix, $folder] = [$candidate, $candidateFolder];
+            break;
+        }
+    }
+    if ($prefix === null || !\Zero\Core\Application::isQualifiedName($class)) {
         return;
     }
 
@@ -42,15 +49,12 @@ spl_autoload_register(static function (string $class): void {
     $name     = array_shift($segments);
     $leaf     = $segments === [] ? $name : array_pop($segments);
 
-    foreach (['/modules/', '/core/modules/'] as $folder) {
-        $dir = $root . $folder . $name . '/';
-        foreach ($segments as $segment) {
-            $dir .= (is_dir($dir . $segment) ? $segment : strtolower($segment)) . '/';
-        }
-        if (is_file($file = $dir . $leaf . '.php')) {
-            require_once $file;
-            return;
-        }
+    $dir = $root . $folder . $name . '/';
+    foreach ($segments as $segment) {
+        $dir .= (is_dir($dir . $segment) ? $segment : strtolower($segment)) . '/';
+    }
+    if (is_file($file = $dir . $leaf . '.php')) {
+        require_once $file;
     }
 });
 

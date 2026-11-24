@@ -1,11 +1,11 @@
 <?php
-namespace Zero\Module\Auth\Tests;
+namespace Zero\Core\Module\Auth\Tests;
 
 use Zero\Tests\Core\ZeroTestCase;
 use Zero\Lib\Http\Client;
 use Zero\Lib\Http\Response;
 
-use Zero\Module\Auth\Adapters\OAuth2Adapter;
+use Zero\Core\Module\Auth\Adapters\OAuth2Adapter;
 
 /** Fake adapter with a fixed verified identity, for token-capture tests. */
 class TokenFakeAdapter extends OAuth2Adapter

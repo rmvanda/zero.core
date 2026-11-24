@@ -1,5 +1,5 @@
 <?php
-namespace Zero\Module\Entity\Model;
+namespace Zero\Core\Module\Entity\Model;
 
 use Zero\Core\Console;
 

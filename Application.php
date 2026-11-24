@@ -275,7 +275,7 @@ class Application {
         //Console::log("Module: $module Endpoint: $endpoint Args: ".print_r($args,true)); 
 
         if ($this->isModule($Module=ucfirst($module))) {
-            $Module = "\\Zero\\Module\\".$Module;
+            $Module = "\\" . Modules::controllerClass($Module);
         } else {
             // loading Index here so we can reference it as a fallback in Response
             // The reason we don't go ahead and do that here is because modules
@@ -527,6 +527,8 @@ class Application {
      * The file a class name maps to, or null when the namespace map has no
      * such file. The map, in order:
      *
+     *   Zero\Core\Module\{X}\...  core's module X (Modules::corePath(X)),
+     *                         whether or not a site module overrides it
      *   Zero\Core\Attribute\  core/attribute/
      *   Zero\Core\            core/
      *   Zero\Lib\             core/lib/
@@ -535,7 +537,7 @@ class Application {
      *                         framework class is never loaded: the framework's wins.
      *   Zero\Aux\             aux/
      *   Zero\App\Lib\        app/lib/
-     *   Zero\Module\{X}\...  the folder Modules::path(X) names
+     *   Zero\Module\{X}\...  the site's module X (Modules::sitePath(X))
      *
      * The remaining namespace segments are folders. Each is tried as written,
      * then as a submodule (module classes only: submodule/{Segment}/), then
@@ -556,6 +558,21 @@ class Application {
         }
         $root  = dirname(__DIR__) . "/";
 
+        // Zero\Core\Module itself (no further segment) is core/Module.php, below.
+        foreach ([Modules::CORE_NAMESPACE => true, Modules::SITE_NAMESPACE => false] as $prefix => $core) {
+            if (!str_starts_with($class, $prefix)) {
+                continue;
+            }
+            $rest = substr($class, strlen($prefix));
+            $name = strstr($rest, "\\", true);
+            $module = $name === false ? $rest : $name;
+            $dir = $core ? Modules::corePath($module) : Modules::sitePath($module);
+            if ($dir === null) {
+                return null;
+            }
+            return self::findIn($dir, $name === false ? $module : substr($rest, strlen($name) + 1), true);
+        }
+
         foreach ([
             "Zero\\Core\\Attribute\\" => "core/attribute/",
             "Zero\\Core\\"            => "core/",
@@ -574,17 +591,6 @@ class Application {
                 }
                 return $file;
             }
-        }
-
-        if (str_starts_with($class, "Zero\\Module\\")) {
-            $rest = substr($class, strlen("Zero\\Module\\"));
-            $name = strstr($rest, "\\", true);
-            $module = $name === false ? $rest : $name;
-            $dir = Modules::path($module);
-            if ($dir === null) {
-                return null;
-            }
-            return self::findIn($dir, $name === false ? $module : substr($rest, strlen($name) + 1), true);
         }
 
         return null;
@@ -768,7 +774,7 @@ class Application {
         if (!self::isModuleName($module) || !Modules::routable($module)) {
             return null;
         }
-        return self::classFile("Zero\\Module\\" . (Modules::name($module) ?? $module));
+        return self::classFile((string) Modules::controllerClass($module));
     }
 
     /** 

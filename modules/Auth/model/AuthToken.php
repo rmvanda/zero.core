@@ -1,5 +1,5 @@
 <?php
-namespace Zero\Module\Auth\Model;
+namespace Zero\Core\Module\Auth\Model;
 
 use Zero\Core\Database;
 use Zero\Core\Request;

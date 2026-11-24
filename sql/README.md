@@ -21,7 +21,7 @@ Tables come first and views after the tables they read.
 | Core (`Zero\Core\Access\User`, `Group`, `Permission`) | `users`, `user_profile`, `user_settings`, `user_group`, `user_group_member`, `permission`, `user_view` |
 | Auth | `auth_token`, `oauth_provider`, `oauth_token` |
 | User | `api_tokens` |
-| AccessRequest | `access_requests` |
+| Auth (its AccessRequest submodule) | `access_requests` |
 | Push | `push_subscriptions`, `push_notifications`, `push_notification_clicks` |
 | Entity framework | `entity_type`, `entity`, `event_view` |
 

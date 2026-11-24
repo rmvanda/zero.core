@@ -25,10 +25,10 @@ POST) still arrives with `?via`, so `loadAdapter()` falls back to the query para
 
 ## Adapter architecture
 
-Adapters are classes of `Zero\Module\Auth\Adapters` in `adapters/`. The autoloader finds them:
+Adapters are classes of `Zero\Core\Module\Auth\Adapters` in `adapters/`. The autoloader finds them:
 
 ```php
-// e.g. 12 => "GitHub" => Zero\Module\Auth\Adapters\GitHubAdapter
+// e.g. 12 => "GitHub" => Zero\Core\Module\Auth\Adapters\GitHubAdapter
 $ac = self::ADAPTER_NAMESPACE . $this->smids[$via] . "Adapter";
 $this->auth = new $ac();
 ```
@@ -101,7 +101,7 @@ userinfo path and `email_verified` on the ID token and neither is guaranteed to 
 
 ## Provider registry (`oauth_provider`)
 
-`Zero\Module\Auth\OAuth\Provider` (`OAuth/Provider.php`; schema `core/sql/migrations/auth_oauth_provider.sql`, created by `core/sql/core.sql`) — a plain table, not an EAV entity.
+`Zero\Core\Module\Auth\OAuth\Provider` (`OAuth/Provider.php`; schema `core/sql/migrations/auth_oauth_provider.sql`, created by `core/sql/core.sql`) — a plain table, not an EAV entity.
 
 - `available()` = enabled **and** configured (credentials present). Drives the login buttons.
 - `Auth::assertProviderAvailable()` re-checks the same gate server-side, so a disabled provider
@@ -112,7 +112,7 @@ userinfo path and `email_verified` on the ID token and neither is guaranteed to 
 
 ## Token persistence (`oauth_token`)
 
-`Zero\Module\Auth\OAuth\Token` (`OAuth/Token.php`; schema `core/sql/migrations/auth_oauth_token.sql`, created by `core/sql/core.sql`) — one row per `(user_id, provider)`, `access_token`/`refresh_token`
+`Zero\Core\Module\Auth\OAuth\Token` (`OAuth/Token.php`; schema `core/sql/migrations/auth_oauth_token.sql`, created by `core/sql/core.sql`) — one row per `(user_id, provider)`, `access_token`/`refresh_token`
 encrypted at rest with `Zero\Lib\Crypto` (AES-256-GCM, key `APP_ENCRYPTION_KEY` from
 `app/config/crypto.ini`). Callers always see plaintext.
 
@@ -120,7 +120,7 @@ encrypted at rest with `Zero\Lib\Crypto` (AES-256-GCM, key `APP_ENCRYPTION_KEY` 
   never break a login**.
 - `store()` writes only the keys present, so a refresh that omits `refresh_token` preserves the
   stored one (Google/Discord) while GitLab's rotated token overwrites.
-- `Zero\Module\Auth\OAuth\Broker` refreshes on demand for other modules (Calendar, Dashboard) via
+- `Zero\Core\Module\Auth\OAuth\Broker` refreshes on demand for other modules (Calendar, Dashboard) via
   `Auth::adapterForProvider($slug)`.
 
 ## Session contract

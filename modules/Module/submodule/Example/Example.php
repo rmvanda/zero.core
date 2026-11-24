@@ -16,7 +16,7 @@
  * core/modules/Module/submodule/Example/ and dispatches here.
  * MKMOD:SKELETON-ONLY-END
  */
-namespace Zero\Module\Module;
+namespace Zero\Core\Module\Module;
 
 class Example extends \Zero\Core\Module {
 

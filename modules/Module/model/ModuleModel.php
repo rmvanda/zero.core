@@ -5,7 +5,7 @@
  * in core/Response.php). The framework does not inject models; instantiate
  * them yourself, typically in the controller's constructor.
  */
-namespace Zero\Module\Module\Model;
+namespace Zero\Core\Module\Module\Model;
 
 class ModuleModel {
 

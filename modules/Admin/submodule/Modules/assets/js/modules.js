@@ -18,6 +18,10 @@ document.addEventListener('DOMContentLoaded', function() {
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
             var body = new FormData(form);
+            // Turning Admin off takes this screen with it: say how to get it back first
+            if (form.dataset.confirmOff && body.get('enabled') === 'off' && !window.confirm(form.dataset.confirmOff)) {
+                return;
+            }
             // The state select sits in another cell and belongs to the form by its form attribute
             try {
                 var response = await fetch('/admin/modules/set', {

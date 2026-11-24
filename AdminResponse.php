@@ -51,7 +51,7 @@ abstract class AdminResponse extends Module {
 
         // Remove any auto-created public symlink — admin assets must not be web-accessible
         $fullClass = get_class($this);
-        $modulePath = substr($fullClass, strlen('Zero\\Module\\'));
+        $modulePath = (string) Modules::classRest($fullClass);
         $linkPath = WEB_ROOT . '/assets/' . strtolower(str_replace('\\', '/', $modulePath));
         if (is_link($linkPath)) {
             unlink($linkPath);
@@ -196,7 +196,7 @@ abstract class AdminResponse extends Module {
             // A folder is not an offering: the class must exist
             // (a load failure in one offering leaves only that module unlisted)
             try {
-                $offeringExists = class_exists("Zero\\Module\\{$moduleName}\\Admin\\{$moduleName}Admin");
+                $offeringExists = class_exists(Modules::controllerClass($moduleName) . "\\Admin\\{$moduleName}Admin");
             } catch (\Throwable $e) {
                 Console::warn("Admin offering {$moduleName} failed to load: " . $e->getMessage());
                 continue;
@@ -261,7 +261,8 @@ abstract class AdminResponse extends Module {
      * Whether a URL may reach a method of an offering
      *
      * Only a public, non-static method that is not a constructor or magic
-     * method and is declared outside the Zero\Core\ namespace is an endpoint.
+     * method and is declared by a module, not by the framework itself, is an
+     * endpoint (a module of core, Zero\Core\Module\, is a module).
      * Methods an offering inherits from the framework (loadConfig,
      * loadInlineAsset, ...) and its protected helpers are not.
      */
@@ -276,7 +277,9 @@ abstract class AdminResponse extends Module {
             && !$reflection->isStatic()
             && !$reflection->isConstructor()
             && !str_starts_with($reflection->getName(), '__')
-            && !str_starts_with($reflection->getDeclaringClass()->getName(), 'Zero\\Core\\');
+            // a method the framework declares is no endpoint; one a module of core declares is
+            && (!str_starts_with($reflection->getDeclaringClass()->getName(), 'Zero\\Core\\')
+                || Modules::classRest($reflection->getDeclaringClass()->getName()) !== null);
     }
 
     /**
@@ -393,7 +396,7 @@ abstract class AdminResponse extends Module {
      * the Admin module itself.
      */
     protected function card(): ?array {
-        $class = substr(static::class, strlen('Zero\\Module\\'));
+        $class = (string) Modules::classRest(static::class);
         $parts = explode('\\', $class);
         if (count($parts) < 2) {
             return null;
@@ -447,7 +450,7 @@ abstract class AdminResponse extends Module {
      * @return mixed Result of controller method
      */
     protected function routeToModuleAdmin($moduleClassName, $method = 'index', $params = []) {
-        $adminClass = "Zero\\Module\\{$moduleClassName}\\Admin\\{$moduleClassName}Admin";
+        $adminClass = Modules::controllerClass($moduleClassName) . "\\Admin\\{$moduleClassName}Admin";
 
         // A module that is switched off has no admin: answered before this
         // method looks for the class. Admin::__call makes the same check before

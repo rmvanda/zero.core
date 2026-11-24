@@ -1,6 +1,6 @@
 <?php
 
-namespace Zero\Module\Admin;
+namespace Zero\Core\Module\Admin;
 
 use \Zero\Core\AdminResponse;
 use \Zero\Core\Session;
@@ -10,7 +10,7 @@ use \Zero\Core\Access\User;
 use \Zero\Core\Attribute\RequirePermission;
 use \Zero\Core\Attribute\{AllowedMethods, RequiredParams, AuditLog};
 use \Zero\Core\Exception\HTTPError;
-use \Zero\Module\Admin\Model\CapabilityKeys;
+use \Zero\Core\Module\Admin\Model\CapabilityKeys;
 
 /**
  * Admin's permissions screens: every capability (an allow.* key) with who

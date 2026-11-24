@@ -71,7 +71,7 @@ class AutoloadMapTest extends TestCase
             'Zero\\Lib\\Mail\\Mail'             => 'core/lib/Mail/Mail.php',
             'Zero\\Lib\\Http\\Client'           => 'core/lib/Http/Client.php',
             'Zero\\Lib\\CloudFlare\\CloudFlare' => 'core/lib/CloudFlare/CloudFlare.php',
-            'Zero\\Module\\Push\\Lib\\PushHelper' => 'core/modules/Push/lib/PushHelper.php',
+            'Zero\\Core\\Module\\Push\\Lib\\PushHelper' => 'core/modules/Push/lib/PushHelper.php',
         ];
         foreach ($core as $class => $path) {
             $found = Application::classFile($class);
@@ -147,7 +147,7 @@ class AutoloadMapTest extends TestCase
     {
         $this->assertSame(
             realpath($this->root . 'core/modules/Admin/submodule/Firewall/Firewall.php'),
-            realpath((string) Application::classFile('Zero\Module\Admin\Firewall'))
+            realpath((string) Application::classFile('Zero\Core\Module\Admin\Firewall'))
         );
     }
 
@@ -162,15 +162,49 @@ class AutoloadMapTest extends TestCase
     {
         return [
             'dotdot to core'      => ['Zero\\Module\\..\\..\\core\\Session'],
-            'dotdot inside'       => ['Zero\\Module\\Auth\\..\\Admin\\Admin'],
-            'slashes'             => ['Zero\\Module\\Auth/../x'],
-            'null byte'           => ["Zero\\Module\\Auth\0\\Auth"],
-            'dot'                 => ['Zero\\Module\\Auth.php'],
+            'dotdot inside'       => ['Zero\\Core\\Module\\Auth\\..\\Admin\\Admin'],
+            'slashes'             => ['Zero\\Core\\Module\\Auth/../x'],
+            'null byte'           => ["Zero\\Core\\Module\\Auth\0\\Auth"],
+            'dot'                 => ['Zero\\Core\\Module\\Auth.php'],
             'empty segment'       => ['Zero\\Module\\\\Auth'],
-            'trailing newline'    => ["Zero\\Module\\Auth\n"],
-            'long segment'        => ['Zero\\Module\\Auth\\' . str_repeat('A', 5000)],
+            'trailing newline'    => ["Zero\\Core\\Module\\Auth\n"],
+            'long segment'        => ['Zero\\Core\\Module\\Auth\\' . str_repeat('A', 5000)],
             'dotdot in core rule' => ['Zero\\Core\\..\\..\\x'],
         ];
+    }
+
+    public function testASiteModuleOverridesAndMayExtendCoresOfTheSameName(): void
+    {
+        $tmp = sys_get_temp_dir() . '/zerotest-override-' . bin2hex(random_bytes(4));
+        try {
+            foreach (['site' => "namespace Zero\\Module;\nclass Zerotestover extends \\Zero\\Core\\Module\\Zerotestover { public function whose() { return 'site over ' . parent::whose(); } }",
+                      'core' => "namespace Zero\\Core\\Module;\nclass Zerotestover { public function whose() { return 'core'; } }"] as $root => $code) {
+                mkdir("$tmp/$root/Zerotestover/model", 0777, true);
+                file_put_contents("$tmp/$root/Zerotestover/Zerotestover.php", "<?php\n$code\n");
+            }
+            file_put_contents("$tmp/core/Zerotestover/model/Thing.php", "<?php\nnamespace Zero\\Core\\Module\\Zerotestover\\Model;\nclass Thing {}\n");
+            mkdir("$tmp/core/Zerotestcore", 0777, true);
+            file_put_contents("$tmp/core/Zerotestcore/Zerotestcore.php", "<?php\nnamespace Zero\\Core\\Module;\nclass Zerotestcore {}\n");
+            Modules::configure(["$tmp/site/", "$tmp/core/"], null, "$tmp/core/");
+            Modules::assertNoClash();
+
+            // The URL reaches the site's class; core's stays loadable under its own name
+            $this->assertSame("$tmp/site/Zerotestover/Zerotestover.php", Application::controllerFile('zerotestover'));
+            $this->assertSame("$tmp/site/Zerotestover/Zerotestover.php", Application::classFile('Zero\\Module\\Zerotestover'));
+            $this->assertSame("$tmp/core/Zerotestover/Zerotestover.php", Application::classFile('Zero\\Core\\Module\\Zerotestover'));
+            $this->assertSame("$tmp/core/Zerotestover/model/Thing.php", Application::classFile('Zero\\Core\\Module\\Zerotestover\\Model\\Thing'));
+            $this->assertNull(Application::classFile('Zero\\Module\\Zerotestover\\Model\\Thing'), 'the site module has no such class');
+            $this->assertSame('site over core', (new \Zero\Module\Zerotestover())->whose());
+
+            // A module only core has is a class of Zero\Core\Module\ and of nothing else
+            $this->assertSame("$tmp/core/Zerotestcore/Zerotestcore.php", Application::controllerFile('Zerotestcore'));
+            $this->assertNull(Application::classFile('Zero\\Module\\Zerotestcore'));
+
+            // Zero\Core\Module itself is still core/Module.php
+            $this->assertSame($this->root . 'core/Module.php', Application::classFile('Zero\\Core\\Module'));
+        } finally {
+            exec('rm -rf ' . escapeshellarg($tmp));
+        }
     }
 
     public function testModuleNameCheck(): void
@@ -178,7 +212,7 @@ class AutoloadMapTest extends TestCase
         foreach (['..', 'Auth\\OAuth\\Token', 'auth/../admin', '', 'Auth.php', "Auth\n", 'api-config'] as $bad) {
             $this->assertFalse(Application::isModuleName($bad), var_export($bad, true));
         }
-        foreach (['Auth', 'AccessRequest'] as $good) {
+        foreach (['Auth', 'ApiConfig'] as $good) {
             $this->assertTrue(Application::isModuleName($good), $good);
         }
         $this->assertNull(Application::controllerFile('..'));

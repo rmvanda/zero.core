@@ -1,6 +1,6 @@
 <?php
 
-namespace Zero\Module;
+namespace Zero\Core\Module;
 
 use \Zero\Core\Attribute\RequirePermission;
 use \Zero\Core\AdminResponse;
@@ -34,7 +34,7 @@ class Admin extends AdminResponse {
      *
      * One of Admin's own screens (a folder in submodule/) wins over a module
      * of the same name: a module called Users cannot take over /admin/users.
-     * Otherwise the name is looked up as Zero\Module\{X}\Admin\{X}Admin, and
+     * Otherwise the name is looked up as Zero\Core\Module\{X}\Admin\{X}Admin, and
      * failing that the request falls through to Module::__call.
      *
      * @param string $moduleName Module name from URL
@@ -43,7 +43,7 @@ class Admin extends AdminResponse {
     public function __call($moduleName, $args) {
         // Convert kebab-case to PascalCase (tech-stack → TechStack)
         $moduleClassName = str_replace(' ', '', ucwords(str_replace('-', ' ', $moduleName)));
-        $adminClass = "Zero\\Module\\{$moduleClassName}\\Admin\\{$moduleClassName}Admin";
+        $adminClass = Modules::controllerClass($moduleClassName) . "\\Admin\\{$moduleClassName}Admin";
 
         // Only a well-formed name of a module that is switched on is looked up:
         // class_exists() runs the autoloader, which would open a disabled

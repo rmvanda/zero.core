@@ -8,7 +8,7 @@
  * Ttrpg/helper/ is the working example. (ExchangeGame/helpers/ is empty; the
  * singular form is the convention.)
  */
-namespace Zero\Module\Module\Helper;
+namespace Zero\Core\Module\Module\Helper;
 
 class ExampleHelper {
 

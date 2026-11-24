@@ -1,10 +1,10 @@
 <?php
-namespace Zero\Module\Auth\Admin;
+namespace Zero\Core\Module\Auth\Admin;
 
 use Zero\Core\AdminResponse;
 use Zero\Core\Database;
 use Zero\Core\Attribute\{RequirePermission, AllowedMethods, RequiredParams};
-use Zero\Module\Auth\OAuth\Provider;
+use Zero\Core\Module\Auth\OAuth\Provider;
 
 /**
  * Admin: OAuth provider registry.

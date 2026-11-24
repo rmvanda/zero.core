@@ -1,10 +1,10 @@
 <?php
 
-namespace Zero\Module\Auth\Tests;
+namespace Zero\Core\Module\Auth\Tests;
 
 use Zero\Tests\Core\ZeroTestCase;
 
-use Zero\Module\Auth\Adapters\GitHubAdapter;
+use Zero\Core\Module\Auth\Adapters\GitHubAdapter;
 
 class GitHubAdapterTest extends ZeroTestCase
 {

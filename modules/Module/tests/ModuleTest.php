@@ -1,5 +1,5 @@
 <?php
-namespace Zero\Module\Module\Tests;
+namespace Zero\Core\Module\Module\Tests;
 
 use Zero\Tests\Core\ZeroTestCase;
 
@@ -25,7 +25,7 @@ class ModuleTest extends ZeroTestCase
     {
         $src = file_get_contents(self::SKEL . '/Module.php');
         $this->assertMatchesRegularExpression(
-            '/^namespace Zero\\\\Module;$/m',
+            '/^namespace Zero\\\\Core\\\\Module;$/m',
             $src,
             'mkmod relies on this exact line; do not reformat it.'
         );
@@ -69,7 +69,7 @@ class ModuleTest extends ZeroTestCase
     {
         $src = file_get_contents(self::SKEL . '/model/ModuleModel.php');
         $this->assertStringContainsString(
-            'namespace Zero\Module\Module\Model;',
+            'namespace Zero\Core\Module\Module\Model;',
             $src,
             'Response.php autoloads only classes whose namespace contains \\Model\\.'
         );
@@ -181,7 +181,7 @@ class ModuleTest extends ZeroTestCase
     public function testAdminControllerExtendsAdminResponse(): void
     {
         $src = file_get_contents(self::SKEL . '/Admin/ModuleAdmin.php');
-        $this->assertStringContainsString('namespace Zero\Module\Module\Admin;', $src);
+        $this->assertStringContainsString('namespace Zero\Core\Module\Module\Admin;', $src);
         $this->assertMatchesRegularExpression('/^class ModuleAdmin\b/m', $src);
         $this->assertStringContainsString('AdminResponse', $src);
     }
@@ -201,10 +201,10 @@ class ModuleTest extends ZeroTestCase
     public function testSubmoduleUsesSemicolonNamespaceForm(): void
     {
         $src = file_get_contents(self::SKEL . '/submodule/Example/Example.php');
-        // mkmod needs a rule for this form; the "Zero\Module\Module\" rule
+        // mkmod needs a rule for this form; the "Zero\Core\Module\Module\" rule
         // does not match a namespace that terminates in a semicolon.
         $this->assertMatchesRegularExpression(
-            '/^namespace Zero\\\\Module\\\\Module;/m',
+            '/^namespace Zero\\\\Core\\\\Module\\\\Module;/m',
             $src
         );
     }
@@ -220,7 +220,7 @@ class ModuleTest extends ZeroTestCase
     public function testSlugifyProducesAssetSafeNames(): void
     {
         require_once self::SKEL . '/helper/ExampleHelper.php';
-        $slugify = [\Zero\Module\Module\Helper\ExampleHelper::class, 'slugify'];
+        $slugify = [\Zero\Core\Module\Module\Helper\ExampleHelper::class, 'slugify'];
 
         // The four real module-name shapes in this codebase.
         $this->assertSame('hello-world', $slugify('HelloWorld'));

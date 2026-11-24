@@ -1,5 +1,5 @@
 <?php
-namespace Zero\Module\Auth\Adapters;
+namespace Zero\Core\Module\Auth\Adapters;
 
 use \Zero\Core\Console;
 use \Zero\Core\Exception\HTTPError;
@@ -14,7 +14,7 @@ use \Zero\Lib\Http\Client;
  * on. Subclasses supply endpoints, scopes, and the provider-specific identity
  * fetch + mapping.
  *
- * An adapter is a class of Zero\Module\Auth\Adapters in adapters/, found by
+ * An adapter is a class of Zero\Core\Module\Auth\Adapters in adapters/, found by
  * the autoloader and instantiated by name from Auth::loadAdapter().
  */
 abstract class OAuth2Adapter

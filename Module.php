@@ -25,8 +25,9 @@ class Module extends Response {
         // Derive URL path from class namespace for symlink
         // Zero\Module\Ttrpg -> ttrpg
         // Zero\Module\Ttrpg\Characters -> ttrpg/characters
+        // (a module of core is Zero\Core\Module\Auth -> auth)
         $fullClass = get_class($this);
-        $modulePath = substr($fullClass, strlen('Zero\\Module\\'));
+        $modulePath = (string) Modules::classRest($fullClass);
         $urlPath = strtolower(str_replace('\\', '/', $modulePath));
 
         // Store submodule context for asset loading (Response methods use these)
@@ -81,11 +82,12 @@ class Module extends Response {
 
     /**
      * The directory name of the module this class belongs to: the first
-     * segment after Zero\Module\ (Zero\Module\Ttrpg\Hexmap is Ttrpg's).
+     * segment after Zero\Module\ or Zero\Core\Module\ (Zero\Module\Ttrpg\Hexmap
+     * is Ttrpg's).
      */
     private function ownModuleName(): string
     {
-        $rest = substr(get_class($this), strlen('Zero\\Module\\'));
+        $rest = (string) Modules::classRest(get_class($this));
         return strstr($rest, '\\', true) ?: $rest;
     }
 

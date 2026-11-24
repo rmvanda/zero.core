@@ -1,10 +1,10 @@
 <?php
 
-namespace Zero\Module\Admin;
+namespace Zero\Core\Module\Admin;
 
 use \Zero\Core\AdminResponse;
 use \Zero\Core\Attribute\RequirePermission;
-use \Zero\Module\Admin\Model\EventLog;
+use \Zero\Core\Module\Admin\Model\EventLog;
 
 /**
  * Admin's audit log: every recorded event, newest first, with filters.

@@ -1,5 +1,5 @@
 <?php
-namespace Zero\Module\Module\Tests;
+namespace Zero\Core\Module\Module\Tests;
 
 use Zero\Tests\Core\ZeroTestCase;
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace Zero\Module\Push\Lib;
+namespace Zero\Core\Module\Push\Lib;
 
 use \Minishlink\WebPush\WebPush;
 use \Minishlink\WebPush\Subscription;

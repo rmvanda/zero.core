@@ -1,6 +1,6 @@
 <?php
 
-namespace Zero\Module\Admin\Tests;
+namespace Zero\Core\Module\Admin\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Zero\Core\AdminResponse;
@@ -37,7 +37,7 @@ class AdminDashboardTest extends TestCase
 
     public function testAdminsOwnScreensAreDiscoveredInTheirOrder(): void
     {
-        $admin = new class extends \Zero\Module\Admin {
+        $admin = new class extends \Zero\Core\Module\Admin {
             public function __construct() {}
             public function __destruct() {}
             public function screens(): array { return $this->ownScreens(); }
@@ -79,7 +79,7 @@ class AdminDashboardTest extends TestCase
             $root = dirname($this->adminDir(), 3) . '/';
             \Zero\Core\Modules::configure(["$tmp/modules/", $root . 'core/modules/'], null);
 
-            $admin = new class extends \Zero\Module\Admin {
+            $admin = new class extends \Zero\Core\Module\Admin {
                 public function __construct() {}
                 public function __destruct() {}
                 protected function userHolds(string $permission): bool { return true; }
@@ -112,7 +112,7 @@ class AdminDashboardTest extends TestCase
 
     public function testDashboardRendersDiscoveredCardsEscaped(): void
     {
-        $admin = new class extends \Zero\Module\Admin {
+        $admin = new class extends \Zero\Core\Module\Admin {
             public function __construct() {}
             public function __destruct() {}
         };

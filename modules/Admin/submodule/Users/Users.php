@@ -1,6 +1,6 @@
 <?php
 
-namespace Zero\Module\Admin;
+namespace Zero\Core\Module\Admin;
 
 use \Zero\Core\AdminResponse;
 use \Zero\Core\Attribute\RequirePermission;
@@ -10,8 +10,8 @@ use \Zero\Core\Access\User;
 use \Zero\Core\Access\Permission;
 use \Zero\Core\Session;
 use \Zero\Core\Console;
-use \Zero\Module\Admin\Model\CapabilityKeys;
-use \Zero\Module\Admin\Model\UserList;
+use \Zero\Core\Module\Admin\Model\CapabilityKeys;
+use \Zero\Core\Module\Admin\Model\UserList;
 
 /**
  * Admin's users screens: the list of users, and one user's capabilities and

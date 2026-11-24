@@ -1,6 +1,6 @@
 <?php
 // Audit::index() loads the filters, one page of events and the event names.
-use Zero\Module\Admin\Model\EventLog;
+use Zero\Core\Module\Admin\Model\EventLog;
 
 $filters = $this->filters;
 $events = $this->events;

@@ -58,7 +58,7 @@ class ModulesTest extends TestCase
 
     private function configure(?string $ini = null): void
     {
-        Modules::configure([$this->site, $this->bundled], $ini);
+        Modules::configure([$this->site, $this->bundled], $ini, $this->bundled);
     }
 
     private function writeIni(string $content): void
@@ -68,16 +68,19 @@ class ModulesTest extends TestCase
 
     public function testClashOnIdenticalNameThrowsNamingBothPaths(): void
     {
+        // Two roots of the site holding one name. (The same name in the site
+        // and in core is an override, not a clash.)
+        $second = $this->base . '/second/';
         $this->make($this->site, 'Auth');
-        $this->make($this->bundled, 'Auth');
-        $this->configure();
+        $this->make($second, 'Auth');
+        Modules::configure([$this->site, $second, $this->bundled], null, $this->bundled);
 
         try {
             Modules::assertNoClash();
             $this->fail('expected a RuntimeException');
         } catch (\RuntimeException $e) {
             $this->assertStringContainsString($this->site . 'Auth', $e->getMessage());
-            $this->assertStringContainsString($this->bundled . 'Auth', $e->getMessage());
+            $this->assertStringContainsString($second . 'Auth', $e->getMessage());
         }
     }
 
@@ -91,16 +94,42 @@ class ModulesTest extends TestCase
         Modules::assertNoClash();
     }
 
-    public function testASitesIndexReplacesCoresAndIsNotAClash(): void
+    public function testASiteModuleOverridesCoresOfTheSameNameAndIsNotAClash(): void
     {
-        $this->make($this->site, 'Index');
-        $this->make($this->bundled, 'Index');
+        $this->make($this->site, 'Index', 'Auth', 'Lists');
+        $this->make($this->bundled, 'Index', 'Auth', 'Push');
         $this->configure();
 
         Modules::assertNoClash();
-        $this->assertSame($this->site . 'Index/', Modules::path('Index'), 'the site\'s root comes first');
-        $this->assertSame('required', Modules::tier('Index'));
-        $this->assertTrue(Modules::enabled('Index'));
+        foreach (['Index', 'Auth'] as $name) {
+            $this->assertSame($this->site . $name . '/', Modules::path($name), 'the site\'s root comes first');
+            $this->assertSame($this->site . $name . '/', Modules::sitePath($name));
+            $this->assertSame($this->bundled . $name . '/', Modules::corePath($name), 'core\'s stays reachable');
+            $this->assertTrue(Modules::overridden($name));
+            $this->assertFalse(Modules::isCore($name));
+            $this->assertSame('Zero\\Module\\' . $name, Modules::controllerClass($name));
+            $this->assertSame('core', Modules::tier($name));
+            $this->assertTrue(Modules::enabled($name));
+        }
+
+        $this->assertFalse(Modules::overridden('Push'));
+        $this->assertTrue(Modules::isCore('Push'));
+        $this->assertNull(Modules::sitePath('Push'));
+        $this->assertSame('Zero\\Core\\Module\\Push', Modules::controllerClass('push'));
+
+        $this->assertFalse(Modules::overridden('Lists'));
+        $this->assertFalse(Modules::isCore('Lists'));
+        $this->assertNull(Modules::corePath('Lists'));
+        $this->assertSame('Zero\\Module\\Lists', Modules::controllerClass('Lists'));
+        $this->assertNull(Modules::controllerClass('Nope'));
+    }
+
+    public function testClassRestDropsEitherNamespace(): void
+    {
+        $this->assertSame('Ttrpg\\Hexmap', Modules::classRest('Zero\\Module\\Ttrpg\\Hexmap'));
+        $this->assertSame('Auth\\AccessRequest', Modules::classRest('\\Zero\\Core\\Module\\Auth\\AccessRequest'));
+        $this->assertNull(Modules::classRest('Zero\\Core\\Module'));
+        $this->assertNull(Modules::classRest('Zero\\Core\\Session'));
     }
 
     public function testCoresIndexServesASiteThatHasNone(): void
@@ -112,7 +141,7 @@ class ModulesTest extends TestCase
         $this->assertSame($this->bundled . 'Index/', Modules::path('Index'));
     }
 
-    public function testOnlyTheExactNameIndexMayBeReplaced(): void
+    public function testOnlyTheExactNameOverrides(): void
     {
         $this->make($this->site, 'index');
         $this->make($this->bundled, 'Index');
@@ -185,12 +214,10 @@ class ModulesTest extends TestCase
     {
         $this->configure();
 
-        foreach (['Index', 'Auth', 'User', 'Admin', 'AccessRequest'] as $name) {
-            $this->assertSame('required', Modules::tier($name), $name);
+        foreach (['Index', 'Auth', 'User', 'Admin', 'Push', 'Entity'] as $name) {
+            $this->assertSame('core', Modules::tier($name), $name);
         }
-        foreach (['Push', 'Entity'] as $name) {
-            $this->assertSame('optional', Modules::tier($name), $name);
-        }
+        $this->assertSame('site', Modules::tier('AccessRequest'), 'a submodule of Auth, not a module');
         foreach (['Module', 'HelloWorld', 'Test'] as $name) {
             $this->assertSame('example', Modules::tier($name), $name);
         }
@@ -220,7 +247,7 @@ class ModulesTest extends TestCase
 
         $this->assertFalse(Modules::enabled('Push'));
         $this->assertTrue(Modules::enabled('HelloWorld'));
-        $this->assertTrue(Modules::enabled('Auth'));
+        $this->assertFalse(Modules::enabled('Auth'), 'no module is always on');
         $this->assertFalse(Modules::enabled('Lists'));
         $this->assertFalse(Modules::enabled('Ghost'));
     }

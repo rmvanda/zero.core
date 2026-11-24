@@ -188,7 +188,7 @@ CREATE TABLE IF NOT EXISTS `oauth_token` (
   KEY `idx_user` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- access_requests: requests for a permission, approved by token. Owner: AccessRequest module
+-- access_requests: requests for a permission, approved by token. Owner: Auth (its AccessRequest submodule)
 CREATE TABLE IF NOT EXISTS `access_requests` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,

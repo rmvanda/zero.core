@@ -1,5 +1,5 @@
 <?php
-namespace Zero\Module\Auth\Adapters;
+namespace Zero\Core\Module\Auth\Adapters;
 
 use \Zero\Core\Console as Console;
 

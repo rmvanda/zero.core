@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Zero\Module\Admin\Tests;
+namespace Zero\Core\Module\Admin\Tests;
 
 use PHPUnit\Framework\TestCase;
-use Zero\Module\Admin\Model\EventLog;
+use Zero\Core\Module\Admin\Model\EventLog;
 
 /**
  * The Admin audit log: its filters, its query and the screen without the tables.
@@ -79,7 +79,7 @@ class AuditLogTest extends TestCase
         $pdo = $this->createStub(\PDO::class);
         $pdo->method('query')->willThrowException($missing);
 
-        $audit = new class($pdo) extends \Zero\Module\Admin\Audit {
+        $audit = new class($pdo) extends \Zero\Core\Module\Admin\Audit {
             public $builtView;
             public function __construct(private \PDO $pdo) {}
             public function __destruct() {}

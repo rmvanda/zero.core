@@ -1,8 +1,8 @@
 <?php
-namespace Zero\Module\Auth\Tests;
+namespace Zero\Core\Module\Auth\Tests;
 
 use Zero\Tests\Core\ZeroTestCase;
-use Zero\Module\Auth;
+use Zero\Core\Module\Auth;
 use Zero\Core\Exception\HTTPError;
 use PHPUnit\Framework\Attributes\DataProvider;
 

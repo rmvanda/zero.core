@@ -1,9 +1,9 @@
 <?php
-namespace Zero\Module\Auth\Tests;
+namespace Zero\Core\Module\Auth\Tests;
 
 use Zero\Tests\Core\ZeroTestCase;
-use Zero\Module\Auth\Model\AuthToken;
-use Zero\Module\Auth\Model\RegistrationFields;
+use Zero\Core\Module\Auth\Model\AuthToken;
+use Zero\Core\Module\Auth\Model\RegistrationFields;
 use Zero\Core\Access\User;
 use Zero\Core\Database;
 

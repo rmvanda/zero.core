@@ -1,11 +1,11 @@
 <?php
 
-namespace Zero\Module\Push\Tests;
+namespace Zero\Core\Module\Push\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Zero\Core\AdminResponse;
 use Zero\Core\Attribute\{AllowedMethods, AuditLog, RequirePermission};
-use Zero\Module\Push\Admin\PushAdmin;
+use Zero\Core\Module\Push\Admin\PushAdmin;
 
 /**
  * The push notification screen is the Push module's admin offering: /admin/push/...
@@ -65,7 +65,7 @@ class PushAdminTest extends TestCase
     public function testAdminNoLongerHasThePushScreen(): void
     {
         foreach (['pushNotifications', 'deletePushNotifications'] as $method) {
-            $this->assertFalse(method_exists(\Zero\Module\Admin::class, $method), "Admin::{$method}() is gone");
+            $this->assertFalse(method_exists(\Zero\Core\Module\Admin::class, $method), "Admin::{$method}() is gone");
         }
 
         $admin = dirname($this->moduleDir()) . '/Admin';

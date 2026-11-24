@@ -1,10 +1,10 @@
 <?php
-namespace Zero\Module\Auth\Tests;
+namespace Zero\Core\Module\Auth\Tests;
 
 use Zero\Tests\Core\ZeroTestCase;
-use Zero\Module\Auth\OAuth\Token;
-use Zero\Module\Auth\OAuth\Provider;
-use Zero\Module\Auth\OAuth\Broker;
+use Zero\Core\Module\Auth\OAuth\Token;
+use Zero\Core\Module\Auth\OAuth\Provider;
+use Zero\Core\Module\Auth\OAuth\Broker;
 use Zero\Lib\Crypto;
 use Zero\Core\Database;
 

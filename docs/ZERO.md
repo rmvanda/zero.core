@@ -87,7 +87,8 @@ Plugin hooks fire along the way (`afterAutoloaders`, `afterParseRequest`, `after
 | `Zero\Entity\` | `core/entity/`, then the site's `entity/` (or `ENTITY_SITE_DIR`) |
 | `Zero\Aux\` | `aux/` |
 | `Zero\App\Lib\` | `app/lib/` |
-| `Zero\Module\{Name}\` | the folder `Modules::path()` names |
+| `Zero\Core\Module\{Name}\` | core's module of that name, `core/modules/{Name}/` (`Modules::corePath()`) |
+| `Zero\Module\{Name}\` | the site's module of that name, `modules/{Name}/` (`Modules::sitePath()`) |
 
 - Each following namespace segment is a folder, tried as written, then (module classes only) as a submodule (`submodule/{Segment}/`), then lowercased (`Model` is `model/`, `Lib` is `lib/`, `Access` is `access/`).
 - Every segment must be a PHP identifier and the file must lie inside the folder its rule names.
@@ -111,7 +112,7 @@ Logic that another module uses lives in the providing module's `lib/` folder:
 `modules/{Name}/lib/{Class}.php`, namespace `Zero\Module\{Name}\Lib`. Other modules call the
 provider's `lib/`, never its `model/`, so the provider's rules apply wherever its data changes.
 Example: `Zero\Module\Lists\Lib\ListService`, which Lists' own endpoints, Notebook and Index0 use.
-In core, `Zero\Module\Push\Lib\PushHelper` is how any module sends a push notification.
+In core, `Zero\Core\Module\Push\Lib\PushHelper` is how any module sends a push notification.
 Other examples are `Zero\Module\Llm\Lib\OllamaClient`, `Zero\Module\Comfy\Lib\ComfyUIClient` and
 `Zero\Module\ApiConfig\Lib\ServiceClient`.
 
@@ -153,21 +154,24 @@ Mail::sendEmailToAdmin($subject, $message);                  // to NOTIFY_EMAIL
 - **Roots.** `Application::registerAutoloaders()` hands it the module roots in priority order, the site's `modules/` folder (`MODULE_PATH`) first and `core/modules/` second, and the path of `app/modules.ini`.
 - **Names.** A directory in a root is a module when its name matches `^[A-Z][A-Za-z0-9]*$`. A folder such as `Links (old)` or `Evil&Co` is not one: the router never serves it and `app/modules.ini` cannot hold it.
 - **Paths.** Core never builds a module path from `MODULE_PATH`: it asks `Modules::path()`, which accepts any spelling of a name (`ApiConfig`, `apiconfig`, `api-config`), and `Modules::name()` for the real directory name.
-- **Clashes.** Two roots holding the same name (compared ignoring case and hyphens) is a configuration error: `Application::run()` logs it and the request fails with a 500.
-- **Index is the exception.** Core ships `core/modules/Index/`, the landing page and the home of standalone pages, so a site works with no Index of its own. A site that has `modules/Index/` replaces core's entirely: the site's root comes first, and the two are not a clash. Core's Index holds two pages, `/` and `/privacy`, the one the sign-in screen links to. Nothing of core's Index is read once the site has its own, so that Index carries its own `view/privacy.php`.
+- **Namespaces.** A module of core is a class of `Zero\Core\Module\` (`Zero\Core\Module\Auth`, `Zero\Core\Module\Auth\OAuth\Token`); a module of the site is a class of `Zero\Module\` (`Zero\Module\Links`). `Modules::controllerClass()` gives the class that answers a URL, and `Modules::classRest()` drops either prefix from a class name. `Zero\Core\Module` itself, with nothing after it, is the base class every module extends.
+- **Overriding a module of core.** A site overrides any module of core by having a module of the same name in its `modules/`. The site's answers the URL (`Zero\Module\Index`), its folder is the one `Modules::path()` names, and its views, assets, strings, config and `Admin/` are the ones used; nothing of core's folder is read on its behalf. Core's classes stay loadable under their own names, so the site's class may extend core's (`class Auth extends \Zero\Core\Module\Auth`) or stand alone. `Modules::overridden()` says a name is held by both, `Modules::corePath()` and `Modules::sitePath()` name each folder, and the Admin modules screen marks the row "Overridden".
+- **Clashes.** Two spellings of one name (`Links` and `links`, compared ignoring case and hyphens), or one name in two folders of the site, is a configuration error: `Application::run()` logs it and the request fails with a 500. The exact name of a module of core in the site's folder is an override, not a clash.
+- **Index.** Core ships `core/modules/Index/`, the landing page and the home of standalone pages, so a site works with no Index of its own. It holds two pages, `/` and `/privacy`, the one the sign-in screen links to. A site's own `modules/Index/` overrides it and carries its own `view/privacy.php`.
 
-The ten modules every site gets (`Index`, `Auth`, `User`, `Admin`, `AccessRequest`, `Push`, `Entity`, `Module`, `HelloWorld`, `Test`) live in `core/modules/`; every other module lives in the site's `modules/`. Their namespaces (`Zero\Module\Auth`) and URLs are the same wherever the folder is.
+The nine modules every site gets (`Index`, `Auth`, `User`, `Admin`, `Push`, `Entity`, `Module`, `HelloWorld`, `Test`) live in `core/modules/`; every other module lives in the site's `modules/`. Requests for access to a capability are answered by `AccessRequest`, a submodule of Auth at `/auth/access-request`.
 
-`core/modules/Module/mkmod` writes a new module into the site's `modules/`, never into `core/` (`--dest <dir>` overrides), and refuses a name a bundled module has. Tests that check every module live in `core/tests/module/` and walk `Modules::all()`.
+`core/modules/Module/mkmod` writes a new module into the site's `modules/`, never into `core/` (`--dest <dir>` overrides), and refuses a name a bundled module has: an override of a module of core is written by hand. Tests that check every module live in `core/tests/module/` and walk `Modules::all()`.
 
 ### Tiers and `app/modules.ini`
 
 | Tier | Modules | Default |
 |---|---|---|
-| required | `Index`, `Auth`, `User`, `Admin`, `AccessRequest` | always on |
-| optional | `Push`, `Entity` | on |
+| core | `Index`, `Auth`, `User`, `Admin`, `Push`, `Entity` | on |
 | site | every module not named here | on |
 | example | `Module`, `HelloWorld`, `Test` | off |
+
+No module is always on. A site with no sign-in turns Auth off; `#[RequireLogin]` and `#[RequirePermission]` still redirect to `/user/login` and `/auth/access-request`, which then answer 404. The tier goes by name, so a site module that overrides a module of core keeps its tier.
 
 `app/modules.ini` lists only the departures from those defaults:
 
@@ -182,20 +186,20 @@ Links = 10
 ```
 
 - A missing file means all defaults. A file `Modules` cannot parse is read as all defaults and logs a warning naming it.
-- An entry for a required module, or for a name that matches no module, is ignored.
+- An entry for a name that matches no module is ignored.
 - `[order]` sets the position of a module's card on the admin dashboard (lower first, no entry last).
 - A change takes effect on the next request.
 
 ### The Admin modules screen
 
-`/admin/modules` (Admin) lists every module of both roots with its tier, where it lives (`core` or `site`), whether it is on and whether that is the default, and its order. A required module has no switch, and a module named like an INI keyword (`On`, `Off`, `Yes`, `No`, `True`, `False`, `None`, `Null`) cannot be set.
+`/admin/modules` (Admin) lists every module of both roots with its tier, where it lives (`core` or `site`), whether it is on and whether that is the default, and its order. A module of core the site overrides is marked "Overridden". Admin's own row says how to turn Admin back on (delete the `Admin = off` line from `app/modules.ini`), because turning it off removes the screen; the browser asks before saving that change. A module named like an INI keyword (`On`, `Off`, `Yes`, `No`, `True`, `False`, `None`, `Null`) cannot be set.
 
 `POST /admin/modules/set` (`module`, `hash`, `enabled` = `on`, `off` or `default`, `order`) changes one module. The form carries the file's hash from when the screen was drawn, and the post is refused with 409 when the file has changed since. When the file cannot be written, the screen shows the error with the path and changes nothing.
 
 `Zero\Core\ModulesIni` is the only writer of `app/modules.ini`. It:
 
 - writes only departures from the defaults and keeps names it does not know;
-- refuses a required module, an unknown name and an order outside 0..9999;
+- refuses an unknown name and an order outside 0..9999;
 - rejects an existing file that holds anything but the two sections with booleans and whole numbers, naming the file and the key;
 - checks that `Modules` reads its text back as the intended entries;
 - saves under a lock on `app/modules.ini.lock` by writing a temp file in the same folder and renaming it, refusing when the file changed since it was read.

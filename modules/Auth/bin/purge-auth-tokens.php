@@ -23,6 +23,6 @@ Zero\Core\Database::init([
 ]);
 
 $retain  = isset($argv[1]) ? (int) $argv[1] : 172800;
-$deleted = Zero\Module\Auth\Model\AuthToken::purgeOlderThan($retain);
+$deleted = Zero\Core\Module\Auth\Model\AuthToken::purgeOlderThan($retain);
 
 printf("purge-auth-tokens: deleted %d row(s) older than %d seconds\n", $deleted, $retain);

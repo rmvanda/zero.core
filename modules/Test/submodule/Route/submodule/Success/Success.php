@@ -1,6 +1,6 @@
 <?php
 
-namespace Zero\Module\Test\Route;
+namespace Zero\Core\Module\Test\Route;
 
 class Success extends \Zero\Core\Module {
 

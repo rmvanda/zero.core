@@ -127,8 +127,6 @@ class ModulesIniTest extends TestCase
     public static function badNames(): array
     {
         return [
-            'required' => ['Admin'],
-            'required other spelling' => ['auth'],
             'unknown' => ['Nope'],
             'traversal' => ['../x'],
             'newline' => ["Blog\nHacked = on"],

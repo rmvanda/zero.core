@@ -1,5 +1,5 @@
 <?php
-namespace Zero\Module;
+namespace Zero\Core\Module;
 
 use Zero\Core\Access\User;
 use Zero\Core\Session;
@@ -8,8 +8,8 @@ use \Zero\Core\Console;
 use \Zero\Core\Request;
 use \Zero\Core\Attribute\RequireLogin;
 use \Zero\Core\Attribute\AllowedMethods;
-use \Zero\Module\Auth\Model\AuthToken;
-use \Zero\Module\Auth\Model\RegistrationFields;
+use \Zero\Core\Module\Auth\Model\AuthToken;
+use \Zero\Core\Module\Auth\Model\RegistrationFields;
 use \Zero\Lib\Mail\Mail;
 
 /**
@@ -55,7 +55,7 @@ class Auth extends \Zero\Core\Module {
     private const PERSISTED_PROVIDERS = ['Google', 'GitHub', 'Discord', 'GitLab'];
 
     /** The namespace of the provider adapters in adapters/. */
-    private const ADAPTER_NAMESPACE = "\\Zero\\Module\\Auth\\Adapters\\";
+    private const ADAPTER_NAMESPACE = "\\Zero\\Core\\Module\\Auth\\Adapters\\";
 
     /** Magic-link TTL: short, because it is a live credential. */
     private const TOKEN_TTL_LOGIN = 900;        // 15 minutes
@@ -124,7 +124,7 @@ class Auth extends \Zero\Core\Module {
     {
         $slug = strtolower(trim($_POST['provider'] ?? ''));
         if ($slug !== '' && preg_match('/^[a-z0-9_]+$/', $slug)) {
-            \Zero\Module\Auth\OAuth\Token::forget((int) \Zero\Core\Session::userId(), $slug);
+            \Zero\Core\Module\Auth\OAuth\Token::forget((int) \Zero\Core\Session::userId(), $slug);
         }
         header('Location: /user/profile');
     }
@@ -194,7 +194,7 @@ class Auth extends \Zero\Core\Module {
         Session::establish($user, $_SESSION['user']);
 
         // Persist the provider's OAuth tokens so the server can refresh access
-        // without forcing re-login (see Zero\Module\Auth\OAuth\Broker). Only full-OAuth
+        // without forcing re-login (see Zero\Core\Module\Auth\OAuth\Broker). Only full-OAuth
         // paths expose a bundle; Google one-tap (identity-only) yields none.
         // Wrapped so a persistence failure can never break a user's login.
         try {
@@ -203,7 +203,7 @@ class Auth extends \Zero\Core\Module {
                 if (!empty($bundle['access_token'])) {
                     $providerSlug = strtolower($this->smids[$this->workingSmid] ?? '');
                     if ($providerSlug !== '') {
-                        \Zero\Module\Auth\OAuth\Token::store($user->id, $providerSlug, $bundle);
+                        \Zero\Core\Module\Auth\OAuth\Token::store($user->id, $providerSlug, $bundle);
                     }
                 }
             }
@@ -364,7 +364,7 @@ class Auth extends \Zero\Core\Module {
         if ($slug !== '' && method_exists($this->auth, 'tokenBundle')) {
             $bundle = $this->auth->tokenBundle();
             if (!empty($bundle['access_token'])) {
-                \Zero\Module\Auth\OAuth\Token::store($userId, $slug, $bundle);
+                \Zero\Core\Module\Auth\OAuth\Token::store($userId, $slug, $bundle);
             }
         }
 
@@ -382,7 +382,7 @@ class Auth extends \Zero\Core\Module {
     {
         try {
             $slug = strtolower($this->smids[$this->workingSmid] ?? '');
-            $p = $slug !== '' ? \Zero\Module\Auth\OAuth\Provider::bySlug($slug) : null;
+            $p = $slug !== '' ? \Zero\Core\Module\Auth\OAuth\Provider::bySlug($slug) : null;
             if ($p !== null && (!$p['enabled'] || !$p['configured'])) {
                 throw new \Zero\Core\Exception\HTTPError(404, "Provider not available");
             }
@@ -826,7 +826,7 @@ class Auth extends \Zero\Core\Module {
             throw new \Zero\Core\Exception\HTTPError(404, "Unknown auth provider");
         }
 
-        // The adapter is Zero\Module\Auth\Adapters\{Name}Adapter in adapters/.
+        // The adapter is Zero\Core\Module\Auth\Adapters\{Name}Adapter in adapters/.
         // classFile() answers without a log line for a provider that has none.
         $ac = self::ADAPTER_NAMESPACE . $this->smids[$via] . "Adapter";
         if (\Zero\Core\Application::classFile($ac) === null) {

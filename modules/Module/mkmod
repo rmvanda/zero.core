@@ -270,7 +270,10 @@ print_tree() {
 #
 # Copies one skeleton file, rewriting the module name. The rules are ANCHORED on
 # purpose: a bare s/Module/Weather/g would corrupt `extends \Zero\Core\Module`
-# and `namespace Zero\Module;`. Rule 3 cannot match ModuleModel/ModuleAdmin/
+# and `namespace Zero\Module;`. The skeleton is a module of core
+# (Zero\Core\Module\...); what it scaffolds is a module of the site
+# (Zero\Module\...), which the two rules numbered 0a and 0b see to before any
+# other. Rule 3 cannot match ModuleModel/ModuleAdmin/
 # ModulePanel because \b requires a non-word char after "Module".
 #
 # `mkmod --selftest` fails loudly if this drifts out of sync with the skeleton.
@@ -313,6 +316,8 @@ substitute() {
             # disjoint text, so their relative order does not matter.
             sed -e "$skeleton_only_filter" "$src" \
                 | sed -E \
+                -e "s|^namespace Zero\\\\Core\\\\Module;|namespace Zero\\\\Module;|" \
+                -e "s|Zero\\\\Core\\\\Module\\\\|Zero\\\\Module\\\\|g" \
                 -e "s|^namespace Zero\\\\Module\\\\Module;|namespace Zero\\\\Module\\\\${NAME};|" \
                 -e "s|Zero\\\\Module\\\\Module\\\\|Zero\\\\Module\\\\${NAME}\\\\|g" \
                 -e "s|\bModuleSmokeTest\b|${NAME}SmokeTest|g" \
@@ -512,7 +517,8 @@ _selftest_body() {
     local pat
     for pat in '^class[[:space:]]+Module\b' '\bModuleModel\b' '\bModuleAdmin\b' \
                '\bModulePanel\b' '\bModuleSmokeTest\b' 'Zero\\Module\\Module\\' \
-               '^namespace Zero\\Module\\Module;' '\bmodule-panel\b' '^MODULE_'; do
+               '^namespace Zero\\Module\\Module;' 'Zero\\Core\\Module\\' \
+               '^namespace Zero\\Core\\Module;' '\bmodule-panel\b' '^MODULE_'; do
         if grep -rEn "$pat" "$mod" >/dev/null 2>&1; then
             printf 'selftest: skeleton identifier survived substitution: %s\n' "$pat" >&2
             grep -rEn "$pat" "$mod" >&2

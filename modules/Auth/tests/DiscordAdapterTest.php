@@ -1,10 +1,10 @@
 <?php
 
-namespace Zero\Module\Auth\Tests;
+namespace Zero\Core\Module\Auth\Tests;
 
 use Zero\Tests\Core\ZeroTestCase;
 
-use Zero\Module\Auth\Adapters\DiscordAdapter;
+use Zero\Core\Module\Auth\Adapters\DiscordAdapter;
 
 class DiscordAdapterTest extends ZeroTestCase
 {

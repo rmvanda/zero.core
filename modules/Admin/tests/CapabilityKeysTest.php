@@ -1,8 +1,8 @@
 <?php
-namespace Zero\Module\Admin\Tests;
+namespace Zero\Core\Module\Admin\Tests;
 
 use Zero\Core\Modules;
-use Zero\Module\Admin\Model\CapabilityKeys;
+use Zero\Core\Module\Admin\Model\CapabilityKeys;
 use Zero\Tests\Core\ZeroTestCase;
 
 /**

@@ -11,8 +11,8 @@ screens to the Admin module through `Admin/`.
 | `/admin/entity/update` | `update()` | POST, inline edit of one attribute value |
 | `/admin/entity/delete` | `delete()` | POST, deletes records of one type |
 
-- `model/EntityStore.php` (`Zero\Module\Entity\Model\EntityStore`) reads the EAV tables
-  (`entity_type`, `entity`) through the PDO it is given. Its namespace is `Zero\Module\Entity`,
+- `model/EntityStore.php` (`Zero\Core\Module\Entity\Model\EntityStore`) reads the EAV tables
+  (`entity_type`, `entity`) through the PDO it is given. Its namespace is `Zero\Core\Module\Entity`,
   distinct from the entity framework's `Zero\Entity` in `entity/`.
 - The event log is not here: it is the Admin module's own Audit Log screen, `/admin/audit`.
 - `index()` shows "The entity tables are not installed on this site." when `entity_type` does

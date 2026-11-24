@@ -192,7 +192,7 @@ class ModuleRoutingTest extends TestCase
     /** An Admin whose constructor and destructor do nothing: the real __call and routing run. */
     private function adminController(): object
     {
-        return new class extends \Zero\Module\Admin {
+        return new class extends \Zero\Core\Module\Admin {
             public function __construct() {}
             public function __destruct() {}
         };

@@ -1,5 +1,5 @@
 <?php
-namespace Zero\Module\Auth\OAuth;
+namespace Zero\Core\Module\Auth\OAuth;
 
 use Zero\Core\Database;
 

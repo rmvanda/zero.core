@@ -1,6 +1,6 @@
 <?php
 
-namespace Zero\Module\Admin;
+namespace Zero\Core\Module\Admin;
 
 use \Zero\Core\AdminResponse;
 use \Zero\Core\Console;

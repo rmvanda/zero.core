@@ -14,7 +14,7 @@ if (isset($this) && ($brandPartial = $this->framePiecePath('_oauth-brand'))) {
 $googleProvider = null;
 if (function_exists('oauth_provider_icon')) {
     try {
-        $googleProvider = \Zero\Module\Auth\OAuth\Provider::bySlug('google');
+        $googleProvider = \Zero\Core\Module\Auth\OAuth\Provider::bySlug('google');
         if ($googleProvider !== null && !($googleProvider['enabled'] && $googleProvider['configured'])) {
             $googleProvider = null;
         }

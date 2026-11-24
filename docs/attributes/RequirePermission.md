@@ -47,14 +47,14 @@ shape:
 
 | Caller | Anonymous (from `RequireLogin`) | Logged in, missing a key |
 |---|---|---|
-| Browser | `302` to `/user/login?r=y` | `302` to `/access-request/permission?p={key}` |
+| Browser | `302` to `/user/login?r=y` | `302` to `/auth/access-request/permission?p={key}` |
 | JSON | `401` `Authentication required` | `403` `Permission required: {key}` |
 
 A JSON caller gets a status rather than a redirect because an XHR follows a
 redirect and hands its caller the page's HTML. The `HTTPError` renders through
 the live module.
 
-`/access-request/permission` is the AccessRequest module's form for asking for
+`/auth/access-request/permission` is the form of AccessRequest, a submodule of Auth, for asking for
 the key. An admin approving the request grants it.
 
 A missing key is logged at warn:

@@ -11,9 +11,9 @@ namespace Zero\Core;
  * app/modules.ini to configure(); the class reads no global constant, so tests
  * can point it at throwaway directories.
  *
- * Tiers: required modules are always on, optional and site modules default
- * on, example modules default off. app/modules.ini lists only the departures
- * from those defaults:
+ * Tiers: core and site modules default on, example modules default off. No
+ * module is always on. app/modules.ini lists only the departures from those
+ * defaults:
  *
  *   [enabled]
  *   Push = off
@@ -21,23 +21,25 @@ namespace Zero\Core;
  *
  *   [order]
  *   Links = 10
+ *
+ * A module of core is a class of Zero\Core\Module\, a module of the site a
+ * class of Zero\Module\. A site overrides a module of core by having one of
+ * the same name: the site's answers the URL, and core's classes stay loadable
+ * so the site's may extend them.
  */
 class Modules
 {
-    private const REQUIRED = ['Index', 'Auth', 'User', 'Admin', 'AccessRequest'];
-    private const OPTIONAL = ['Push', 'Entity'];
+    private const CORE = ['Index', 'Auth', 'User', 'Admin', 'Push', 'Entity'];
     private const EXAMPLE = ['Module', 'HelloWorld', 'Test'];
 
-    /**
-     * Bundled modules a site replaces by having its own of the same name.
-     * Index is the landing page and the home of standalone pages: core ships
-     * one so a site works without any, and a site's modules/Index is the
-     * site's own. For every other name, two roots holding it is a clash.
-     */
-    private const OVERRIDABLE = ['Index'];
+    /** The namespace of a module of core, and of a module of the site */
+    public const CORE_NAMESPACE = 'Zero\\Core\\Module\\';
+    public const SITE_NAMESPACE = 'Zero\\Module\\';
 
     /** @var string[] Existing roots in priority order, each with a trailing slash */
     private static array $roots = [];
+    /** Real path (trailing slash) of the root core ships its own modules in */
+    private static string $coreRoot = '';
     private static ?string $iniFile = null;
     private static ?array $all = null;
     private static ?array $listing = null;
@@ -46,10 +48,14 @@ class Modules
 
     /**
      * Set the roots (priority order, site first) and the ini file, and reset
-     * every cache. A root that does not exist is skipped.
+     * every cache. A root that does not exist is skipped. $coreRoot names the
+     * root whose modules are core's (Zero\Core\Module\); it defaults to the
+     * modules/ folder beside this file.
      */
-    public static function configure(array $roots, ?string $iniFile): void
+    public static function configure(array $roots, ?string $iniFile, ?string $coreRoot = null): void
     {
+        $core = realpath($coreRoot ?? __DIR__ . '/modules');
+        self::$coreRoot = $core === false ? '' : rtrim($core, '/') . '/';
         self::$roots = [];
         $real = [];
         foreach ($roots as $root) {
@@ -104,6 +110,103 @@ class Modules
     }
 
     /**
+     * Whether a folder is inside the root core ships its own modules in.
+     */
+    private static function inCoreRoot(string $path): bool
+    {
+        $real = realpath($path);
+
+        return self::$coreRoot !== '' && $real !== false && str_starts_with(rtrim($real, '/') . '/', self::$coreRoot);
+    }
+
+    /**
+     * Whether the module that answers to this name is core's own. False for a
+     * module of the site, including one that overrides a module of core.
+     */
+    public static function isCore(string $name): bool
+    {
+        $path = self::path($name);
+
+        return $path !== null && self::inCoreRoot($path);
+    }
+
+    /**
+     * The folder (trailing slash) of core's module of this name, or null.
+     * It is there whether or not a site module overrides it.
+     */
+    public static function corePath(string $name): ?string
+    {
+        return self::rootPath($name, true);
+    }
+
+    /**
+     * The folder (trailing slash) of the site's module of this name, or null.
+     */
+    public static function sitePath(string $name): ?string
+    {
+        return self::rootPath($name, false);
+    }
+
+    /**
+     * Whether a site module stands in for a module of core of the same name.
+     */
+    public static function overridden(string $name): bool
+    {
+        return self::corePath($name) !== null && self::sitePath($name) !== null;
+    }
+
+    /**
+     * The controller class of the module that answers to this name:
+     * Zero\Core\Module\{Name} for a module of core, Zero\Module\{Name} for
+     * a module of the site. Null for an unknown module.
+     */
+    public static function controllerClass(string $name): ?string
+    {
+        $real = self::name($name);
+        if ($real === null) {
+            return null;
+        }
+
+        return (self::isCore($real) ? self::CORE_NAMESPACE : self::SITE_NAMESPACE) . $real;
+    }
+
+    /**
+     * A module class name without its namespace prefix (Zero\Module\Ttrpg\Hexmap
+     * and Zero\Core\Module\Ttrpg\Hexmap are both Ttrpg\Hexmap), or null for a
+     * class that is not a module's.
+     */
+    public static function classRest(string $class): ?string
+    {
+        $class = ltrim($class, '\\');
+        foreach ([self::CORE_NAMESPACE, self::SITE_NAMESPACE] as $prefix) {
+            if (str_starts_with($class, $prefix)) {
+                return substr($class, strlen($prefix));
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The first folder of this name (any accepted spelling) in the core root
+     * or in the other roots.
+     */
+    private static function rootPath(string $name, bool $core): ?string
+    {
+        $wanted = self::fold($name);
+        if ($wanted === '') {
+            return null;
+        }
+        foreach (self::listing() as [$root, $entry]) {
+            if (self::isModuleDirName($entry) && self::fold($entry) === $wanted && self::inCoreRoot($root) === $core) {
+                return $root . $entry . '/';
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * The real directory name for any accepted spelling, or null.
      */
     public static function name(string $name): ?string
@@ -127,16 +230,14 @@ class Modules
     }
 
     /**
-     * 'required' | 'optional' | 'example' | 'site'
+     * 'core' | 'example' | 'site', by name: a site module that overrides a
+     * module of core keeps that module's tier.
      */
     public static function tier(string $name): string
     {
         $name = self::name($name) ?? $name;
-        if (in_array($name, self::REQUIRED, true)) {
-            return 'required';
-        }
-        if (in_array($name, self::OPTIONAL, true)) {
-            return 'optional';
+        if (in_array($name, self::CORE, true)) {
+            return 'core';
         }
         if (in_array($name, self::EXAMPLE, true)) {
             return 'example';
@@ -146,8 +247,7 @@ class Modules
     }
 
     /**
-     * Whether a module is switched on. False for an unknown module. Required
-     * modules are always on; an ini entry for one is ignored.
+     * Whether a module is switched on. False for an unknown module.
      */
     public static function enabled(string $name): bool
     {
@@ -157,9 +257,6 @@ class Modules
         }
 
         $tier = self::tier($real);
-        if ($tier === 'required') {
-            return true;
-        }
 
         foreach (self::ini()['enabled'] as $key => $value) {
             if (self::fold((string) $key) === self::fold($real)) {
@@ -188,8 +285,8 @@ class Modules
     /**
      * Throw when two roots hold the same module name, compared the way path()
      * compares (case-insensitive, hyphens ignored). The message names both
-     * paths. Reads the cached listing. A module a site may replace
-     * (OVERRIDABLE) under its exact name in two roots is not a clash.
+     * paths. Reads the cached listing. A site module with the exact name of a
+     * module of core is not a clash: it overrides it.
      */
     public static function assertNoClash(): void
     {
@@ -199,7 +296,7 @@ class Modules
             if (isset($seen[$key])) {
                 [$first, $firstEntry] = $seen[$key];
                 // The earlier root (the site's) wins in all(), which is the override
-                if ($entry === $firstEntry && in_array($entry, self::OVERRIDABLE, true)) {
+                if ($entry === $firstEntry && self::inCoreRoot($root) !== self::inCoreRoot($first)) {
                     continue;
                 }
                 if (self::isModuleDirName($entry) || self::isModuleDirName($firstEntry)) {

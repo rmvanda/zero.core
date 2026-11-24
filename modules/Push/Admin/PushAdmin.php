@@ -1,5 +1,5 @@
 <?php
-namespace Zero\Module\Push\Admin;
+namespace Zero\Core\Module\Push\Admin;
 
 use Zero\Core\AdminResponse;
 use Zero\Core\Database;
@@ -7,7 +7,7 @@ use Zero\Core\Session;
 use Zero\Core\Attribute\RequirePermission;
 use Zero\Core\Attribute\AllowedMethods;
 use Zero\Core\Attribute\AuditLog;
-use Zero\Module\Push\Lib\PushHelper;
+use Zero\Core\Module\Push\Lib\PushHelper;
 
 /**
  * Push notification admin: send a notification and manage the history

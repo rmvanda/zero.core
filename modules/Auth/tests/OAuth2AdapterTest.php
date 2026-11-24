@@ -1,10 +1,10 @@
 <?php
 
-namespace Zero\Module\Auth\Tests;
+namespace Zero\Core\Module\Auth\Tests;
 
 use Zero\Tests\Core\ZeroTestCase;
 
-use Zero\Module\Auth\Adapters\OAuth2Adapter;
+use Zero\Core\Module\Auth\Adapters\OAuth2Adapter;
 
 /** Minimal concrete subclass to exercise the shared base behavior. */
 class FakeOAuth2Adapter extends OAuth2Adapter

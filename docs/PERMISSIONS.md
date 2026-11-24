@@ -136,7 +136,7 @@ $group->can('allow.polly');              // was it granted to the group itself?
 - The Admin module's permissions screen (`/admin/permissions`) starts from the key: who was
   granted it, who has it through a group, and granting or revoking it for several users and
   groups at once.
-- A user asking for a capability they lack goes through the AccessRequest module, which calls
+- A user asking for a capability they lack goes through AccessRequest, a submodule of Auth (`/auth/access-request`), which calls
   `grant()` when an admin approves.
 
 Who holds a capability:

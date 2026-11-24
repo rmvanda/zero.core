@@ -1,6 +1,6 @@
 <?php
 
-namespace Zero\Module;
+namespace Zero\Core\Module;
 
 use \Zero\Core\Console;
 use \Zero\Entity\Entity;
@@ -165,7 +165,7 @@ class Test extends \Zero\Core\Module {
 
     public function index(){
 
-        $class = new \ReflectionClass("\Zero\Module\Test");
+        $class = new \ReflectionClass("\Zero\Core\Module\Test");
         $methods = $class->getMethods(\ReflectionMethod::IS_PUBLIC);
         echo "<h1>Index of Test module: </h1>"; 
         foreach($methods as $method){

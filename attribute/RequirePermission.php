@@ -88,7 +88,7 @@ class RequirePermission {
             throw new HTTPError(403, "Permission required: {$permission}");
         }
 
-        $url = '/access-request/permission?p=' . urlencode($permission);
+        $url = '/auth/access-request/permission?p=' . urlencode($permission);
         header('Location: ' . $url);
         exit;
     }

@@ -169,6 +169,6 @@ class AdminOfferingTest extends TestCase
         foreach (['loadConfig', 'loadInlineAsset', '__construct', '__call', 'getAuxiliary', 'renderError', 'noSuchMethod'] as $method) {
             $this->assertFalse($this->admin()::routable($admin, $method), $method);
         }
-        $this->assertFalse($this->admin()::routable(\Zero\Module\Entity\Admin\EntityAdmin::class, 'store'));
+        $this->assertFalse($this->admin()::routable(\Zero\Core\Module\Entity\Admin\EntityAdmin::class, 'store'));
     }
 }

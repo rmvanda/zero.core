@@ -1,6 +1,6 @@
 <?php
 
-namespace Zero\Module;
+namespace Zero\Core\Module\Auth;
 
 use \Zero\Core\Module;
 use \Zero\Core\Request;
@@ -9,10 +9,10 @@ use \Zero\Lib\Mail\Mail;
 use \Zero\Core\Attribute\{AllowedMethods, RequiredParams, RequireLogin};
 
 /**
- * AccessRequest Module
+ * AccessRequest, a submodule of Auth
  * Handles user requests for access to restricted resources
  */
-class AccessRequest extends Module {
+class AccessRequest extends \Zero\Core\Module {
 
     public function __construct() {
         parent::__construct();
@@ -20,7 +20,7 @@ class AccessRequest extends Module {
 
     /**
      * Display access request form for a specific permission
-     * GET /access-request/permission?p=permission.key
+     * GET /auth/access-request/permission?p=permission.key
      */
     #[RequiredParams(['p'])]
     public function permission() {
@@ -60,7 +60,7 @@ class AccessRequest extends Module {
                         <p class='mt-1'>You can request access from the administrator.</p>
                         <p class='text-muted'>Requesting permission: <strong>" . htmlspecialchars($permissionKey) . "</strong></p>
                     </div>
-                    <form id='accessRequestForm' method='POST' action='/access-request/submit'>
+                    <form id='accessRequestForm' method='POST' action='/auth/access-request/submit'>
                         <input type='hidden' name='requested_url' value='" . htmlspecialchars($requestedUrl) . "'>
                         <input type='hidden' name='permission' value='" . htmlspecialchars($permissionKey) . "'>
                         <div class='form-group'>
@@ -83,7 +83,7 @@ class AccessRequest extends Module {
 
     /**
      * Handle access request form submission
-     * POST /access-request/submit
+     * POST /auth/access-request/submit
      */
     #[RequireLogin]
     #[AllowedMethods('POST')]
@@ -121,7 +121,7 @@ class AccessRequest extends Module {
 
         // Prepare email content with approval button
         $subject = "Access Request from $userName";
-        $approveUrl = "https://" . PRIMARY_DOMAIN . "/access-request/approve?token=" . urlencode($token);
+        $approveUrl = "https://" . PRIMARY_DOMAIN . "/auth/access-request/approve?token=" . urlencode($token);
 
         // Email HTML needs inline styles for email client compatibility
         $message = "
@@ -206,7 +206,7 @@ class AccessRequest extends Module {
 
     /**
      * Approve an access request
-     * GET /access-request/approve?token=xxx
+     * GET /auth/access-request/approve?token=xxx
      */
     #[RequireLogin]
     #[RequiredParams(['token'])]

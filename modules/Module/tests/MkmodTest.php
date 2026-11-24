@@ -1,5 +1,5 @@
 <?php
-namespace Zero\Module\Module\Tests;
+namespace Zero\Core\Module\Module\Tests;
 
 use Zero\Tests\Core\ZeroTestCase;
 
@@ -117,7 +117,7 @@ class MkmodTest extends ZeroTestCase
         $dest = sys_get_temp_dir() . '/mkmod-clash-' . getmypid();
         mkdir($dest);
         try {
-            foreach (['Auth', 'HelloWorld', 'AccessRequest'] as $name) {
+            foreach (['Auth', 'HelloWorld', 'Push'] as $name) {
                 [$code, $out] = $this->mkmod($name . ' --dry-run --dest ' . escapeshellarg($dest));
                 $this->assertSame(1, $code, "$name: $out");
                 $this->assertStringContainsStringIgnoringCase('bundled', $out);

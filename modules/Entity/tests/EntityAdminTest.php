@@ -1,12 +1,12 @@
 <?php
 
-namespace Zero\Module\Entity\Tests;
+namespace Zero\Core\Module\Entity\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Zero\Core\AdminResponse;
 use Zero\Core\Attribute\{AllowedMethods, RequiredParams};
-use Zero\Module\Entity\Admin\EntityAdmin;
-use Zero\Module\Entity\Model\EntityStore;
+use Zero\Core\Module\Entity\Admin\EntityAdmin;
+use Zero\Core\Module\Entity\Model\EntityStore;
 
 /**
  * The entity screens are the Entity module's admin offering: /admin/entity/...
@@ -65,7 +65,7 @@ class EntityAdminTest extends TestCase
     public function testAdminNoLongerHasEntityEndpoints(): void
     {
         foreach (['deleteEntity', 'updateEntity', 'createEntity', 'manageEntity'] as $method) {
-            $this->assertFalse(method_exists(\Zero\Module\Admin::class, $method), "Admin::{$method}() is gone");
+            $this->assertFalse(method_exists(\Zero\Core\Module\Admin::class, $method), "Admin::{$method}() is gone");
         }
     }
 

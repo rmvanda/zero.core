@@ -28,7 +28,7 @@ server rebuilds the session before any HTML is rendered: no redirect, no provide
   `Session::end()` the single teardown. Rehydration must go through `establish()`, not build
   `$_SESSION` itself. The session contract is in `core/modules/Auth/CLAUDE.md`;
   `core/tests/SessionEstablishTest.php` pins it.
-- **`Zero\Module\Auth\Model\AuthToken`** (`core/modules/Auth/model/AuthToken.php`, table
+- **`Zero\Core\Module\Auth\Model\AuthToken`** (`core/modules/Auth/model/AuthToken.php`, table
   `auth_token`) already implements selector + validator tokens for one-time sign-in links:
   `random_bytes`, base64url, validator stored hashed, `expires_at` computed by the database.
   Copy its approach. It is one-time by design, so a remember token needs its own table and
@@ -190,7 +190,7 @@ No data migration.
    lost.
 2. **Where does `RememberToken` live?** `Zero\Core` next to `Session`, or the Auth module
    next to `AuthToken`. `RequireLogin` is in core and must not depend on a module that could
-   be absent; Auth is a required module, but core calling into it is still the wrong
+   be absent; Auth may be switched off, and core calling into it is still the wrong
    direction.
 3. **Public pages.** Rehydrating only in `RequireLogin` means a returning user on a public
    page (the home page, anything that branches on `Session::isLoggedIn()`) looks signed out

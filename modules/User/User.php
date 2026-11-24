@@ -1,6 +1,6 @@
 <?php
 
-namespace Zero\Module;
+namespace Zero\Core\Module;
 
 use \Zero\Core\Attribute\RequireLogin;
 use \Zero\Core\Attribute\RequireAuthLevel;
@@ -44,13 +44,13 @@ class User extends \Zero\Core\Module {
         // including a since-disabled one, so it can still be disconnected.
         // Guarded so a registry/DB hiccup renders an empty section, not a 500.
         try {
-            $connections = \Zero\Module\Auth\OAuth\Token::connectionsFor((int) ($this->userId ?? 0));
+            $connections = \Zero\Core\Module\Auth\OAuth\Token::connectionsFor((int) ($this->userId ?? 0));
             $bySlug = [];
-            foreach (\Zero\Module\Auth\OAuth\Provider::available() as $p) {
+            foreach (\Zero\Core\Module\Auth\OAuth\Provider::available() as $p) {
                 $bySlug[$p['slug']] = $p;
             }
             foreach (array_keys($connections) as $slug) {
-                if (!isset($bySlug[$slug]) && ($p = \Zero\Module\Auth\OAuth\Provider::bySlug($slug))) {
+                if (!isset($bySlug[$slug]) && ($p = \Zero\Core\Module\Auth\OAuth\Provider::bySlug($slug))) {
                     $bySlug[$slug] = $p;
                 }
             }

@@ -90,14 +90,11 @@ class ModulesIni
      * Turn a module on or off; null removes the entry (back to the default).
      * An entry equal to the module's default is not kept.
      *
-     * @throws \DomainException for a required module, a name no module has or a name that cannot be an INI key
+     * @throws \DomainException for a name no module has or a name that cannot be an INI key
      */
     public function setEnabled(string $name, ?bool $enabled): void
     {
         $real = $this->realName($name);
-        if (Modules::tier($real) === 'required') {
-            throw new \DomainException("{$real} is required and cannot be turned off");
-        }
 
         $this->enabled = self::without($this->enabled, $real);
         if ($enabled !== null && $enabled !== (Modules::tier($real) !== 'example')) {

@@ -1,6 +1,6 @@
 <?php
 
-namespace Zero\Module\Admin;
+namespace Zero\Core\Module\Admin;
 
 use \Zero\Core\AdminResponse;
 use \Zero\Core\Attribute\RequirePermission;
@@ -186,40 +186,31 @@ class Modules extends AdminResponse {
     }
 
     /**
-     * The folder core's own modules live in (trailing slash).
-     */
-    protected function coreModulesDir(): string {
-        return dirname(__DIR__, 3) . '/';
-    }
-
-    /**
      * One row per module of every root for the modules screen, ordered by tier
-     * (required, optional, example, site) then name.
+     * (core, example, site) then name. `where` is the root the module that
+     * answers lives in; `overridden` says a site module stands in for core's.
      *
-     * @return array<int,array{name:string,tier:string,where:string,enabled:bool,default:bool,departure:bool,order:?int,canSwitch:bool,settable:bool}>
+     * @return array<int,array{name:string,tier:string,where:string,overridden:bool,enabled:bool,default:bool,departure:bool,order:?int,settable:bool}>
      */
     protected function moduleRows(): array {
-        $core = realpath($this->coreModulesDir());
-        $core = $core === false ? null : rtrim($core, '/') . '/';
-        $tiers = ['required' => 0, 'optional' => 1, 'example' => 2, 'site' => 3];
+        $tiers = ['core' => 0, 'example' => 1, 'site' => 2];
 
         $rows = [];
         foreach (\Zero\Core\Modules::all() as $name => $path) {
             $name = (string) $name;
             $tier = \Zero\Core\Modules::tier($name);
-            $real = realpath($path);
             $settable = \Zero\Core\ModulesIni::isSettable($name);
             $enabled = \Zero\Core\Modules::enabled($name);
             $default = $tier !== 'example';
             $rows[] = [
                 'name' => $name,
                 'tier' => $tier,
-                'where' => ($core !== null && $real !== false && str_starts_with(rtrim($real, '/') . '/', $core)) ? 'core' : 'site',
+                'where' => \Zero\Core\Modules::isCore($name) ? 'core' : 'site',
+                'overridden' => \Zero\Core\Modules::overridden($name),
                 'enabled' => $enabled,
                 'default' => $default,
                 'departure' => $enabled !== $default,
                 'order' => \Zero\Core\Modules::order($name),
-                'canSwitch' => $tier !== 'required' && $settable,
                 'settable' => $settable,
             ];
         }

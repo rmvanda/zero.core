@@ -1,8 +1,8 @@
 <?php
-namespace Zero\Module\Auth\Tests;
+namespace Zero\Core\Module\Auth\Tests;
 
 use Zero\Tests\Core\ZeroTestCase;
-use Zero\Module\Auth\Model\RegistrationFields;
+use Zero\Core\Module\Auth\Model\RegistrationFields;
 use Zero\Core\Exception\HTTPError;
 
 class RegistrationFieldsTest extends ZeroTestCase

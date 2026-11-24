@@ -1,6 +1,6 @@
 <?php
 // Sign-in buttons for the OAuth providers an admin enabled and configured
-// (Zero\Module\Auth\OAuth\Provider::available()). Google is rendered by
+// (Zero\Core\Module\Auth\OAuth\Provider::available()). Google is rendered by
 // _google-signin.php, so it is skipped here. A site replaces this file by having
 // its own _oauth-buttons.php in app/frontend/frame/.
 //
@@ -14,7 +14,7 @@ $oauthButtons = [];
 if (function_exists('oauth_provider_icon')) {
     try {
         $oauthButtons = array_filter(
-            \Zero\Module\Auth\OAuth\Provider::available(),
+            \Zero\Core\Module\Auth\OAuth\Provider::available(),
             fn($p) => $p['slug'] !== 'google'
         );
     } catch (\Throwable $e) {

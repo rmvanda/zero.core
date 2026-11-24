@@ -1,11 +1,11 @@
 <?php
 
-namespace Zero\Module\Entity\Admin;
+namespace Zero\Core\Module\Entity\Admin;
 
 use Zero\Core\AdminResponse;
 use Zero\Core\Attribute\{AllowedMethods, RequiredParams, RequirePermission};
 use Zero\Core\Exception\HTTPError;
-use Zero\Module\Entity\Model\EntityStore;
+use Zero\Core\Module\Entity\Model\EntityStore;
 
 /**
  * Entity Admin Controller

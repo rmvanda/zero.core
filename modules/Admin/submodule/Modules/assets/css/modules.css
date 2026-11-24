@@ -13,9 +13,14 @@
     color: var(--admin-text-dim);
 }
 
-.admin .modules-table .module-always-on {
-    font-size: 0.875rem;
-    color: var(--admin-text-dim);
+.admin .modules-table .module-warning {
+    display: block;
+    max-width: 28rem;
+    margin-top: 0.25rem;
+}
+
+.admin .modules-table .module-overridden {
+    margin-left: 0.5rem;
 }
 
 .admin .modules-table .actions-cell {

@@ -1,6 +1,6 @@
 <?php
 
-namespace Zero\Module\Test;
+namespace Zero\Core\Module\Test;
 
 class Route extends \Zero\Core\Module {
 

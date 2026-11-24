@@ -1,9 +1,9 @@
 <?php
 
-namespace Zero\Module\Auth\Tests;
+namespace Zero\Core\Module\Auth\Tests;
 
 use Zero\Tests\Core\ZeroTestCase;
-use Zero\Module\Auth;
+use Zero\Core\Module\Auth;
 
 
 class AuthResolverTest extends ZeroTestCase
@@ -24,7 +24,7 @@ class AuthResolverTest extends ZeroTestCase
     public function testResolvesGithubAdapter(): void
     {
         $adapter = Auth::adapterForProvider('github');
-        $this->assertInstanceOf(\Zero\Module\Auth\Adapters\GitHubAdapter::class, $adapter);
+        $this->assertInstanceOf(\Zero\Core\Module\Auth\Adapters\GitHubAdapter::class, $adapter);
     }
 
     public function testUnknownProviderReturnsNull(): void

@@ -40,8 +40,8 @@ the screens it finds and routes `/admin/{name}/...` to them.
 | Firewall rules | `core/modules/Admin/submodule/Firewall/` (Admin's own screen) |
 
 **Namespaces:**
-- Module admin controllers: `Zero\Module\{Module}\Admin\{Module}Admin`, reached through `Admin::__call`
-- Admin submodules: `Zero\Module\Admin\{Name}`, reached when `Admin::__call` falls through to `Module::__call`
+- Module admin controllers: `Zero\Module\{Module}\Admin\{Module}Admin` (`Zero\Core\Module\{Module}\Admin\{Module}Admin` for a module of core), reached through `Admin::__call`
+- Admin submodules: `Zero\Core\Module\Admin\{Name}`, reached when `Admin::__call` falls through to `Module::__call`
 
 ---
 
@@ -63,7 +63,7 @@ Abstract base class of every admin controller. Extends `Module`.
 
 ### `Admin` (`core/modules/Admin/Admin.php`)
 
-`Zero\Module\Admin`, `#[RequirePermission('allow.admin')]` on the class. It holds the dashboard
+`Zero\Core\Module\Admin`, `#[RequirePermission('allow.admin')]` on the class. It holds the dashboard
 and routes everything else through `__call`.
 
 ```
@@ -87,7 +87,7 @@ holds one card per screen `Admin::ownScreens()` finds. "Modules" holds one card 
 
 ```
 core/modules/Admin/submodule/Users/
-├── Users.php               # Zero\Module\Admin\Users, extends AdminResponse
+├── Users.php               # Zero\Core\Module\Admin\Users, extends AdminResponse
 ├── admin-config.php        # The dashboard card
 ├── view/
 └── assets/css/, assets/js/ # Inlined: users.css on every screen, {method}.css on that one
@@ -133,11 +133,11 @@ user do", Permissions answers "who may do this".
   nothing. An admin cannot revoke `allow.admin` from the account they are signed in with.
 
 The Audit Log lists what `#[AuditLog]` and the framework's own events recorded, newest first,
-read from `event_view` by `Zero\Module\Admin\Model\EventLog`. An audit event names its user in
+read from `event_view` by `Zero\Core\Module\Admin\Model\EventLog`. An audit event names its user in
 its detail (`User ID: 5`); the screen links that id to the user's screen and filters by it. A
 site without the entity tables gets a line saying so.
 
-The users list is paged, 25 to a page. Its model, `Zero\Module\Admin\Model\UserList`, runs its
+The users list is paged, 25 to a page. Its model, `Zero\Core\Module\Admin\Model\UserList`, runs its
 own SQL against `users`, `user_group`, `user_group_member` and `permission`: the one exception
 to the rule that a module reads those through `Zero\Core\Access`, made because this is the only
 screen that asks about every user at once.
@@ -209,7 +209,7 @@ where its card sits, are set in `app/modules.ini`, never in `admin-config.php`.
 lists a module when all of these hold:
 
 1. It is not Admin itself, it has an `Admin/` folder and `Modules::enabled()` is true for it.
-2. The class `Zero\Module\{X}\Admin\{X}Admin` exists. An `Admin/` folder without it (one holding
+2. The class `Zero\Module\{X}\Admin\{X}Admin` exists (`Zero\Core\Module\...` for a module of core). An `Admin/` folder without it (one holding
    only `view/`, say) is not an offering. A class that throws while loading is logged with
    `Console::warn()` and left out; the other cards still show.
 3. The logged-in user holds every key in the card's `permissions`, checked with `Session::can()`.
@@ -305,11 +305,16 @@ The last crumb is the page itself and is not a link.
 
 `/admin/modules` (`core/modules/Admin/submodule/Modules/`, assets `modules.css`, `modules.js`; wording in
 `core/modules/Admin/strings/admin.ini`, `ADMIN_MODULES_*`) lists `Modules::all()` ordered by tier
-(required, optional, example, site) then name. Each row shows the real folder name, the tier,
+(core, example, site) then name. Each row shows the real folder name, the tier,
 where it lives (`core` under `core/modules/`, otherwise `site`), on or off, whether that is the
 default or a departure, and the order.
 
-- A required module shows no switch.
+- Every module has a switch, Admin included. Admin's row carries `ADMIN_MODULES_ADMIN_OFF_WARNING`
+  (turning Admin off removes every admin screen; deleting the `Admin = off` line from
+  `app/modules.ini` brings it back), and `modules.js` asks for confirmation with the same text
+  before it saves that change.
+- A module of core that the site overrides with one of the same name lives in `site` and carries
+  an "Overridden" badge (`Modules::overridden()`).
 - A module whose name is an INI keyword (`On`, `Off`, `Yes`, `No`, `True`, `False`, `None`,
   `Null`) shows no controls and a note: its name cannot be a key in `app/modules.ini`.
 - Each row's form carries the hash of `app/modules.ini` as the screen was drawn.

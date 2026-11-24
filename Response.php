@@ -158,8 +158,8 @@ class Response
             return false;
         }
 
-        // Modules::path() reads every spelling routing does, so /access-request/
-        // resolves to AccessRequest here exactly as it does in
+        // Modules::path() reads every spelling routing does, so /api-config/
+        // resolves to ApiConfig here exactly as it does in
         // Request::__construct(). A module that is switched off has no frame
         // to lend.
         $dir = self::moduleDir($segment);
@@ -240,9 +240,10 @@ class Response
             // submodule gate is: a check that runs after the constructor has
             // opened connections and loaded models gates the response, not the
             // work.
-            Application::checkAttributes(\Zero\Module\Index::class, $method);
+            $indexClass = Modules::controllerClass("Index");
+            Application::checkAttributes($indexClass, $method);
 
-            $index = new \Zero\Module\Index();
+            $index = new $indexClass();
 
             // Assets are matched on the endpoint name, and to Index this
             // segment IS the endpoint — Request::$endpoint is the *second*
@@ -299,7 +300,12 @@ class Response
         // Response, but a real module reaching __call may not have. The
         // framework autoloader cannot resolve module classes — that is what
         // Application::isModule() exists for — so load it by path or give up.
-        if (!class_exists('\Zero\Module\Index', false)) {
+        // The site's Index when it has one, otherwise core's.
+        $indexClass = Modules::controllerClass("Index");
+        if ($indexClass === null) {
+            return null;
+        }
+        if (!class_exists($indexClass, false)) {
             if (($file = Application::controllerFile("Index")) === null) {
                 return null;
             }
@@ -312,14 +318,14 @@ class Response
             }
 
             try {
-                $candidate = new \ReflectionMethod('\Zero\Module\Index', $name);
+                $candidate = new \ReflectionMethod($indexClass, $name);
             } catch (\ReflectionException $e) {
                 continue; // no such method
             }
 
             if ($candidate->isPublic()
              && !$candidate->isStatic()
-             && $candidate->getDeclaringClass()->getName() === 'Zero\Module\Index'
+             && Modules::classRest($candidate->getDeclaringClass()->getName()) === 'Index'
             ) {
                 // Reflection matched case-insensitively; hand back the real name.
                 return $candidate->getName();

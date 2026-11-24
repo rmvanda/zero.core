@@ -1,5 +1,5 @@
 <?php
-namespace Zero\Module\User\Tests;
+namespace Zero\Core\Module\User\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Zero\Core\Strings;

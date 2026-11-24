@@ -1,12 +1,12 @@
 <?php
 
-namespace Zero\Module;
+namespace Zero\Core\Module;
 
 use \Zero\Core\Database;
 use Zero\Core\Access\User;
 use Zero\Core\Session;
 use \Zero\Core\Attribute\RequireLogin;
-use \Zero\Module\Push\Lib\PushHelper;
+use \Zero\Core\Module\Push\Lib\PushHelper;
 
 /**
  * Push Module - Handles push notification subscriptions and tracking

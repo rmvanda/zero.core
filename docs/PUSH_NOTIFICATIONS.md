@@ -9,7 +9,7 @@ to work. To send a notification from a module, see `core/modules/Push/CLAUDE.md`
 
 | Piece | Where | What it does |
 |-------|-------|--------------|
-| `Zero\Module\Push\Lib\PushHelper` | `core/modules/Push/lib/PushHelper.php` | Creates notification records, sends them, records clicks |
+| `Zero\Core\Module\Push\Lib\PushHelper` | `core/modules/Push/lib/PushHelper.php` | Creates notification records, sends them, records clicks |
 | `Push` module | `core/modules/Push/Push.php` | The `/push/*` endpoints the browser calls |
 | `PushAdmin` | `core/modules/Push/Admin/` | The `/admin/push` screen |
 | Service worker | the site's `app/frontend/www/push-worker.js`, served as `/push-worker.js` | Shows a notification when a push arrives; on a click, posts to `/push/click` and opens the URL; subscribes again on `pushsubscriptionchange` |
@@ -48,7 +48,7 @@ each method and not on the class.
 ## Sending from code
 
 ```php
-use \Zero\Module\Push\Lib\PushHelper;
+use \Zero\Core\Module\Push\Lib\PushHelper;
 
 $notificationId = PushHelper::createNotification([
     'title' => 'New Message',
