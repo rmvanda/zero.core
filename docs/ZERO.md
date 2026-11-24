@@ -265,7 +265,7 @@ A session older than `SESSION_REGENERATE_INTERVAL` seconds gets a new session id
 
 - The key is in `app/config/constants.ini`, and in `core/skeleton/config/constants.ini` for a site with no file of that name. Left out or blank, the interval is 1800 seconds (`Application::SESSION_REGENERATE_DEFAULT`). `0` means never.
 - The check runs at the end of `defineConstants()`, the first point at which the interval is known.
-- The old session is left for PHP's garbage collection, not deleted, so a request already in flight with the old id still finds its session.
+- The old session is not deleted at once, so a request already in flight with the old id still finds its session. It is marked obsolete (`$_SESSION['obsolete_at']`), answers for `Application::SESSION_OBSOLETE_GRACE` seconds (60), and is then refused: `new Application()` destroys it and the client starts an empty session under a new id.
 - Signing in is separate: `Session::establish()` rotates the id and deletes the old session.
 
 ### Key Constants
