@@ -147,11 +147,11 @@ class AccessRequest extends \Zero\Core\Module {
                 <div class='content'>
                     <div class='field'>
                         <div class='label'>User:</div>
-                        <div class='value'>$userIdentifier</div>
+                        <div class='value'>" . htmlspecialchars($userIdentifier) . "</div>
                     </div>
                     <div class='field'>
                         <div class='label'>Email:</div>
-                        <div class='value'>$userEmail</div>
+                        <div class='value'>" . htmlspecialchars($userEmail) . "</div>
                     </div>
                     <div class='field'>
                         <div class='label'>Requested Permission:</div>
@@ -159,7 +159,7 @@ class AccessRequest extends \Zero\Core\Module {
                     </div>
                     <div class='field'>
                         <div class='label'>Requested URL:</div>
-                        <div class='value'>$requestedUrl</div>
+                        <div class='value'>" . htmlspecialchars($requestedUrl) . "</div>
                     </div>
                     <div class='field'>
                         <div class='label'>Reason:</div>
@@ -285,7 +285,7 @@ class AccessRequest extends \Zero\Core\Module {
                 <div class='content-wrapper mx-auto text-center surface-medium p-2 border-radius-8 mt-3'>
                     <span class='material-symbols-outlined icon-xl text-success'>check_circle</span>
                     <h2>Request Submitted</h2>
-                    <p>$message</p>
+                    <p>" . htmlspecialchars((string) $message) . "</p>
                     <a href='/' class='btn-primary mt-2'>Return Home</a>
                 </div>
             ";
@@ -305,7 +305,7 @@ class AccessRequest extends \Zero\Core\Module {
                 <div class='content-wrapper mx-auto text-center surface-medium p-2 border-radius-8 mt-3'>
                     <span class='material-symbols-outlined icon-xl text-error'>error</span>
                     <h2>Error</h2>
-                    <p>$message</p>
+                    <p>" . htmlspecialchars((string) $message) . "</p>
                     <a href='javascript:history.back()' class='btn-secondary mt-2'>Go Back</a>
                 </div>
             ";
