@@ -10,6 +10,15 @@ that text belongs in this file.
 
 Newest first.
 
+## 2026-11 — log_monitor.sh
+
+### `core/bin/log_monitor.sh` and `LOG_FILE` — REMOVED
+
+The cron script mailed and rotated one log file per level (`{LOG_FILE}_{LEVEL}.log`). `Console`
+writes every level to one file (`Console::$defaultLogFile`), so the script found nothing to send.
+It is deleted, and the commented `LOG_FILE` key is gone from the `config.ini` template: nothing
+else read it. Watch `Console`'s own file with the host's log tooling.
+
 ## 2026-11 — No connection without a configured database; DEVMODE off
 
 ### A default `DB_DRIVER` — REMOVED

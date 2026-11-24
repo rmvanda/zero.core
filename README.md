@@ -117,7 +117,7 @@ core's `composer.json` at runtime; it documents what to install.
 | `skeleton/` | The template for a new site, and the defaults core falls back to. See [skeleton/README.md](skeleton/README.md). |
 | `tests/` | PHPUnit suite for core. See [tests/README.md](tests/README.md). |
 | `docs/` | Framework documentation. |
-| `bin/` | Maintenance scripts: `refresh-cloudflare-ips.php`, and `log_monitor.sh`, which predates `Console` and is likely deprecated (it mails and rotates one file per log level, `{LOG_FILE}_{LEVEL}.log`; `Console` writes every level to one file). |
+| `bin/` | Maintenance scripts (`refresh-cloudflare-ips.php`). |
 | `deprecated/` | `Error.php` and `SQLAdapter.php`. Nothing loads them. `SQLAdapter` extends an `Adapter` class that does not exist in this repo. |
 
 # Where to read next

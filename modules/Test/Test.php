@@ -59,7 +59,7 @@ class Test extends \Zero\Core\Module {
         Console::debug("What's up? I'm alive");
         Console::error("A test error from /test/console"); 
         echo "<pre>";
-        echo LOG_FILE."</pre>"; 
+        echo Console::$defaultLogFile."</pre>"; 
         echo "<pre>".ZERO_ROOT; 
         
     }
