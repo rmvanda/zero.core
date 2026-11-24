@@ -1,0 +1,507 @@
+#!/usr/bin/env bash
+#
+# mkrepo — give the module in the current directory a repository of its own.
+#
+# Run it from inside a site module ({site}/modules/{Name}). It builds a new
+# repository that holds the module's history, writes the module's own
+# .gitignore, creates a PRIVATE repository on GitHub with gh, pushes, and then
+# records the module in the site repository as a submodule. The files on disk
+# do not move. See README, and `mkrepo --help`.
+#
+set -euo pipefail
+
+# ---------------------------------------------------------------------------
+# Configuration. A new module repository is {REPO_OWNER}/{REPO_PREFIX}{name}.
+# ---------------------------------------------------------------------------
+
+# The GitHub user or organisation that owns the module repositories.
+REPO_OWNER="zero"
+# Put before the module's name: module.weather, module.networkmap.
+REPO_PREFIX="module."
+# 1: the module's name is written in lower case in the repository name.
+REPO_NAME_LOWERCASE=1
+# Put before {owner}/{repo} to make the remote URL. SSH, as in .gitmodules.
+REMOTE_BASE="git@github.com:"
+# The branch of the new repository.
+BRANCH="main"
+# The description GitHub shows; %s is the module's name.
+REPO_DESCRIPTION="Zero Framework module: %s"
+
+# TEMPORARY. The site repository began on 2026-11-15; the history of a module
+# before that date is in the retired zero.modules checkout, where a module is a
+# folder at the root. mkrepo puts that history under the site's commits. A
+# module with no folder there (every module made after that date) gets the
+# site's history only, and so does every module when this folder is absent or
+# this value is empty. Delete this value, and legacy_history(), when the old
+# modules all have repositories of their own.
+LEGACY_HISTORY="${MKREPO_LEGACY_HISTORY-$HOME/zero-bundle/retired/modules.git}"
+
+# ---------------------------------------------------------------------------
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# The Module skeleton (this script's own directory) names the standard folders.
+SKEL_DIR="$SCRIPT_DIR"
+
+DRY_RUN=0
+ADD_UNKNOWN=0
+ADD_UNKNOWN_NAMES=()
+IGNORE_UNKNOWN=0
+ACCEPT_LEAKS=0
+NO_COMMIT=0
+REMOTE_URL=""
+
+STAGE=""
+CONVERTING=0
+
+say()  { printf 'mkrepo: %s\n' "$1"; }
+warn() { printf 'mkrepo: WARNING: %s\n' "$1" >&2; }
+die()  { printf 'mkrepo: %s\n' "$1" >&2; exit "${2:-1}"; }
+
+usage() {
+    cat <<'EOF'
+Usage: cd {site}/modules/{Name} && mkrepo [flags]
+
+Gives the module in the current directory a repository of its own:
+
+  1. Checks that the directory is a module: it is directly in the modules/
+     folder of a site repository and holds {Name}.php.
+  2. Compares its folders with the Module skeleton. A folder the skeleton does
+     not have stops the run, unless one of the two flags below says what to do.
+  3. Builds the new repository from the module's history in the site
+     repository (and, while it exists, in the retired zero.modules checkout).
+  4. Writes the module's own .gitignore and commits it.
+  5. Scans the new history with gitleaks.
+  6. Creates a PRIVATE repository on GitHub with gh and pushes to it.
+  7. Records the module in the site repository as a submodule and commits that.
+     The site repository is not pushed.
+
+Flags:
+  --add-unknown [folder ...]  Add the unknown folders to the Module skeleton.
+                              With names: add only those, ignore the rest.
+  --ignore-unknown            Ignore unknown folders; no warning.
+  --dry-run                   Do steps 1 to 5 in a temporary folder and report.
+                              Changes nothing in the site, the skeleton or GitHub.
+  --accept-leaks              Continue when gitleaks reports findings, or when
+                              gitleaks is not installed.
+  --remote <url>              Use this remote; do not create one with gh.
+  --no-commit                 Leave the submodule change staged in the site.
+  -h, --help                  This text.
+
+The repository name comes from the variables at the top of this script.
+EOF
+}
+
+# --- arguments --------------------------------------------------------------
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --add-unknown)
+            ADD_UNKNOWN=1
+            shift
+            while [ $# -gt 0 ] && [ "${1#-}" = "$1" ]; do
+                ADD_UNKNOWN_NAMES+=("${1%/}")
+                shift
+            done
+            continue
+            ;;
+        --ignore-unknown) IGNORE_UNKNOWN=1 ;;
+        --dry-run)        DRY_RUN=1 ;;
+        --accept-leaks)   ACCEPT_LEAKS=1 ;;
+        --no-commit)      NO_COMMIT=1 ;;
+        --remote)         [ $# -ge 2 ] || die "--remote needs a URL"; REMOTE_URL="$2"; shift ;;
+        --remote=*)       REMOTE_URL="${1#--remote=}" ;;
+        -h|--help)        usage; exit 0 ;;
+        *)                usage >&2; die "unknown argument: $1" 2 ;;
+    esac
+    shift
+done
+
+# --- cleanup ----------------------------------------------------------------
+
+cleanup() {
+    local rc=$?
+    if [ "$CONVERTING" = 1 ] && [ $rc -ne 0 ]; then
+        cat >&2 <<EOF
+
+mkrepo: the run stopped while it changed the site repository. No file of the
+module was deleted. To put the site repository back as it was:
+    cd "$SITE_DIR"
+    rm -rf "$REL/.git" ".git/modules/$REL"
+    git reset -q -- .gitmodules "$REL"
+    git checkout -- .gitmodules "$REL/.gitignore" 2>/dev/null
+EOF
+    fi
+    if [ -n "$STAGE" ] && [ -d "$STAGE" ]; then
+        rm -rf "$STAGE"
+    fi
+    exit $rc
+}
+trap cleanup EXIT
+
+# --- 1. is this a module? ---------------------------------------------------
+
+MODULE_DIR="$(pwd -P)"
+NAME="$(basename "$MODULE_DIR")"
+MODULES_DIR="$(dirname "$MODULE_DIR")"
+
+[ "$(basename "$MODULES_DIR")" = "modules" ] \
+    || die "$MODULE_DIR is not a module: a module is a folder directly in a site's modules/ folder."
+
+[ -f "$MODULE_DIR/$NAME.php" ] \
+    || die "$MODULE_DIR is not a module: it has no $NAME.php."
+
+[ ! -e "$MODULE_DIR/.git" ] \
+    || die "$NAME already has a repository of its own ($MODULE_DIR/.git exists)."
+
+SITE_DIR="$(git -C "$MODULES_DIR" rev-parse --show-toplevel 2>/dev/null)" \
+    || die "$MODULES_DIR is not in a git repository: there is no history to take and no parent to update."
+
+[ "$MODULES_DIR" = "$SITE_DIR/modules" ] \
+    || die "$MODULES_DIR is not the modules/ folder at the root of the repository $SITE_DIR."
+
+# core/modules/ is the modules/ folder at the root of core, but core is itself
+# a submodule of a site. A bundled module belongs to core and stays there.
+[ -z "$(git -C "$SITE_DIR" rev-parse --show-superproject-working-tree 2>/dev/null)" ] \
+    || die "$SITE_DIR is a submodule of another repository. A module bundled in core stays in core."
+
+REL="modules/$NAME"
+
+if git -C "$SITE_DIR" ls-files -s -- "$REL" | grep -q '^160000 '; then
+    die "$NAME is already a submodule of $SITE_DIR."
+fi
+
+[ -n "$(git -C "$SITE_DIR" ls-files -- "$REL" | head -n 1)" ] \
+    || die "$SITE_DIR tracks no file of $NAME: commit the module in the site repository first."
+
+DIRTY="$(git -C "$SITE_DIR" status --porcelain -- "$REL")"
+if [ -n "$DIRTY" ]; then
+    printf '%s\n' "$DIRTY" >&2
+    die "$NAME has changes that are not committed in $SITE_DIR. Commit or discard them first."
+fi
+
+SITE_BRANCH="$(git -C "$SITE_DIR" symbolic-ref -q --short HEAD)" \
+    || die "$SITE_DIR is not on a branch."
+
+# --- 2. unknown folders -----------------------------------------------------
+
+# A standard folder is one the Module skeleton has. Dot-folders (.claude, .git)
+# are tooling, not module structure, and are not compared.
+UNKNOWN=()
+while IFS= read -r dir; do
+    [ -d "$SKEL_DIR/$dir" ] || UNKNOWN+=("$dir")
+done < <(find "$MODULE_DIR" -mindepth 1 -maxdepth 1 -type d ! -name '.*' -printf '%f\n' | sort)
+
+TO_ADD=()
+if [ ${#UNKNOWN[@]} -gt 0 ]; then
+    if [ "$ADD_UNKNOWN" = 1 ]; then
+        if [ ${#ADD_UNKNOWN_NAMES[@]} -eq 0 ]; then
+            TO_ADD=("${UNKNOWN[@]}")
+        else
+            for want in "${ADD_UNKNOWN_NAMES[@]}"; do
+                found=0
+                for dir in "${UNKNOWN[@]}"; do
+                    [ "$dir" = "$want" ] && found=1
+                done
+                [ "$found" = 1 ] || die "--add-unknown $want: $NAME has no unknown folder with that name. Unknown folders: ${UNKNOWN[*]}"
+                TO_ADD+=("$want")
+            done
+        fi
+    elif [ "$IGNORE_UNKNOWN" = 0 ]; then
+        warn "$NAME has folders that the Module skeleton ($SKEL_DIR) does not have:"
+        printf '    %s/\n' "${UNKNOWN[@]}" >&2
+        cat >&2 <<'EOF'
+Run again with one of:
+    --add-unknown [folder ...]   add them (or only the named ones) to the skeleton
+    --ignore-unknown             continue and leave the skeleton as it is
+EOF
+        exit 1
+    fi
+fi
+
+# --- names and tools --------------------------------------------------------
+
+REPO_NAME="$NAME"
+[ "$REPO_NAME_LOWERCASE" = 1 ] && REPO_NAME="$(printf '%s' "$NAME" | tr '[:upper:]' '[:lower:]')"
+REPO_SLUG="$REPO_OWNER/$REPO_PREFIX$REPO_NAME"
+USE_GH=1
+if [ -n "$REMOTE_URL" ]; then
+    USE_GH=0
+else
+    REMOTE_URL="$REMOTE_BASE$REPO_SLUG"
+fi
+
+command -v git-filter-repo >/dev/null 2>&1 \
+    || die "git-filter-repo is not installed (pip install --user git-filter-repo)."
+
+HAVE_GITLEAKS=1
+if ! command -v gitleaks >/dev/null 2>&1; then
+    HAVE_GITLEAKS=0
+    [ "$ACCEPT_LEAKS" = 1 ] \
+        || die "gitleaks is not installed, so the history cannot be scanned for secrets. Install it, or pass --accept-leaks."
+fi
+
+REMOTE_STATE="given"
+if [ "$USE_GH" = 1 ]; then
+    command -v gh >/dev/null 2>&1 || die "gh is not installed."
+    GH_USER="$(gh api user --jq .login 2>/dev/null)" || die "gh is not logged in (gh auth login)."
+    if [ "$REPO_OWNER" != "$GH_USER" ]; then
+        gh api "user/memberships/orgs/$REPO_OWNER" --jq .state 2>/dev/null | grep -qx active \
+            || die "the GitHub login $GH_USER is not an active member of '$REPO_OWNER', so it cannot create $REPO_SLUG. Set REPO_OWNER at the top of $0."
+    fi
+    if EMPTY="$(gh repo view "$REPO_SLUG" --json isEmpty --jq .isEmpty 2>/dev/null)"; then
+        [ "$EMPTY" = "true" ] || die "$REPO_SLUG exists on GitHub and is not empty."
+        REMOTE_STATE="exists-empty"
+    else
+        REMOTE_STATE="absent"
+    fi
+fi
+
+# --- 3. history -------------------------------------------------------------
+
+STAGE="$(mktemp -d "${TMPDIR:-/tmp}/mkrepo.XXXXXX")"
+GIT_QUIET=(-c advice.detachedHead=false)
+
+# The site's part: a clone of the site repository cut down to the module.
+say "taking the history of $REL from $SITE_DIR"
+git clone -q --no-local --no-recurse-submodules --single-branch --branch "$SITE_BRANCH" "$SITE_DIR" "$STAGE/site"
+SITE_TREE="$(git -C "$SITE_DIR" rev-parse "HEAD:$REL")"
+git -C "$STAGE/site" filter-repo --quiet --force --subdirectory-filter "$REL" >"$STAGE/filter.log" 2>&1 \
+    || { cat "$STAGE/filter.log" >&2; die "git-filter-repo failed on the site's history."; }
+SITE_TIP="$(git -C "$STAGE/site" rev-parse HEAD)"
+SITE_COUNT="$(git -C "$STAGE/site" rev-list --count HEAD)"
+
+# TEMPORARY, with LEGACY_HISTORY: the older part. Prints the folder of a clone
+# cut down to the module, or nothing when there is no older history for it.
+legacy_history() {
+    [ -n "$LEGACY_HISTORY" ] || return 0
+    if [ ! -d "$LEGACY_HISTORY" ]; then
+        warn "the old history ($LEGACY_HISTORY) is not there; $NAME gets the site's history only."
+        return 0
+    fi
+    # A module made after the site repository began has no folder there.
+    [ -n "$(git -C "$LEGACY_HISTORY" rev-list -n 1 HEAD -- "$NAME" 2>/dev/null)" ] || return 0
+    git clone -q --no-local --no-recurse-submodules "$LEGACY_HISTORY" "$STAGE/legacy" >&2
+    git -C "$STAGE/legacy" filter-repo --quiet --force --subdirectory-filter "$NAME" >"$STAGE/filter.log" 2>&1 \
+        || { cat "$STAGE/filter.log" >&2; die "git-filter-repo failed on the old history."; }
+    git -C "$STAGE/legacy" rev-parse -q --verify HEAD >/dev/null 2>&1 || return 0
+    printf '%s\n' "$STAGE/legacy"
+}
+
+LEGACY_COUNT=0
+LEGACY_DIR="$(legacy_history)"
+if [ -n "$LEGACY_DIR" ]; then
+    # Replay the site's commits on top of the old history: same tree, message,
+    # author and dates; the first of them gets the old tip as its parent.
+    LEGACY_TIP="$(git -C "$LEGACY_DIR" rev-parse HEAD)"
+    LEGACY_COUNT="$(git -C "$LEGACY_DIR" rev-list --count HEAD)"
+    say "putting $SITE_COUNT site commits on top of $LEGACY_COUNT commits from $LEGACY_HISTORY"
+    mv "$LEGACY_DIR" "$STAGE/repo"
+    git -C "$STAGE/repo" fetch -q --no-tags "$STAGE/site" HEAD
+    declare -A NEW_OF
+    NEW_TIP=""
+    while IFS= read -r line; do
+        read -r -a ids <<<"$line"
+        commit="${ids[0]}"
+        parents=()
+        if [ ${#ids[@]} -eq 1 ]; then
+            parents=(-p "$LEGACY_TIP")
+        else
+            for p in "${ids[@]:1}"; do parents+=(-p "${NEW_OF[$p]}"); done
+        fi
+        NEW_TIP="$(
+            export GIT_AUTHOR_NAME="$(git -C "$STAGE/repo" log -1 --format=%an "$commit")"
+            export GIT_AUTHOR_EMAIL="$(git -C "$STAGE/repo" log -1 --format=%ae "$commit")"
+            export GIT_AUTHOR_DATE="$(git -C "$STAGE/repo" log -1 --format=%aI "$commit")"
+            export GIT_COMMITTER_NAME="$(git -C "$STAGE/repo" log -1 --format=%cn "$commit")"
+            export GIT_COMMITTER_EMAIL="$(git -C "$STAGE/repo" log -1 --format=%ce "$commit")"
+            export GIT_COMMITTER_DATE="$(git -C "$STAGE/repo" log -1 --format=%cI "$commit")"
+            git -C "$STAGE/repo" log -1 --format=%B "$commit" \
+                | git -C "$STAGE/repo" commit-tree "$commit^{tree}" "${parents[@]}"
+        )"
+        NEW_OF[$commit]="$NEW_TIP"
+    done < <(git -C "$STAGE/repo" rev-list --reverse --topo-order --parents "$SITE_TIP")
+    git -C "$STAGE/repo" "${GIT_QUIET[@]}" checkout -q -f -B "$BRANCH" "$NEW_TIP"
+    # Only the new branch goes to the new repository.
+    git -C "$STAGE/repo" for-each-ref --format='%(refname)' refs/heads refs/tags refs/remotes \
+        | { grep -vx "refs/heads/$BRANCH" || true; } \
+        | while IFS= read -r ref; do git -C "$STAGE/repo" update-ref -d "$ref"; done
+else
+    say "$NAME has no older history: the new repository gets the site's history only (commits: $SITE_COUNT)"
+    mv "$STAGE/site" "$STAGE/repo"
+    git -C "$STAGE/repo" "${GIT_QUIET[@]}" checkout -q -f -B "$BRANCH" "$SITE_TIP"
+    git -C "$STAGE/repo" for-each-ref --format='%(refname)' refs/heads refs/tags refs/remotes \
+        | { grep -vx "refs/heads/$BRANCH" || true; } \
+        | while IFS= read -r ref; do git -C "$STAGE/repo" update-ref -d "$ref"; done
+fi
+
+# The new repository must hold exactly what the site holds for the module.
+[ "$(git -C "$STAGE/repo" rev-parse 'HEAD^{tree}')" = "$SITE_TREE" ] \
+    || die "the new repository's files are not the files the site tracks in $REL. Nothing was changed."
+
+# --- 4. .gitignore ----------------------------------------------------------
+
+# The site's ignore rules stop at a submodule, so the module carries its own:
+#   - the skeleton's rules (what mkmod gives a new module),
+#   - the rules the module has already,
+#   - the site's rules that name a path in this module,
+#   - and, last, each file the site ignores today that those rules miss.
+GITIGNORE="$STAGE/repo/.gitignore"
+CANDIDATE="$STAGE/gitignore.new"
+: > "$CANDIDATE"
+if [ -f "$SKEL_DIR/.gitignore" ]; then
+    sed '/MKMOD:SKELETON-ONLY-START/,/MKMOD:SKELETON-ONLY-END/d' "$SKEL_DIR/.gitignore" > "$CANDIDATE"
+fi
+
+# Appends the lines of file $2 that the candidate does not have yet, under the
+# heading $1; nothing when no rule (a line that is not a comment) is left.
+add_rules() {
+    local heading="$1" file="$2" fresh="$STAGE/gitignore.fresh"
+    [ -s "$file" ] || return 0
+    grep -vxF -f "$CANDIDATE" "$file" | awk 'NF' > "$fresh" || true
+    grep -qvE '^[[:space:]]*#' "$fresh" || return 0
+    { printf '\n# %s\n' "$heading"; cat "$fresh"; } >> "$CANDIDATE"
+}
+
+if [ -f "$GITIGNORE" ]; then
+    add_rules "Rules this module had in the site repository." "$GITIGNORE"
+fi
+: > "$STAGE/gitignore.site"
+if [ -f "$SITE_DIR/.gitignore" ]; then
+    sed -n "s#^/\{0,1\}modules/$NAME/#/#p" "$SITE_DIR/.gitignore" >> "$STAGE/gitignore.site"
+fi
+if [ -f "$SITE_DIR/modules/.gitignore" ]; then
+    sed -n "s#^/\{0,1\}$NAME/#/#p" "$SITE_DIR/modules/.gitignore" >> "$STAGE/gitignore.site"
+fi
+add_rules "Rules the site repository had for this module." "$STAGE/gitignore.site"
+cp "$CANDIDATE" "$GITIGNORE"
+
+# Every file on disk that the site does not track must stay out of the new
+# repository. (The module has no untracked file that is not ignored: step 1.)
+MISSED="$(
+    git -C "$SITE_DIR" -c core.quotePath=false ls-files --others --ignored --exclude-standard -- "$REL" \
+        | sed "s#^$REL/##" \
+        | { grep -v '^\.git/' || true; } > "$STAGE/ignored-on-disk"
+    if [ -s "$STAGE/ignored-on-disk" ]; then
+        git -C "$STAGE/repo" -c core.quotePath=false check-ignore --no-index -v -n --stdin < "$STAGE/ignored-on-disk" \
+            | awk -F'\t' '$1 ~ /^::/ || $1 ~ /:!/ { print $2 }' || true
+    fi
+)"
+if [ -n "$MISSED" ]; then
+    {
+        printf '\n# On disk and ignored by the site repository when this repository was made.\n'
+        printf '%s\n' "$MISSED" | sed 's#^#/#'
+    } >> "$GITIGNORE"
+fi
+
+if [ -n "$(git -C "$STAGE/repo" status --porcelain -- .gitignore)" ]; then
+    git -C "$STAGE/repo" add .gitignore
+    git -C "$STAGE/repo" commit -q -m "$NAME carries its own ignore rules"
+fi
+
+# A tracked file that the new rules ignore is still tracked; say so.
+TRACKED_IGNORED="$(git -C "$STAGE/repo" ls-files -ci --exclude-standard)"
+if [ -n "$TRACKED_IGNORED" ]; then
+    warn "these files are tracked, and the new .gitignore would ignore them (they stay tracked):"
+    printf '    %s\n' $TRACKED_IGNORED >&2
+fi
+
+TOTAL_COUNT="$(git -C "$STAGE/repo" rev-list --count HEAD)"
+
+# --- 5. secrets -------------------------------------------------------------
+
+LEAKS=0
+if [ "$HAVE_GITLEAKS" = 1 ]; then
+    say "scanning $TOTAL_COUNT commits with gitleaks"
+    if ! gitleaks git --no-banner --redact --log-level warn "$STAGE/repo"; then
+        LEAKS=1
+    fi
+else
+    warn "gitleaks is not installed: the history was NOT scanned (--accept-leaks)."
+fi
+if [ "$LEAKS" = 1 ] && [ "$ACCEPT_LEAKS" = 0 ] && [ "$DRY_RUN" = 0 ]; then
+    die "gitleaks found possible secrets in the history of $NAME (above). Nothing was changed. Remove them from the history, or pass --accept-leaks if they are false."
+fi
+
+# --- dry run stops here -----------------------------------------------------
+
+if [ "$DRY_RUN" = 1 ]; then
+    cat <<EOF
+
+mkrepo: dry run. Nothing was changed.
+  module        $NAME ($MODULE_DIR)
+  site          $SITE_DIR (branch $SITE_BRANCH)
+  history       $LEGACY_COUNT old + $SITE_COUNT site commits; $TOTAL_COUNT with the .gitignore commit
+  remote        $REMOTE_URL ($REMOTE_STATE)
+  gitleaks      $([ "$HAVE_GITLEAKS" = 0 ] && echo "not installed" || { [ "$LEAKS" = 1 ] && echo "FINDINGS, see above" || echo "no findings"; })
+  unknown       ${UNKNOWN[*]:-none}$([ ${#TO_ADD[@]} -gt 0 ] && echo " (would add to the skeleton: ${TO_ADD[*]})")
+  .gitignore    as below
+EOF
+    sed 's/^/    | /' "$GITIGNORE"
+    exit 0
+fi
+
+# --- unknown folders into the skeleton --------------------------------------
+
+for dir in ${TO_ADD[@]+"${TO_ADD[@]}"}; do
+    mkdir -p "$SKEL_DIR/$dir"
+    if [ -z "$(ls -A "$SKEL_DIR/$dir")" ]; then
+        # git does not keep an empty folder.
+        cat > "$SKEL_DIR/$dir/README" <<EOF
+$dir/ is a standard module folder. The $NAME module was the first to have it.
+Write here what a module keeps in $dir/.
+EOF
+    fi
+    say "added $dir/ to the Module skeleton ($SKEL_DIR/$dir); commit it in core"
+done
+
+# --- 6. the remote ----------------------------------------------------------
+
+if [ "$USE_GH" = 1 ] && [ "$REMOTE_STATE" = "absent" ]; then
+    say "creating the private repository $REPO_SLUG"
+    # shellcheck disable=SC2059
+    gh repo create "$REPO_SLUG" --private --description "$(printf "$REPO_DESCRIPTION" "$NAME")" >/dev/null
+fi
+git -C "$STAGE/repo" remote remove origin 2>/dev/null || true
+git -C "$STAGE/repo" remote add origin "$REMOTE_URL"
+say "pushing $TOTAL_COUNT commits to $REMOTE_URL"
+git -C "$STAGE/repo" push -q -u origin "$BRANCH"
+
+# --- 7. the site repository -------------------------------------------------
+
+if ! git -C "$SITE_DIR" diff --cached --quiet; then
+    [ "$NO_COMMIT" = 1 ] \
+        || die "$SITE_DIR has staged changes, so mkrepo cannot make a commit of its own. The new repository is pushed; commit or unstage, then run again with --remote $REMOTE_URL, or pass --no-commit."
+fi
+
+say "recording $REL as a submodule of $SITE_DIR"
+CONVERTING=1
+cd "$SITE_DIR"
+# Index only: no file of the module leaves the disk.
+git rm -r -q --cached -- "$REL"
+cp "$GITIGNORE" "$MODULE_DIR/.gitignore"
+mv "$STAGE/repo/.git" "$MODULE_DIR/.git"
+git -C "$MODULE_DIR" reset -q
+git -c protocol.file.allow=always submodule --quiet add -- "$REMOTE_URL" "$REL"
+git submodule --quiet absorbgitdirs -- "$REL"
+CONVERTING=0
+
+LEFT="$(git -C "$MODULE_DIR" status --porcelain)"
+if [ -n "$LEFT" ]; then
+    warn "the new repository does not see a clean module. Look at these before the next commit:"
+    printf '%s\n' "$LEFT" >&2
+fi
+
+if [ "$NO_COMMIT" = 1 ]; then
+    say "the change is staged in $SITE_DIR and not committed (--no-commit)"
+else
+    git commit -q -m "$NAME is a submodule: $REMOTE_URL"
+    say "committed in $SITE_DIR: $(git log -1 --format='%h %s')"
+fi
+
+cat <<EOF
+
+mkrepo: done.
+  $NAME is now the repository $REMOTE_URL, branch $BRANCH, $TOTAL_COUNT commits.
+  $SITE_DIR pins it as the submodule $REL. Push the site when you are ready:
+      git -C "$SITE_DIR" push
+EOF

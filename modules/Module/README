@@ -176,3 +176,47 @@ gets the plain file.
 Run --selftest after editing anything in this directory. mkmod rewrites the
 skeleton using patterns anchored to exact strings in these files; --selftest
 turns a broken anchor into a loud failure rather than a silently wrong module.
+
+
+Giving a module its own repository
+----------------------------------
+
+  cd {site}/modules/Inventory
+  ../../core/modules/Module/mkrepo --dry-run    # build and scan in a temporary folder, change nothing
+  ../../core/modules/Module/mkrepo              # do it
+  ../../core/modules/Module/mkrepo --help
+
+mkrepo works on the module in the current directory. It makes a repository
+that holds the module's history, creates a PRIVATE repository on GitHub with
+gh, pushes, and records the module in the site repository as a submodule. The
+files on disk do not move. The site repository gets one commit and is not
+pushed.
+
+The directory is a module when it is directly in the modules/ folder at the
+root of a site repository and holds {Name}.php. mkrepo refuses a module that is
+a submodule already, a module with changes that are not committed, and a module
+bundled in core/modules/ (it belongs to core).
+
+mkrepo compares the module's folders with this skeleton's. A folder this
+skeleton does not have stops the run until a flag says what to do:
+
+  --add-unknown [folder ...]   add the unknown folders to this skeleton, each
+                               with a README to fill in; with names, add only
+                               those and ignore the rest
+  --ignore-unknown             continue, no warning
+
+The new repository's name is {REPO_OWNER}/{REPO_PREFIX}{name}; these variables
+are at the top of the script, with the branch name and the remote's base URL.
+`--remote <url>` uses a remote that exists and does not call gh.
+
+History comes from the site repository. For a module older than the site
+repository, mkrepo puts the site's commits on top of the module's history in
+the retired zero.modules checkout (LEGACY_HISTORY at the top of the script). A
+module with no history there gets the site's history only. That lookup is
+temporary: it goes away when the old modules all have repositories.
+
+A site's ignore rules stop at a submodule, so mkrepo writes the module's own
+.gitignore: this skeleton's rules, the rules the module has, the site's rules
+that name a path in the module, and each file on disk that the site ignores and
+those rules miss. mkrepo then scans the new history with gitleaks and stops
+before it creates the remote if there are findings (`--accept-leaks` continues).

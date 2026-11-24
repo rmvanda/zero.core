@@ -161,7 +161,7 @@ Mail::sendEmailToAdmin($subject, $message);                  // to NOTIFY_EMAIL
 
 The nine modules every site gets (`Index`, `Auth`, `User`, `Admin`, `Push`, `Entity`, `Module`, `HelloWorld`, `Test`) live in `core/modules/`; every other module lives in the site's `modules/`. Requests for access to a capability are answered by `AccessRequest`, a submodule of Auth at `/auth/access-request`.
 
-`core/modules/Module/mkmod` writes a new module into the site's `modules/`, never into `core/` (`--dest <dir>` overrides), and refuses a name a bundled module has: an override of a module of core is written by hand. Tests that check every module live in `core/tests/module/` and walk `Modules::all()`.
+`core/modules/Module/mkmod` writes a new module into the site's `modules/`, never into `core/` (`--dest <dir>` overrides), and refuses a name a bundled module has: an override of a module of core is written by hand. `core/modules/Module/mkrepo`, run from inside a site module, gives that module a private repository of its own with its history and records it in the site repository as a submodule; see `core/modules/Module/README`. Tests that check every module live in `core/tests/module/` and walk `Modules::all()`.
 
 ### Tiers and `app/modules.ini`
 
