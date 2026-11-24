@@ -212,26 +212,50 @@ class Database {
     }
 
     /**
+     * Whether app/config/database.ini names a database to connect to.
+     *
+     * DB_DRIVER must be set. sqlite then needs NAME (the file path, or
+     * :memory:); every other driver needs NAME and USER. PASS may be blank.
+     * A site with no database leaves the file blank and nothing connects.
+     *
+     * @return bool
+     */
+    public static function isConfigured(): bool {
+        $value = fn(string $key): string => defined($key) ? trim((string) constant($key)) : '';
+
+        if ($value('DB_DRIVER') === '' || $value('NAME') === '') {
+            return false;
+        }
+        return strtolower($value('DB_DRIVER')) === 'sqlite' || $value('USER') !== '';
+    }
+
+    /**
      * Get database connection (singleton pattern)
      * Lazy-loads connection using constants from database.ini if not already initialized
+     *
+     * With no DB_DRIVER or no credentials in database.ini (isConfigured()),
+     * no connection is attempted at all: the call throws, and nothing is
+     * logged as a failure, because nothing failed.
      *
      * @return \PDO
      */
     public static function getConnection(): \PDO {
         if (!isset(self::$connection)) {
+            if (!self::isConfigured()) {
+                throw new \Exception("Database is not configured: set DB_DRIVER, NAME and USER in app/config/database.ini");
+            }
             // Lazy initialization using constants from database.ini
             try {
-                // DB_DRIVER/DB_PORT/DB_CHARSET are optional additions to
-                // database.ini — with none of them set this yields exactly the
-                // mysql DSN this method has always built.
+                // DB_DRIVER is required (isConfigured() above). DB_PORT and
+                // DB_CHARSET are optional; blank lets the driver choose.
                 $dsn = self::buildDsn([
-                    'driver'  => defined('DB_DRIVER')  ? DB_DRIVER  : 'mysql',
-                    'host'    => HOST,
+                    'driver'  => DB_DRIVER,
+                    'host'    => defined('HOST')       ? HOST       : 'localhost',
                     'port'    => defined('DB_PORT')    ? DB_PORT    : null,
                     'name'    => NAME,
                     'charset' => defined('DB_CHARSET') ? DB_CHARSET : null,
                 ]);
-                self::$connection = new \PDO($dsn, USER, PASS, self::$pdoOpts);
+                self::$connection = new \PDO($dsn, defined('USER') ? USER : null, defined('PASS') ? PASS : null, self::$pdoOpts);
                 if (self::$trackingEnabled) {
                     self::$connection->setAttribute(\PDO::ATTR_STATEMENT_CLASS, [TrackedStatement::class, []]);
                 }

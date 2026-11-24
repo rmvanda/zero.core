@@ -233,6 +233,31 @@ class DatabaseTest extends ZeroTestCase
         Database::enableQueryTracking();
     }
 
+    /* ── No database configured ── */
+
+    /**
+     * PHPUnit does not run defineConstants(), so no database.ini constant
+     * exists here: this is a site with no DB_DRIVER and no credentials.
+     */
+    public function testUnconfiguredDatabaseIsNotConfigured(): void
+    {
+        $this->assertFalse(defined('DB_DRIVER'), 'this test needs DB_DRIVER undefined');
+        $this->assertFalse(Database::isConfigured());
+    }
+
+    public function testGetConnectionOpensNothingWhenUnconfigured(): void
+    {
+        Database::$connection = null;
+
+        try {
+            Database::getConnection();
+            $this->fail('getConnection() must throw when no database is configured');
+        } catch (\Exception $e) {
+            $this->assertStringContainsString('not configured', $e->getMessage());
+        }
+        $this->assertNull(Database::$connection);
+    }
+
     /* ── Static connection reset (for test isolation) ── */
 
     public function testConnectionCanBeReset(): void

@@ -129,15 +129,19 @@ class Application {
         }
 
         // TODO - maybe this goes somewhere else.
-        if(str_contains($_SERVER['REMOTE_ADDR'], DEV_SUBNET)){
-            define("DEVMODE", true); 
-            ini_set("xdebug.var_display_max_children", '-1');
-            ini_set("xdebug.var_display_max_data", '-1');
-            ini_set("xdebug.var_display_max_depth", '-1');
-            //ini_set('xdebug.var_display_max_depth', 10);
-            //ini_set('xdebug.var_display_max_children', 256);
-            //ini_set('xdebug.var_display_max_data', 1024);
-        }
+        // DEV_SUBNET is not in use for now, so DEVMODE is never defined. The
+        // block read DEV_SUBNET with no defined() check: a site whose own
+        // constants.ini left the key out failed here on every request.
+        // Everything that reads DEVMODE asks defined('DEVMODE') first.
+        //if(str_contains($_SERVER['REMOTE_ADDR'], DEV_SUBNET)){
+        //    define("DEVMODE", true); 
+        //    ini_set("xdebug.var_display_max_children", '-1');
+        //    ini_set("xdebug.var_display_max_data", '-1');
+        //    ini_set("xdebug.var_display_max_depth", '-1');
+        //    //ini_set('xdebug.var_display_max_depth', 10);
+        //    //ini_set('xdebug.var_display_max_children', 256);
+        //    //ini_set('xdebug.var_display_max_data', 1024);
+        //}
 
         \Zero\Core\PluginLoader::hook($this->plugins, 'afterConstants');
 
